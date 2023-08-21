@@ -181,7 +181,7 @@ const FacultyProfileGrid = () => {
     {
       field: 'action',
       headerName: 'Action',
-      width: 100,
+      width: 150,
       renderCell: (params) => (
         <div>
         <IconButton onClick={() => handleAction(params.row.id)}>
