@@ -1,17 +1,17 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import { DataGrid } from '@mui/x-data-grid';
 import IconButton from '@mui/material/IconButton';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import TextField from '@mui/material/TextField';
+import Button from '@mui/material/Button';
 
 const UserGrid = () => {
 
-  const [page, setPage] = useState(0);
-  const rowsPerPage = 10;
-
-  const handleChangePage = (newPage) => {
-    setPage(newPage);
-
+  const [searchValue, setSearchValue] = useState('');
+  
+  const handleSearchChange = (event) => {
+    setSearchValue(event.target.value);
   };
 
   const users = [
@@ -248,20 +248,45 @@ const UserGrid = () => {
     // Implement your delete logic here
     console.log(`Delete user with ID: ${userId}`);
   };
+
+  const filteredUsers = users.filter(user => 
+    user.id.toString().includes(searchValue) ||
+    user.name.toLowerCase().includes(searchValue.toLowerCase()) ||
+    user.email.toLowerCase().includes(searchValue.toLowerCase()) ||
+    user.mobile.includes(searchValue) ||
+    user.role.toLowerCase().includes(searchValue.toLowerCase()) ||
+    user.status.toLowerCase().includes(searchValue.toLowerCase())
+  );
   
 
   return (
     <div style={{ height: 500, width: '100%' }}>
+       <div className="mb-4 flex justify-end items-center">
+       <Button variant="contained" color="primary">New User</Button>
+       <div className="ml-2">
+        <TextField
+          label="Search"
+          variant="outlined"
+          size="small"
+          value={searchValue}
+          onChange={handleSearchChange}
+        />
+      </div>
+      </div>
       <DataGrid 
-      rows={users.slice(page * rowsPerPage, (page + 1) * rowsPerPage)}
+      rows={filteredUsers}
       columns={columns}
+      initialState={{
+        pagination: {
+          paginationModel: {
+            pageSize: 10,
+          },
+        },
+      }}
+      pageSizeOptions={[10]}
       checkboxSelection
-      pagination
-      pageSize={rowsPerPage}
-      rowCount={users.length}
-      paginationMode="server"
-      onPageChange={(newPage) => handleChangePage(newPage)}
-      disableRowSelectionOnClick/>
+      disableRowSelectionOnClick  
+      />
     </div>
   );
 };
