@@ -5,10 +5,12 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
+import StudentProfileModal from '../modal/StudentProfileModal.js'
 
 const StudentsProfileGrid = () => {
 
   const [searchValue, setSearchValue] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
   
   const handleSearchChange = (event) => {
     setSearchValue(event.target.value);
@@ -16,7 +18,8 @@ const StudentsProfileGrid = () => {
 
   const students = [
     {
-        id: 101,
+        id: 1,
+        stud_id: 101,
         name: 'Anna Smith',
         mobile: '987-654-3210',
         section: 'Magalang',
@@ -26,7 +29,8 @@ const StudentsProfileGrid = () => {
       },
      
       {
-        id: 102,
+        id: 2,
+        stud_id: 102,
         name: 'Michael Johnson',
         mobile: '555-123-4567',
         section: 'Magalang',
@@ -36,7 +40,8 @@ const StudentsProfileGrid = () => {
       },
      
       {
-        id: 103,
+        id: 3,
+        stud_id: 103,
         name: 'Emily Davis',
         mobile: '777-888-9999',
         section: 'Masunurin',
@@ -46,7 +51,8 @@ const StudentsProfileGrid = () => {
       },
      
       {
-        id: 104,
+        id: 4,
+        stud_id: 104,
         name: 'David Miller',
         mobile: '444-555-6666',
         section: 'Masunurin',
@@ -56,7 +62,8 @@ const StudentsProfileGrid = () => {
       },
      
       {
-        id: 105,
+        id: 5,
+        stud_id: 105,
         name: 'Olivia Martinez',
         mobile: '111-222-3333',
         section: 'Mabait',
@@ -66,7 +73,8 @@ const StudentsProfileGrid = () => {
       },
      
       {
-        id: 106,
+        id: 6,
+        stud_id: 106,
         name: 'William Anderson',
         mobile: '888-999-0000',
         section: 'Mabait',
@@ -76,7 +84,8 @@ const StudentsProfileGrid = () => {
       },
      
       {
-        id: 107,
+        id: 7,
+        stud_id: 107,
         name: 'Sophia Wilson',
         mobile: '333-444-5555',
         section: 'Magalang',
@@ -86,7 +95,8 @@ const StudentsProfileGrid = () => {
       },
      
       {
-        id: 108,
+        id: 8,
+        stud_id: 108,
         name: 'Daniel Lee',
         mobile: '666-777-8888',
         section: 'Magalang',
@@ -96,7 +106,8 @@ const StudentsProfileGrid = () => {
       },
      
       {
-        id: 109,
+        id: 9,
+        stud_id: 109,
         name: 'Isabella Taylor',
         mobile: '222-333-4444',
         section: 'Masunurin',
@@ -106,7 +117,8 @@ const StudentsProfileGrid = () => {
       },
      
       {
-         id: 110,
+         id: 10,
+         stud_id: 110,
          name: 'James Martinez',
          mobile: '999-000-1111',
          section: 'Masunurin',
@@ -116,7 +128,8 @@ const StudentsProfileGrid = () => {
       },
      
       {
-         id: 111,
+         id: 11,
+         stud_id: 111,
          name: 'Grace Johnson',
          mobile: '444-555-6666',
          section: 'Mabait',
@@ -126,7 +139,8 @@ const StudentsProfileGrid = () => {
       },
      
       {
-         id: 112,
+         id: 12,
+         stud_id: 112,
          name: 'Joseph Brown',
          mobile: '111-222-3333',
          section: 'Mabait',
@@ -136,7 +150,8 @@ const StudentsProfileGrid = () => {
       },
       
       {
-         id: 113,
+         id: 13,
+         stud_id: 113,
          name: 'Chloe Davis',
          mobile: '777-888-9999',
          section: 'Magalang',
@@ -146,7 +161,8 @@ const StudentsProfileGrid = () => {
       },
      
       {
-         id: 114,
+         id: 14,
+         stud_id: 114,
          name: 'Liam Wilson',
          mobile: '555-123-4567',
          section: 'Magalang',
@@ -156,7 +172,8 @@ const StudentsProfileGrid = () => {
       },
      
       {
-         id: 115,
+         id: 15,
+         stud_id: 115,
          name: 'Emma Smith',
          mobile: '987-654-3210',
          section: 'Masunurin',
@@ -166,7 +183,8 @@ const StudentsProfileGrid = () => {
       },
      
       {
-         id: 116,
+         id: 16,
+         stud_id: 116,
          name: 'Noah Johnson',
          mobile: '888-999-0000',
          section: 'Masunurin',
@@ -176,7 +194,8 @@ const StudentsProfileGrid = () => {
       },
      
       {
-         id: 117,
+         id: 17,
+         stud_id: 117,
          name: 'Ava Martinez',
          mobile: '333-444-5555',
          section: 'Mabait',
@@ -186,7 +205,8 @@ const StudentsProfileGrid = () => {
       },
      
       {
-         id: 118,
+         id: 18,
+         stud_id: 118,
          name: 'Ethan Anderson',
          mobile: '666-777-8888',
          section: 'Mabait',
@@ -196,7 +216,8 @@ const StudentsProfileGrid = () => {
       },
      
       {
-         id: 119,
+         id: 19,
+         stud_id: 119,
          name: 'Mia Taylor',
          mobile: '222-333-4444',
          section: 'Magalang',
@@ -206,7 +227,8 @@ const StudentsProfileGrid = () => {
       },
      
       {
-         id: 120,
+         id: 20,
+         stud_id: 120,
          name: 'Alexander Lee',
          mobile: '999-000-1111',
          section: 'Magalang',
@@ -218,7 +240,7 @@ const StudentsProfileGrid = () => {
   ];
 
   const columns = [
-    { field: 'id', headerName: 'ID', width: 100 },
+    { field: 'stud_id', headerName: 'Stud ID', width: 100 },
     { field: 'name', headerName: 'Name', width: 200 },
     { field: 'mobile', headerName: 'Mobile Number', width: 150 },
     { field: 'section', headerName: 'Section', width: 150 },
@@ -280,12 +302,22 @@ const StudentsProfileGrid = () => {
     user.gender.toLowerCase().includes(searchValue.toLowerCase()) ||
     user.status.toLowerCase().includes(searchValue.toLowerCase())
   );
+
+  const handleModalOpen = () => {
+    console.log('Opening modal');
+    setIsModalOpen(true);
+  };
+
+  const handleModalClose = () => {
+    console.log('Closing modal');
+    setIsModalOpen(false);
+  };
   
 
   return (
     <div style={{ height: 500, width: '100%' }}>
        <div className="mb-4 flex justify-end items-center">
-       <Button variant="contained" color="primary">Add Student</Button>
+       <Button variant="contained" color="primary" onClick={handleModalOpen}>Add Student</Button>
        <div className="ml-2">
         <TextField
           label="Search"
@@ -310,6 +342,7 @@ const StudentsProfileGrid = () => {
       checkboxSelection
       disableRowSelectionOnClick  
       />
+      <StudentProfileModal isOpen={isModalOpen} onClose={handleModalClose} onCancel={handleModalClose} />
     </div>
   );
 };

@@ -31,10 +31,12 @@ const Dashboard = () => {
     };
 
   return (
+    
     <div className="flex">
+    <div className="flex h-full">
       {/* Sidebar */}
       <Sidebar />
-
+      </div>
       {/* Main Content Area */}
       <div className="bg-black h-64 w-full mb-4">
       <div className="flex-grow p-4">
