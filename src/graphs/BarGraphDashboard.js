@@ -52,7 +52,7 @@ const BarGraphDashboard = () => {
 
       {/* Bar chart */}
       <div className="flex-grow">
-      <BarChart width={830} height={400} data={filteredData}>
+      <BarChart width={830} height={300} data={filteredData}>
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="name" />
         <YAxis />

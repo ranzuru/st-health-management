@@ -3,6 +3,8 @@ import { Paper, Grid, TextField, Button, InputAdornment, Dialog, DialogTitle, Di
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { Link } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
+import { useMediaQuery } from '@mui/material';
+
 
 import schoolLogo from './Data/DonjuanTransparent.png';
 import clinicLogo from './Data/medical.png';
@@ -32,18 +34,20 @@ const LoginPage = () => {
   const handleCloseWarning = () => {
     setShowWarning(false);
   };
+
+  const isSmallScreen = useMediaQuery('(max-width:600px)');
+
   return (
     <Grid container component="main" sx={{ height: '100vh' }}>
       {/* Left-side Image */}
-      <Grid item xs={12} sm={4} md={7} sx={{ backgroundColor: '#6C63FF', minHeight: '100vh' }}>
-        <div className="flex justify-center items-center h-full">
-          <img src={clinicLogo} alt="School Logo" style={{ width: '600px', height: '430px' }} />
+      <Grid item xs={12} sm={4} md={7} sx={{ display: isSmallScreen ? 'none' : 'block', backgroundColor: '#6C63FF', minHeight: '100vh' }}>
+          <div className="flex justify-center items-center h-full">
+            <img src={clinicLogo} alt="Clinic Logo" style={{ width: '600px', height: '430px' }} />
         </div>
-      </Grid>
+          </Grid>
 
       {/* Right-side Login Form */}
-      <Grid item xs={12} sm={8} md={5} component={Paper} elevation={6} square>
-        <Grid container justifyContent="center" alignItems="center" sx={{ height: '100%' }}>
+      <Grid item xs={12} sm={8} md={5} component={Paper} elevation={6} square sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: isSmallScreen ? 'transparent' : '#FFF' }}>
           <Grid item xs={10} sm={8} md={6}>
             {/* Add form components here */}
             <div className="flex flex-col space-y-4 text-center">
@@ -96,7 +100,6 @@ const LoginPage = () => {
             </div>
           </Grid>
         </Grid>
-      </Grid>
       <Dialog open={showWarning} onClose={handleCloseWarning}>
         <DialogTitle>Invalid Credentials</DialogTitle>
         <DialogContent>

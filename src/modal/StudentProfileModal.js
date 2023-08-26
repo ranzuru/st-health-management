@@ -176,6 +176,7 @@ const StudentProfileModal = ({ isOpen, onClose, onAddUser }) => {
          </div>
         </form>
         </div>
+        
     </Modal>
   );
 };

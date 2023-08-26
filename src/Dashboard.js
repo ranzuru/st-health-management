@@ -31,7 +31,6 @@ const Dashboard = () => {
     };
 
   return (
-    
     <div className="flex">
     <div className="flex h-full">
       {/* Sidebar */}
@@ -43,7 +42,7 @@ const Dashboard = () => {
         <h1 className="text-5xl font-bold text-white pt-4" >Welcome Jeremiah!</h1>
         </div>
         <Grid  className="pt-14 pr-4 pl-4" container spacing={3}>
-          <Grid item xs={3}>
+          <Grid item xs={12} sm={6} md={4} lg={3}>
             <Card className="h-44">
             <CardActionArea onClick={handleCardClickManageUser}>
               <CardContent className="pl-5 pt-3 pb-1 relative">
@@ -71,7 +70,7 @@ const Dashboard = () => {
               </CardActionArea>
             </Card>
           </Grid>
-          <Grid item xs={3}>
+          <Grid item xs={12} sm={6} md={4} lg={3}>
             <Card className="h-44">
           <CardActionArea onClick={handleCardClickStudents}>
             <CardContent className="pl-5 pt-3 pb-1 relative">
@@ -99,7 +98,7 @@ const Dashboard = () => {
               </CardActionArea>
             </Card>
           </Grid>
-          <Grid item xs={3}>
+          <Grid item xs={12} sm={6} md={4} lg={3}>
             <Card className="h-44">
           <CardActionArea onClick={handleCardClickClinic}>
             <CardContent className="pl-5 pt-3 pb-1 relative">
@@ -127,7 +126,7 @@ const Dashboard = () => {
               </CardActionArea>
             </Card>
           </Grid>
-          <Grid item xs={3}>
+          <Grid item xs={12} sm={6} md={4} lg={3}>
             <Card className="h-44">
           <CardActionArea onClick={handleCardClickFeeding}>
             <CardContent className="pl-5 pt-3 pb-1 relative">
@@ -155,8 +154,8 @@ const Dashboard = () => {
               </CardActionArea>
             </Card>
           </Grid>
-        <Grid item xs={9}>
-          <Card className="w-full mt-4">
+        <Grid item xs={12} sm={9}>
+          <Card className="w-full mt-4" style={{ overflowX: 'auto' }}>
           <CardContent>
            <div className="flex items-center mb-4">
               <img
@@ -172,7 +171,7 @@ const Dashboard = () => {
           </CardContent>
         </Card>
         </Grid>
-        <Grid item xs={3}>
+        <Grid item xs={12} sm={3}>
             <Card className="mt-4">         
               <CardContent className="pl-5 pt-3 pb-1 relative">
               <div className="flex flex-col justify-center">

@@ -5,8 +5,10 @@ import { Paper, Grid, TextField, Button, InputAdornment, Select, MenuItem } from
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import clinicLogo from './Data/medical.png';
 import { Link } from 'react-router-dom';
+import { useMediaQuery } from '@mui/material';
 
 const RegistrationPage = () => {
+  const isSmallScreen = useMediaQuery('(max-width:600px)');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [role, setRole] = useState('');
 
@@ -37,16 +39,17 @@ const RegistrationPage = () => {
   return (
     <Grid container component="main" sx={{ height: '100vh' }}>
       {/* Left-side Image */}
-      <Grid item xs={false} sm={4} md={7} sx={{ backgroundColor: '#6C63FF', minHeight: '100vh' }}>
+      <Grid item xs={false} sm={4} md={7} sx={{ display: isSmallScreen ? 'none' : 'block', backgroundColor: '#6C63FF', minHeight: '100vh' }}>
         <div className="flex justify-center items-center h-full">
-          <img src={clinicLogo} alt="School Logo" style={{ width: '600px', height: '430px' }} />
+          <img src={clinicLogo} alt="Clinic Logo" style={{ width: '600px', height: '430px' }} />
         </div>
       </Grid>
 
       {/* Right-side Registration Form */}
-      <Grid item xs={12} sm={8} md={5} component={Paper} elevation={6} square>
+      <Grid item xs={12} sm={8} md={5} component={Paper} elevation={6} square sx={
+        { display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: isSmallScreen ? 'transparent' : '#FFF' }}>
         <div className="flex justify-center items-center h-full">
-          <Grid container justifyContent="center" spacing={2}>
+          <Grid container justifyContent="center" alignItems="center" spacing={2}>
              {/* Add new Grid item for "Create an account" */}
              <Grid item xs={12}>
               <div className="flex justify-center mb-6">
@@ -54,14 +57,14 @@ const RegistrationPage = () => {
               </div>
             </Grid>
             {/* Separate First Name and Last Name */}
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={12} sm={6} sx={{ display: 'flex', justifyContent: isSmallScreen ? 'center' : 'flex-start', width: isSmallScreen ? '80%' : 'auto', margin: isSmallScreen ? '0 auto' : '0' }}>
                 <TextField label="First Name" fullWidth margin="normal" sx={{ width: '270px', margin: '0 15px' }} />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={12} sm={6} sx={{ display: 'flex', justifyContent: isSmallScreen ? 'center' : 'flex-start', width: isSmallScreen ? '80%' : 'auto', margin: isSmallScreen ? '0 auto' : '0' }}>
                 <TextField label="Last Name" fullWidth margin="normal" sx={{ width: '270px', margin: '0 15px' }} />
               </Grid>
             {/* Continue with the rest of the form */}
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} sm={6} sx={{ display: 'flex', justifyContent: isSmallScreen ? 'center' : 'flex-start', width: isSmallScreen ? '80%' : 'auto', margin: isSmallScreen ? '0 auto' : '0' }}>
               <TextField
                 label="Phone Number"
                 fullWidth
@@ -75,10 +78,10 @@ const RegistrationPage = () => {
                 sx={{ width: '270px', margin: '0 15px' }}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} sm={6} sx={{ display: 'flex', justifyContent: isSmallScreen ? 'center' : 'flex-start', width: isSmallScreen ? '80%' : 'auto', margin: isSmallScreen ? '0 auto' : '0' }}>
               <TextField label="Email" fullWidth margin="normal" sx={{ width: '270px', margin: '0 15px' }} />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} sm={6} sx={{ display: 'flex', justifyContent: isSmallScreen ? 'center' : 'flex-start', width: isSmallScreen ? '80%' : 'auto', margin: isSmallScreen ? '0 auto' : '0' }}>
               <TextField
                 label="Password"
                 type={showPassword ? 'text' : 'password'}
@@ -99,7 +102,7 @@ const RegistrationPage = () => {
                 sx={{ width: '270px', margin: '0 15px' }}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} sm={6} sx={{ display: 'flex', justifyContent: isSmallScreen ? 'center' : 'flex-start', width: isSmallScreen ? '80%' : 'auto', margin: isSmallScreen ? '0 auto' : '0' }}>
               <TextField
                 label="Confirm Password"
                 type={showConfirmPassword ? 'text' : 'password'}
@@ -120,7 +123,7 @@ const RegistrationPage = () => {
                 sx={{ width: '270px', margin: '0 15px' }}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid item xs={12} sx={{ display: 'flex', justifyContent: isSmallScreen ? 'center' : 'flex-start', width: isSmallScreen ? '80%' : 'auto', margin: isSmallScreen ? '0 auto' : '0' }}>
               <Select
                 label="Role"
                 fullWidth
@@ -129,7 +132,7 @@ const RegistrationPage = () => {
                 onChange={handleRoleChange}
                 displayEmpty
                 inputProps={{ 'aria-label': 'Select your role' }}
-                sx={{ width: '200px', margin: '0 15px' }}
+                sx={{ width: '270px', margin: '0 15px' }}
               >
                 <MenuItem value="" disabled>
                   Select your role
