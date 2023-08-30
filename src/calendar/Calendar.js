@@ -4,10 +4,8 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import listPlugin from '@fullcalendar/list';
-import { List, ListItem, ListItemText, Typography } from '@mui/material';
 
 const Calendar = () => {
-    const [currentEvents, setCurrentEvents] = React.useState([]);
 
     const handleDateClick = (selected) => {
         const title = prompt("Please enter a new title for your event");
@@ -31,65 +29,36 @@ const Calendar = () => {
         }
     };
 
-    const formatDate = (date) => {
-        return new Intl.DateTimeFormat("en-US", {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-        }).format(date);
-    };
     return (
-        <div className="w-full flex">
-            <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-1 p-4 rounded-md bg-gray-100 w-80 sm:w-auto md:w-80"> 
-                    <Typography variant="h5">Events</Typography>
-                    <List>
-                        {currentEvents.map((event) => (
-                            <ListItem
-                                key={event.id}
-                                className="my-2 p-2 rounded-md">
-                                <ListItemText
-                                    primary={event.title}
-                                    secondary={
-                                        <Typography>
-                                            {formatDate(new Date(event.start))}
-                                        </Typography>
-                                    }
-                                />
-                            </ListItem>
-                        ))}
-                    </List>
+        <div className="w-full h-screen flex"> {/* Use h-screen to fill vertical space */}
+            <div className="flex-grow"> {/* Use flex-grow to fill horizontal space */}
+                        <FullCalendar
+                            plugins={[
+                                dayGridPlugin,
+                                timeGridPlugin,
+                                interactionPlugin,
+                                listPlugin
+                            ]}
+                            headerToolbar={{
+                                left: "prev,next,today",
+                                center: "title",
+                                right: "dayGridMonth,timeGridWeek,timeGridDay,listMonth"
+                            }}
+                            initialView="dayGridMonth"
+                            editable={true}
+                            selectable={true}
+                            selectMirror={true}
+                            dayMaxEvents={true}
+                            select={handleDateClick}
+                            eventClick={handleEventClick}
+                            initialEvents={[
+                                { id: "1234", title: "All day long", date: "2023-07-06" },
+                                { id: "1232", title: "All I want for christmas", date: "2023-08-26" }
+                            ]}
+                            height="100%" // Remove explicit height setting
+                        ></FullCalendar>
+                    </div>
                 </div>
-                <div className="col-span-1">
-                    <FullCalendar
-                        height="75vh"
-                        plugins={[
-                            dayGridPlugin,
-                            timeGridPlugin,
-                            interactionPlugin,
-                            listPlugin
-                        ]}
-                        headerToolbar={{
-                            left: "prev,next,today",
-                            center: "title",
-                            right: "dayGridMonth,timeGridWeek,timeGridDay,listMonth"
-                        }}
-                        initialView="dayGridMonth"
-                        editable={true}
-                        selectable={true}
-                        selectMirror={true}
-                        dayMaxEvents={true}
-                        select={handleDateClick}
-                        eventClick={handleEventClick}
-                        eventSet={(events) => setCurrentEvents(events)}
-                        initialEvents={[
-                            { id: "1234", title: "All day long", date: "2023-07-06" },
-                            { id: "1232", title: "All I want for christmas", date: "2023-08-26" }
-                        ]}
-                    ></FullCalendar>
-                </div>
-            </div>
-        </div>
     );
 };
 

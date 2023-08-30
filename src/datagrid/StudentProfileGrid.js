@@ -315,7 +315,8 @@ const StudentsProfileGrid = () => {
   
 
   return (
-    <div style={{ height: 500, width: '100%' }}>
+    <div className="flex flex-col h-full">
+      <div className="w-full max-w-screen-xl mx-auto px-4">
        <div className="mb-4 flex justify-end items-center">
        <Button variant="contained" color="primary" onClick={handleModalOpen}>Add Student</Button>
        <div className="ml-2">
@@ -343,6 +344,7 @@ const StudentsProfileGrid = () => {
       disableRowSelectionOnClick  
       />
       <StudentProfileModal isOpen={isModalOpen} onClose={handleModalClose} onCancel={handleModalClose} />
+    </div>
     </div>
   );
 };

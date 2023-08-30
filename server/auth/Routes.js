@@ -1,0 +1,20 @@
+// Routes.js
+const express = require('express');
+const authController = require('../controllers/authController.js');
+const authenticateMiddleware = require('../auth/authenticateMiddleware.js');
+
+const router = express.Router();
+
+// Signup route
+router.post('/signup', authController.signup);
+
+// Login route
+router.post('/login', authController.login);
+
+// Protected route
+router.get('/protected', authenticateMiddleware, (req, res) => {
+    // The authenticateMiddleware ensures only authenticated users can access this route
+    res.json({ message: 'Access granted to protected route', user: req.user });
+});
+
+module.exports = router;

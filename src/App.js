@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route} from 'react-router-dom';
 import LoginPage from './LoginPage';
 import RegistrationPage from './RegistrationPage';
 import Dashboard from './Dashboard';
@@ -20,6 +20,8 @@ import Analytics from './navbar/Analytics';
 import Logs from './navbar/Logs';
 import Settings from './navbar/Settings';
 import Logout from './navbar/Logout';
+import Sidebar from './Sidebar.js'
+
 
 
 
@@ -29,6 +31,19 @@ function App() {
       <Routes>
         <Route path="/" element={<LoginPage />} />
         <Route path="/register" element={<RegistrationPage />} />
+        <Route path="/*" element={<AppLayout />} />
+      </Routes>
+    </Router>
+  );
+}
+
+function AppLayout() {
+  return (
+    <>
+    <div className="flex">
+      <Sidebar className="w-64 flex-shrink-0"/>
+    <main className="flex-1 overflow-y-auto">
+      <Routes>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/manage-users" element={<ManageUsers />} />
         <Route path="/students-profile" element={<StudentsProfile />} />
@@ -48,7 +63,9 @@ function App() {
         <Route path="/settings" element={<Settings />} />
         <Route path="/logout" element={<Logout />} />
       </Routes>
-    </Router>
+    </main>
+    </div>
+    </>
   );
 }
 

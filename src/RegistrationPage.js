@@ -11,6 +11,7 @@ const RegistrationPage = () => {
   const isSmallScreen = useMediaQuery('(max-width:600px)');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [role, setRole] = useState('');
+  const [gender, setGender] = useState('');
 
   const handlePhoneNumberChange = (event) => {
     const formattedPhoneNumber = event.target.value.replace(/\D/g, '');
@@ -23,6 +24,10 @@ const RegistrationPage = () => {
 
   const handleRoleChange = (event) => {
     setRole(event.target.value);
+  };
+
+  const handleGender = (event) => {
+    setGender(event.target.value);
   };
 
   const [showPassword, setShowPassword] = useState(false);
@@ -123,7 +128,25 @@ const RegistrationPage = () => {
                 sx={{ width: '270px', margin: '0 15px' }}
               />
             </Grid>
-            <Grid item xs={12} sx={{ display: 'flex', justifyContent: isSmallScreen ? 'center' : 'flex-start', width: isSmallScreen ? '80%' : 'auto', margin: isSmallScreen ? '0 auto' : '0' }}>
+            <Grid item xs={12} sm={6} sx={{ display: 'flex', justifyContent: isSmallScreen ? 'center' : 'flex-start', width: isSmallScreen ? '80%' : 'auto', margin: isSmallScreen ? '0 auto' : '0' }}>
+              <Select
+                label="Gender"
+                fullWidth
+                margin="normal"
+                value={gender}
+                onChange={handleGender}
+                displayEmpty
+                inputProps={{ 'aria-label': 'Select your role' }}
+                sx={{ width: '270px', margin: '0 15px' }}
+              >
+                <MenuItem value="" disabled>
+                  Select your gender
+                </MenuItem>
+                <MenuItem value="male">Male</MenuItem>
+                <MenuItem value="female">Female</MenuItem>
+              </Select>
+            </Grid>
+            <Grid item xs={12} sm={6} sx={{ display: 'flex', justifyContent: isSmallScreen ? 'center' : 'flex-start', width: isSmallScreen ? '80%' : 'auto', margin: isSmallScreen ? '0 auto' : '0' }}>
               <Select
                 label="Role"
                 fullWidth

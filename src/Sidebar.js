@@ -1,231 +1,167 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { List, ListItem, ListItemIcon, ListItemText, Collapse, Divider } from '@mui/material';
-import { DashboardOutlined, ManageAccountsOutlined, Person2Outlined, SupervisorAccountOutlined, SpaOutlined, AssignmentIndOutlined, MedicalServicesOutlined, EventOutlined, AutoGraphOutlined, ReceiptLongOutlined, SettingsOutlined, ExitToAppOutlined, ExpandLess, ExpandMore } from '@mui/icons-material';
+import { List, ListItem, ListItemIcon, ListItemText, Collapse, Menu, MenuItem } from '@mui/material';
+import { DashboardOutlined, ManageAccountsOutlined, Person2Outlined, SupervisorAccountOutlined, AssignmentIndOutlined, MedicalServicesOutlined, EventOutlined, AutoGraphOutlined, ReceiptLongOutlined, SettingsOutlined, ExitToAppOutlined, ExpandLess, ExpandMore } from '@mui/icons-material';
+import SpaOutlinedIcon from '@mui/icons-material/SpaOutlined';
+import MenuOutlinedIcon from '@mui/icons-material/MenuOutlined';
 
 import schoolLogo from './Data/DonjuanTransparent.png';
 
-
 const Sidebar = () => {
-  const [activeSubmenu, setActiveSubmenu] = useState('');
   const location = useLocation();
+  const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  const handleSubmenuClick = (submenuName) => {
-    setActiveSubmenu((prevActiveSubmenu) =>
-    prevActiveSubmenu === submenuName ? '' : submenuName
-  );
-};
-
-  const isSubmenuOpen = (submenuName) => {
-    return activeSubmenu === submenuName;
+  const toggleSidebar = () => {
+    setSidebarCollapsed(!isSidebarCollapsed);
   };
 
   const isActive = (path) => {
-    if (activeSubmenu === 'Dengue Monitoring') {
-      return location.pathname.startsWith('/dengue-monitoring');
-    } else {
-      return location.pathname === path;
-    }
+    return location.pathname === path;
+  };
+
+  const SidebarLink = ({ to, primary, icon, isActive }) => (
+    <ListItem
+      component={Link}
+      to={to}
+      sx={{
+        backgroundColor: isActive ? '#343541' : 'transparent',
+        color: isActive ? '#FEFEFE' : 'gray-300',
+        '&:hover': { backgroundColor: '#2A2B32', borderRadius: '0.5rem', color: '#FEFEFE', justifyContent: 'center', minWidth: '2rem'},
+        borderRadius: isActive ? '0.5rem' : '0',
+        height: isSidebarCollapsed ? '2.5rem' : 'auto', // Set a fixed height for collapsed items
+        justifyContent: 'center', // Center icon vertically
+        alignItems: 'center', // Center icon horizontally
+        flexDirection: isSidebarCollapsed ? 'column' : 'row', // Adjust layout based on collapse state
+      }}
+    >
+      <ListItemIcon style={{ color: isActive || isSidebarCollapsed ? 'white' : '#E0E0E0',
+        minWidth: isSidebarCollapsed ? '1rem' : '2rem' }}>{icon}</ListItemIcon>
+      {!isSidebarCollapsed && <ListItemText primary={primary} />} 
+    </ListItem>
+  );
+
+  const SidebarSubmenu = ({ primary, icon, submenuLinks }) => {
+    const [open, setOpen] = useState(false);
+    const [menuAnchor, setMenuAnchor] = useState(null);
+
+    const handleSubmenuClick = (event) => {
+      if (isSidebarCollapsed) {
+        setMenuAnchor(event.currentTarget);
+        setOpen(!open);
+      } else {
+        setOpen(!open);
+      }
+    };
+
+    const handleMenuClose = () => {
+      setOpen(false);
+      setMenuAnchor(null); // Clear menu anchor on menu close
+    };
+
+    return (
+      <>
+        <ListItem 
+        onClick={handleSubmenuClick}
+        sx={{
+          color: isActive ? '#FEFEFE' : 'gray-300',
+          justifyContent: isSidebarCollapsed ? 'center' : undefined, // Center icon horizontally when collapsed
+          alignItems: isSidebarCollapsed ? 'center' : undefined,
+          '&:hover': { backgroundColor: '#2A2B32', borderRadius: '0.5rem', color: '#FEFEFE', justifyContent: 'center', minWidth: '2rem'}
+           // Center icon vertically when collapsed
+        }}
+        >
+        <ListItemIcon style={{ minWidth: isSidebarCollapsed ? '1rem' : '2rem', color: '#E0E0E0', justifyContent: isSidebarCollapsed ? 'center' : undefined, marginLeft: isSidebarCollapsed ? '1rem' : undefined, }}>
+          {icon}
+        </ListItemIcon>
+         {!isSidebarCollapsed && <ListItemText primary={primary}/>}
+            {open ? (
+              <ExpandLess sx={{ fontSize: isSidebarCollapsed ? '1rem' : '2rem',}} />
+            ) : (
+              <ExpandMore sx={{ fontSize: isSidebarCollapsed ? '1rem' : '2rem',}} />
+            )}
+        </ListItem>
+        {isSidebarCollapsed ? (
+        <Menu
+            anchorEl={menuAnchor}
+            open={open}
+            onClose={handleMenuClose}
+            className="ml-5"
+            anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+          >
+            {submenuLinks.map((link) => (
+              <MenuItem
+                key={link.to}
+                component={Link}
+                to={link.to}
+                onClick={handleMenuClose} // Close menu when a menu item is clicked
+              >
+                {link.primary}
+              </MenuItem>
+            ))}
+          </Menu>
+        ) : (
+        <Collapse in={open} timeout="auto" unmountOnExit>
+          <List component="div" disablePadding>
+            {submenuLinks.map((link) => (
+              <SidebarLink
+                key={link.to}
+                to={link.to}
+                primary={link.primary}
+                icon={null}
+                isActive={isActive(link.to)}
+              />
+            ))}
+          </List>
+        </Collapse>
+        )}
+      </>
+    );
   };
 
   return (
-    <div className="bg-black text-gray-300 flex flex-col w-60 p-4" style={{ minHeight: '100vh' }}>
-      <div className="flex justify-center mb-2">
-          <img src={schoolLogo} alt="School Logo" style={{ width: '100px', height: '100px' }} />
+    <div className={`bg-black text-gray-300 flex flex-col p-4 ${isSidebarCollapsed ? 'collapsed' : ''}`} style={{ width: isSidebarCollapsed ? '4rem' : '16rem', minHeight: '100vh' }}>
+    <div className="flex justify-between items-center mb-4">
+      <button onClick={toggleSidebar}>
+        <MenuOutlinedIcon />
+      </button>
       </div>
-      <div className="text-center mb-6 text-white">
-        <h5 className="text-sm font-semibold">Don Juan Dela Cruz Central Elementary School</h5>
-      </div>
-      <Divider />
-      <List className='flex-grow'>
-        <ListItem button component={Link} to="/dashboard" sx={{
-            backgroundColor: isActive('/dashboard') ? '#343541' : 'transparent',
-            color: isActive('/dashboard') ? '#FEFEFE' : 'gray-300',
-            '&:hover': { backgroundColor: '#2A2B32', borderRadius: '0.5rem', color: '#FEFEFE'},
-            borderRadius: isActive('/dashboard') ? '0.5rem' : '0',
-          }}> {/*Other option for color in hover #3A3B3D or #282828 */}
-          <ListItemIcon>
-            <DashboardOutlined style={{ color: isActive('/dashboard') ? 'white' : '#E0E0E0' }}/>
-          </ListItemIcon>
-          <ListItemText primary="Dashboard" />
-        </ListItem>
-        <ListItem button component={Link} to="/manage-users" sx={{
-            backgroundColor: isActive('/manage-users') ? '#343541' : 'transparent',
-            color: isActive('/manage-users') ? '#FEFEFE' : 'gray-300',
-            '&:hover': { backgroundColor: '#2A2B32', borderRadius: '0.5rem', color: '#FEFEFE'},
-            borderRadius: isActive('/manage-users') ? '0.5rem' : '0',
-          }}>
-          <ListItemIcon>
-            <ManageAccountsOutlined style={{ color: isActive('/manage-users') ? 'white' : '#E0E0E0' }}/>
-          </ListItemIcon>
-          <ListItemText primary="Manage Users" />
-        </ListItem>
-        <ListItem button component={Link} to="/students-profile" sx={{
-            backgroundColor: isActive('/students-profile') ? '#343541' : 'transparent',
-            color: isActive('/students-profile') ? '#FEFEFE' : 'gray-300',
-            '&:hover': { backgroundColor: '#2A2B32', borderRadius: '0.5rem', color: '#FEFEFE'},
-            borderRadius: isActive('/students/profile') ? '0.5rem' : '0',
-          }}>
-          <ListItemIcon>
-            <Person2Outlined style={{ color: isActive('/students-profile') ? 'white' : '#E0E0E0' }} />
-          </ListItemIcon>
-          <ListItemText primary="Students Profile" />
-        </ListItem>
-        <ListItem button component={Link} to="/faculty-profile" sx={{
-            backgroundColor: isActive('/faculty-profile') ? '#343541' : 'transparent',
-            color: isActive('/faculty-profile') ? '#FEFEFE' : 'gray-300',
-            '&:hover': { backgroundColor: '#2A2B32', borderRadius: '0.5rem', color: '#FEFEFE'},
-            borderRadius: isActive('/faculty-profile') ? '0.5rem' : '0',
-          }}>
-          <ListItemIcon>
-            <SupervisorAccountOutlined style={{ color: isActive('/faculty-profile') ? 'white' : '#E0E0E0' }} />
-          </ListItemIcon>
-          <ListItemText primary="Faculty Profile" />
-        </ListItem>
-        <ListItem button onClick={() => handleSubmenuClick('clinicProgram')} sx={{
-            backgroundColor: isActive('/clinic-programs') ? '#343541' : 'transparent',
-            color: isActive('/clinic-programs') ? '#FEFEFE' : 'gray-300',
-            '&:hover': { backgroundColor: '#2A2B32', borderRadius: '0.5rem', color: '#FEFEFE'},
-            borderRadius: isActive('/clinic-programs') ? '0.5rem' : '0',
-          }}>
-          <ListItemIcon>
-            <SpaOutlined style={{ color: isActive('/clinic-programs') ? 'white' : '#E0E0E0' }}/>
-          </ListItemIcon>
-          <ListItemText primary="Clinic Programs"/>
-          {activeSubmenu === 'clinicProgram' ? <ExpandLess /> : <ExpandMore />}
-        </ListItem>
-        <Collapse in={isSubmenuOpen('clinicProgram')} timeout="auto" unmountOnExit>
-          <List component="div" disablePadding>
-            <ListItem button component={Link} to="/dengue-monitoring" className="pl-8" sx={{
-            backgroundColor: isActive('/dengue-monitoring') ? '#343541' : 'transparent',
-            color: isActive('/dengue-monitoring') ? '#FEFEFE' : 'gray-300',
-            '&:hover': { backgroundColor: '#2A2B32', borderRadius: '0.5rem', color: '#FEFEFE'},
-            borderRadius: isActive('/dengue-monitoring') ? '0.5rem' : '0',
-          }}>
-              <ListItemText primary="Dengue Monitoring" />
-            </ListItem>
-            <ListItem button component={Link} to="/immunization" className="pl-8" sx={{
-            backgroundColor: isActive('/immunization') ? '#343541' : 'transparent',
-            color: isActive('/immunization') ? '#FEFEFE' : 'gray-300',
-            '&:hover': { backgroundColor: '#2A2B32', borderRadius: '0.5rem', color: '#FEFEFE'},
-            borderRadius: isActive('/immunization') ? '0.5rem' : '0',
-          }}>
-              <ListItemText primary="Immunization" />
-            </ListItem>
-            <ListItem button component={Link} to="/medical-checkup" className="pl-8" sx={{
-            backgroundColor: isActive('/medical-checkup') ? '#343541' : 'transparent',
-            color: isActive('/medical-checkup') ? '#FEFEFE' : 'gray-300',
-            '&:hover': { backgroundColor: '#2A2B32', borderRadius: '0.5rem', color: '#FEFEFE'},
-            borderRadius: isActive('/medical-checkup') ? '0.5rem' : '0',
-          }}>
-              <ListItemText primary="Medical Checkup" />
-            </ListItem>
-            <ListItem button component={Link} to="/faculty-checkup" className="pl-8" sx={{
-            backgroundColor: isActive('/faculty-checkup') ? '#343541' : 'transparent',
-            color: isActive('/faculty-checkup') ? '#FEFEFE' : 'gray-300',
-            '&:hover': { backgroundColor: '#2A2B32', borderRadius: '0.5rem', color: '#FEFEFE'},
-            borderRadius: isActive('/faculty-checkup') ? '0.5rem' : '0',
-          }}>
-              <ListItemText primary="Faculty Checkup" />
-            </ListItem>
-            <ListItem button component={Link} to="/deworming-monitoring" className="pl-8" sx={{
-            backgroundColor: isActive('/deworming-monitoring') ? '#343541' : 'transparent',
-            color: isActive('/deworming-monitoring') ? '#FEFEFE' : 'gray-300',
-            '&:hover': { backgroundColor: '#2A2B32', borderRadius: '0.5rem', color: '#FEFEFE'},
-            borderRadius: isActive('/deworming-monitoring') ? '0.5rem' : '0',
-          }}>
-              <ListItemText primary="Deworming Monitoring" />
-            </ListItem>
-            <ListItem button component={Link} to="/feeding-program" className="pl-8" sx={{
-            backgroundColor: isActive('/feeding-program') ? '#343541' : 'transparent',
-            color: isActive('/feeding-program') ? '#FEFEFE' : 'gray-300',
-            '&:hover': { backgroundColor: '#2A2B32', borderRadius: '0.5rem', color: '#FEFEFE'},
-            borderRadius: isActive('/feeding-program') ? '0.5rem' : '0',
-          }}>
-              <ListItemText primary="Feeding Program" />
-            </ListItem>
-          </List>
-        </Collapse>
-        <ListItem button component={Link} to="/clinic-records"sx={{
-            backgroundColor: isActive('/clinic-records') ? '#343541' : 'transparent',
-            color: isActive('/clinic-records') ? '#FEFEFE' : 'gray-300',
-            '&:hover': { backgroundColor: '#2A2B32', borderRadius: '0.5rem', color: '#FEFEFE'},
-            borderRadius: isActive('/clinic-records') ? '0.5rem' : '0',
-          }}>
-          <ListItemIcon>
-            <AssignmentIndOutlined style={{ color: isActive('/clinic-records') ? 'white' : '#E0E0E0' }} />
-          </ListItemIcon>
-          <ListItemText primary="Clinic Records" />
-        </ListItem>
-        <ListItem button component={Link} to="/medicine-inventory" sx={{
-            backgroundColor: isActive('/medicine-inventory') ? '#343541' : 'transparent',
-            color: isActive('/medicine-inventory') ? '#FEFEFE' : 'gray-300',
-            '&:hover': { backgroundColor: '#2A2B32', borderRadius: '0.5rem', color: '#FEFEFE'},
-            borderRadius: isActive('/medicine-inventory') ? '0.5rem' : '0',
-          }}>
-          <ListItemIcon>
-            <MedicalServicesOutlined style={{ color: isActive('/medicine-inventory') ? 'white' : '#E0E0E0' }}/>
-          </ListItemIcon>
-          <ListItemText primary="Medicine Inventory" />
-        </ListItem>
-        <ListItem button component={Link} to="/events" sx={{
-            backgroundColor: isActive('/events') ? '#343541' : 'transparent',
-            color: isActive('/events') ? '#FEFEFE' : 'gray-300',
-            '&:hover': { backgroundColor: '#2A2B32', borderRadius: '0.5rem', color: '#FEFEFE'},
-            borderRadius: isActive('/events') ? '0.5rem' : '0',
-          }}>
-          <ListItemIcon>
-            <EventOutlined style={{ color: isActive('/events') ? 'white' : '#E0E0E0' }}/>
-          </ListItemIcon>
-          <ListItemText primary="Events" />
-        </ListItem>
-        <ListItem button component={Link} to="/analytics" sx={{
-            backgroundColor: isActive('/analytics') ? '#343541' : 'transparent',
-            color: isActive('/analytics') ? '#FEFEFE' : 'gray-300',
-            '&:hover': { backgroundColor: '#2A2B32', borderRadius: '0.5rem', color: '#FEFEFE'},
-            borderRadius: isActive('/analytics') ? '0.5rem' : '0',
-          }}>
-          <ListItemIcon>
-            <AutoGraphOutlined style={{ color: isActive('/analytics') ? 'white' : '#E0E0E0' }}/>
-          </ListItemIcon>
-          <ListItemText primary="Analytics" />
-        </ListItem>
-        <ListItem button component={Link} to="/logs" sx={{
-            backgroundColor: isActive('/logs') ? '#343541' : 'transparent',
-            color: isActive('/logs') ? '#FEFEFE' : 'gray-300',
-            '&:hover': { backgroundColor: '#2A2B32', borderRadius: '0.5rem', color: '#FEFEFE'},
-            borderRadius: isActive('/logs') ? '0.5rem' : '0',
-          }}>
-          <ListItemIcon>
-            <ReceiptLongOutlined style={{ color: isActive('/logs') ? 'white' : '#E0E0E0' }}/>
-          </ListItemIcon>
-          <ListItemText primary="Logs" />
-        </ListItem>
-      </List>
-      <Divider />
-      <List>
-        <ListItem button component={Link} to="/settings" sx={{
-            backgroundColor: isActive('/settings') ? '#343541' : 'transparent',
-            color: isActive('/settings') ? '#FEFEFE' : 'gray-300',
-            '&:hover': { backgroundColor: '#2A2B32', borderRadius: '0.5rem', color: '#FEFEFE'},
-            borderRadius: isActive('/settings') ? '0.5rem' : '0',
-          }}>
-          <ListItemIcon>
-            <SettingsOutlined style={{ color: isActive('/settings') ? 'white' : '#E0E0E0' }}/>
-          </ListItemIcon>
-          <ListItemText primary="Settings" />
-        </ListItem>
-        <ListItem button component={Link} to="/logout" sx={{
-            backgroundColor: isActive('/logout') ? '#343541' : 'transparent',
-            color: isActive('/logout') ? '#FEFEFE' : 'gray-300',
-            '&:hover': { backgroundColor: '#2A2B32', borderRadius: '0.5rem', color: '#FEFEFE'},
-            borderRadius: isActive('/logout') ? '0.5rem' : '0',
-          }}>
-          <ListItemIcon>
-            <ExitToAppOutlined style={{ color: isActive('/logout') ? 'white' : '#E0E0E0' }}/>
-          </ListItemIcon>
-          <ListItemText primary="Logout" />
-        </ListItem>
+  {!isSidebarCollapsed && (
+    <>
+    <div className="flex justify-center mb-2">
+      <img src={schoolLogo} alt="School Logo" style={{ width: '100px', height: '100px' }} />
+    </div>
+    <div className="text-center mb-6 text-white">
+      <h5 className="text-sm font-semibold">Don Juan Dela Cruz Central Elementary School</h5>
+    </div>
+    </>
+    )}
+    <List>
+        <SidebarLink to="/dashboard" primary="Dashboard" isActive={isActive('/dashboard')} icon={<DashboardOutlined />}/>
+        <SidebarLink to="/manage-users" primary="Manage Users" isActive={isActive('/manage-users')} icon={<ManageAccountsOutlined />}/>
+        <SidebarLink to="/students-profile" primary="Student Profile" isActive={isActive('/students-profile')} icon={<Person2Outlined />}/>
+        <SidebarLink to="/faculty-profile" primary="Faculty Profile" isActive={isActive('/faculty-profile')} icon={<SupervisorAccountOutlined />}/>
+        <SidebarSubmenu
+          primary="Clinic Programs"
+          icon={<SpaOutlinedIcon />}
+          submenuName="clinicProgram"
+          isActive={isActive}
+          submenuLinks={[
+            { to: '/dengue-monitoring', primary: 'Dengue Monitoring' },
+            { to: '/immunization', primary: 'Immunization' },
+            { to: '/medical-checkup', primary: 'Medical Checkup' },
+            { to: '/faculty-checkup', primary: 'Faculty Checkup' },
+            { to: '/deworming-monitoring', primary: 'Deworming Monitoring' },
+            { to: '/feeding-program', primary: 'Feeding Program' },
+          ]}
+        />
+        <SidebarLink to="/clinic-records" primary="Clinic Records" isActive={isActive('/clinic-records')} icon={<AssignmentIndOutlined />}/>
+        <SidebarLink to="/medicine-inventory" primary="Medicine Inventory" isActive={isActive('/medicine-inventory')} icon={<MedicalServicesOutlined />}/>
+        <SidebarLink to="/events" primary="Events" isActive={isActive('/events')} icon={<EventOutlined />}/>
+        <SidebarLink to="/analytics" primary="Analytics" isActive={isActive('/analytics')} icon={<AutoGraphOutlined />}/>
+        <SidebarLink to="/logs" primary="Logs" isActive={isActive('/logs')} icon={<ReceiptLongOutlined />}/>
+        <SidebarLink to="/settings" primary="Settings" isActive={isActive('/settings')} icon={<SettingsOutlined />}/>
+        <SidebarLink to="/logout" primary="Logout" isActive={isActive('/logout')} icon={<ExitToAppOutlined />}/>
       </List>
     </div>
   );

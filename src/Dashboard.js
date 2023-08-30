@@ -1,10 +1,7 @@
 import React from 'react';
-import Sidebar from './Sidebar';
 import BarGraphDashboard from './graphs/BarGraphDashboard.js';
 import { Card, CardContent, Typography, Grid, CardActionArea} from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-
-
 import numberOfUser from './Data/numberOfUser.png';
 import numberOfStudents from './Data/numberOfStudents.png';
 import clinicPatients from './Data/clinicPatients.png';
@@ -32,14 +29,13 @@ const Dashboard = () => {
 
   return (
     <div className="flex">
-    <div className="flex h-full">
-      {/* Sidebar */}
-      <Sidebar />
-      </div>
-      {/* Main Content Area */}
       <div className="bg-black h-64 w-full mb-4">
       <div className="flex-grow p-4">
-        <h1 className="text-5xl font-bold text-white pt-4" >Welcome Jeremiah!</h1>
+      <Typography variant="h3" sx={{ 
+        fontSize: { xs: '2rem', sm: '2rem', md: '3rem' }, 
+        fontWeight: 'bold', color: 'white', pt: { xs: 2, md: 4 } }}>
+              Welcome Jeremiah!
+      </Typography>
         </div>
         <Grid  className="pt-14 pr-4 pl-4" container spacing={3}>
           <Grid item xs={12} sm={6} md={4} lg={3}>
@@ -51,6 +47,7 @@ const Dashboard = () => {
                 src={numberOfUser}
                 alt="Icon"
                 className="h-16 w-16"
+                display = "inline-block"
               />
               <div className="ml-10 flex flex-col justify-center">
                 <Typography variant="h3" component="div">
@@ -161,9 +158,14 @@ const Dashboard = () => {
               <img
                   src={graphImage}
                   alt="Icon"
-                  className="w-16 h-16 ml-2 inline-block"
+                  className="w-16 h-16 inline-block"
                 />
-            <Typography variant="h6" component="div">
+            <Typography variant="h1" sx={{ 
+              fontSize: { xs: '1rem', sm: '2rem', md: '2rem' }, 
+              fontWeight: 'bold', 
+              textAlign: 'center',  
+              whiteSpace: 'pre-line'}}
+              >
             &nbsp;&nbsp; Clinic Patients For School Year 2022-2023
             </Typography>
             </div>

@@ -219,11 +219,11 @@ const UserGrid = () => {
   ];
 
   const columns = [
-    { field: 'user_id', headerName: 'UserID', width: 100 },
-    { field: 'name', headerName: 'Name', width: 200 },
-    { field: 'email', headerName: 'Email', width: 250 },
+    { field: 'user_id', headerName: 'UserID', width: 100},
+    { field: 'name', headerName: 'Name', width: 200},
+    { field: 'email', headerName: 'Email', width: 250},
     { field: 'mobile', headerName: 'Mobile Number', width: 150},
-    { field: 'role', headerName: 'Role', width: 150 },
+    { field: 'role', headerName: 'Role', width: 150},
     {
       
       field: 'status',
@@ -292,7 +292,8 @@ const UserGrid = () => {
   
 
   return (
-    <div style={{ height: 500, width: '100%' }}>
+    <div className="flex flex-col h-full">
+      <div className="w-full max-w-screen-xl mx-auto px-4">
        <div className="mb-4 flex justify-end items-center">
        <Button variant="contained" color="primary" onClick={handleModalOpen}>New User</Button>
        <div className="ml-2">
@@ -320,6 +321,7 @@ const UserGrid = () => {
       disableRowSelectionOnClick  
       />
       <ManageUserModal isOpen={isModalOpen} onClose={handleModalClose} onCancel={handleModalClose} />
+    </div>
     </div>
   );
 };
