@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { DataGrid } from '@mui/x-data-grid';
+import { DataGrid, GridToolbarExport, GridToolbarContainer } from '@mui/x-data-grid';
 import IconButton from '@mui/material/IconButton';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
@@ -69,6 +69,14 @@ const ClinicRecordsGrid = () => {
     console.log(`Delete user with ID: ${recordId}`);
   };
 
+  function CustomToolbar() {
+    return (
+      <GridToolbarContainer>
+        <GridToolbarExport />
+      </GridToolbarContainer>
+    );
+  }
+
   const filteredUsers = record.filter(user => 
     user.clRc_id.toString().includes(searchValue) ||
     user.stud_lrn.toString().includes(searchValue) ||
@@ -101,6 +109,8 @@ const ClinicRecordsGrid = () => {
       <DataGrid 
       rows={filteredUsers}
       columns={columns}
+      slots={{
+        toolbar: CustomToolbar}}
       initialState={{
         pagination: {
           paginationModel: {

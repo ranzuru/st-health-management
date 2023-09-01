@@ -3,7 +3,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User.js');
 
-exports.signup = async (req, res) => {
+exports.register = async (req, res) => {
     try {
         // Extract user data from the request body
         const { firstName, lastName, phoneNumber, email, password, gender, role } = req.body;
@@ -25,7 +25,7 @@ exports.signup = async (req, res) => {
 
         res.status(201).json({ message: 'User registered successfully' });
     } catch (error) {
-        console.error('Signup error:', error);
+        console.error('Register error:', error);
         res.status(500).json({ error: 'An error occurred' });
     }
 };

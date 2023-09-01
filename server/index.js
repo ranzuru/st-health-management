@@ -3,6 +3,7 @@ const dotenv = require('dotenv');
 const authenticateMiddleware = require('./auth/authenticateMiddleware.js');
 const authRoutes = require('./auth/Routes.js');
 const connectDB = require('./mongodb/Connect.js');
+const cors = require('cors')
 
 
 dotenv.config();
@@ -10,10 +11,11 @@ dotenv.config();
 const app = express();
 app.use(express.json({ limit: '50mb' }));
 
+app.use(cors());
+
 app.get('/', (req, res) => {
   res.send('Hello World!');
 });
-
 
 // Use the authentication routes with a prefix, for example: /auth/signup, /auth/login, etc.
 app.use('/auth', authRoutes);

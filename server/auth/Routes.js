@@ -6,7 +6,7 @@ const authenticateMiddleware = require('../auth/authenticateMiddleware.js');
 const router = express.Router();
 
 // Signup route
-router.post('/signup', authController.signup);
+router.post('/register', authController.register);
 
 // Login route
 router.post('/login', authController.login);

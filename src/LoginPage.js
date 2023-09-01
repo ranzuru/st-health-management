@@ -4,7 +4,7 @@ import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { Link } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 import { useMediaQuery } from '@mui/material';
-
+import axios from 'axios';
 
 import schoolLogo from './Data/DonjuanTransparent.png';
 import clinicLogo from './Data/medical.png';
@@ -20,17 +20,30 @@ const LoginPage = () => {
     setShowPassword((prevShowPassword) => !prevShowPassword);
   };
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
+    try {
+      const response = await axios.post('http://localhost:8080/auth/login', {
+        email: email,
+        password: password,
+      });
 
-    if (email === 'admin@example.com' && password === '1234') {
-      setTimeout(() => {
+      if (response.data.token) {
+        const token = response.data.token;
+
+        // Store the token securely (e.g., in a cookie or local storage)
+        localStorage.setItem('authToken', token);
+
+        // Successful login, navigate to dashboard or other protected page
         navigate('/dashboard');
-      }, 2000);
-    }else{
+      } else {
+        setShowWarning(true);
+      }
+    } catch (error) {
+      console.error('Error during login:', error);
       setShowWarning(true);
     }
   };
-
+  
   const handleCloseWarning = () => {
     setShowWarning(false);
   };

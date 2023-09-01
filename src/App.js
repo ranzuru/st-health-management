@@ -23,8 +23,6 @@ import Logout from './navbar/Logout';
 import Sidebar from './Sidebar.js'
 
 
-
-
 function App() {
   return (
     <Router>
