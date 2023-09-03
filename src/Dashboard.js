@@ -27,6 +27,7 @@ const Dashboard = () => {
       navigate('/feeding-program');
     };
 
+
   return (
     <div className="flex">
       <div className="bg-black h-64 w-full mb-4">
@@ -34,7 +35,7 @@ const Dashboard = () => {
       <Typography variant="h3" sx={{ 
         fontSize: { xs: '2rem', sm: '2rem', md: '3rem' }, 
         fontWeight: 'bold', color: 'white', pt: { xs: 2, md: 4 } }}>
-              Welcome Jeremiah!
+              Welcome Ka!
       </Typography>
         </div>
         <Grid  className="pt-14 pr-4 pl-4" container spacing={3}>

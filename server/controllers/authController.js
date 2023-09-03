@@ -37,8 +37,23 @@ exports.login = async (req, res) => {
         // Find the user by email
         const user = await User.findOne({ email });
 
-        // Check if user exists and password is valid
-        if (!user || !(await bcrypt.compare(password, user.password))) {
+        // Check if user exists
+        if (!user) {
+            return res.status(401).json({ error: 'User not found' });
+        }
+
+        // Check if the user is active
+        if (user.status !== 'Active') {
+            return res.status(401).json({ error: 'User is not active' });
+        }
+
+        // Check if the user is approved
+        if (!user.approved) {
+            return res.status(401).json({ error: 'User not approved' });
+        }
+
+        // Check if the password is valid
+        if (!(await bcrypt.compare(password, user.password))) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 

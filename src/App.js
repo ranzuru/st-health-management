@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route} from 'react-router-dom';
 import LoginPage from './LoginPage';
 import RegistrationPage from './RegistrationPage';
 import Dashboard from './Dashboard';
+import UserApproval from './navbar/UserApproval';
 import ManageUsers from './navbar/ManageUsers';
 import StudentsProfile from './navbar/StudentsProfile';
 import FacultyProfile from './navbar/FacultyProfile';
@@ -19,7 +20,6 @@ import Events from './navbar/Events';
 import Analytics from './navbar/Analytics';
 import Logs from './navbar/Logs';
 import Settings from './navbar/Settings';
-import Logout from './navbar/Logout';
 import Sidebar from './Sidebar.js'
 
 
@@ -43,7 +43,8 @@ function AppLayout() {
     <main className="flex-1 overflow-y-auto">
       <Routes>
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/manage-users" element={<ManageUsers />} />
+        <Route path="/manage-users" element={<ManageUsers />} /> 
+        <Route path="/user-approval" element={<UserApproval />} />
         <Route path="/students-profile" element={<StudentsProfile />} />
         <Route path="/faculty-profile" element={<FacultyProfile />} />
         <Route path="/clinic-programs" element={<ClinicPrograms />} />
@@ -59,7 +60,6 @@ function AppLayout() {
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/logs" element={<Logs />} />
         <Route path="/settings" element={<Settings />} />
-        <Route path="/logout" element={<Logout />} />
       </Routes>
     </main>
     </div>

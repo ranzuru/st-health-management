@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { DataGrid } from '@mui/x-data-grid';
 import IconButton from '@mui/material/IconButton';
 import EditIcon from '@mui/icons-material/Edit';
@@ -7,49 +7,85 @@ import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 import ManageUserModal from '../modal/ManageUserModal.js'
 
-const UserGrid = () => {
+const UserApprovalGrid = () => {
 
   const [searchValue, setSearchValue] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [users, setUsers] = useState([]);
   
   const handleSearchChange = (event) => {
     setSearchValue(event.target.value);
   };
 
-  useEffect(() => {
-    // Fetch user data from your server when the component mounts
-    const fetchData = async () => {
-      try {
-        const response = await fetch('http://localhost:8080/users/userFetch');
-        if (response.ok) {
-          const data = await response.json();
-          // Map the data to include an 'id' property
-          const formattedData = data.map((user) => ({
-        ...user,
-        id: user.user_id,
-      }));
-      setUsers(formattedData); // Update the users state with the formatted data
-        } else {
-          console.error('Error fetching user data:', response.statusText);
-        }
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-      }
-    };
+  const users = [
+    {
+    _id: 1,
+    user_id: 'U101',
+    name: 'John Doe',
+    email: 'john@example.com',
+    mobile: '123-456-7890',
+    role: 'Admin',
+    status: 'Active',
+    },
+    {
+    _id: 2,
+    user_id: 'U102',
+    name: 'Jane Smith',
+    email: 'jane@example.com',
+    mobile: '987-654-3210',
+    role: 'User',
+    status: 'Inactive',
+    },
+     
+   {
+    _id: 3,
+    user_id: 'U103',
+    name: 'Michael Johnson',
+    email: 'michael@example.com',
+    mobile: '555-123-4567',
+    role: 'User',
+    status: 'Active',
+    },
 
-    fetchData();
-  }, []); // The empty dependency array ensures the effect runs only once
+    {
+    _id: 4,
+    user_id: 'U104',
+    name: 'Emily Williams',
+    email: 'emily@example.com',
+    mobile: '777-555-8888',
+    role: 'Admin',
+    status: 'Active',
+    },
+
+    {
+    _id: 5,
+    user_id: 'U105',
+    name: 'Daniel Brown',
+    email: 'daniel@example.com',
+    mobile: '444-222-1111',
+    role: 'User',
+    status: 'Inactive',
+    },
+
+    {
+      _id: 6,
+      user_id: 'U106',
+      name: 'Sophia Miller',
+      email: 'sophia@example.com',
+      mobile: '999-888-7777',
+      role: 'Admin',
+      status: 'Active'
+    },
+    // ... more user data
+  ];
 
   const columns = [
     { field: '_id', headerName: 'UserID', width: 100},
     { field: 'name', headerName: 'Name', width: 200},
-    { field: 'phoneNumber', headerName: 'Mobile Number', width: 150},
     { field: 'email', headerName: 'Email', width: 250},
-    { field: 'gender', headerName: 'Gender', width: 150},
+    { field: 'mobile', headerName: 'Mobile Number', width: 150},
     { field: 'role', headerName: 'Role', width: 150},
-    { field: 'createdAt', headerName: 'Date Created', width: 250},
     {
+      
       field: 'status',
       headerName: 'Status',
       width: 150,
@@ -74,10 +110,10 @@ const UserGrid = () => {
       width: 150,
       renderCell: (params) => (
         <div>
-        <IconButton onClick={() => handleAction(params.row._id)}>
+        <IconButton onClick={() => handleAction(params.row.id)}>
             <EditIcon />
           </IconButton>
-          <IconButton onClick={() => handleDelete(params.row._id)}>
+          <IconButton onClick={() => handleDelete(params.row.id)}>
             <DeleteOutlineIcon />
           </IconButton>
         </div>
@@ -85,33 +121,24 @@ const UserGrid = () => {
     },
   ];
 
-  const handleAction = (_id) => {
+  const handleAction = (userId) => {
     // Implement your action logic here
-    console.log(`Edit user with ID: ${_id}`);
+    console.log(`Edit user with ID: ${userId}`);
   };
 
-  const handleDelete = (_id) => {
+  const handleDelete = (userId) => {
     // Implement your delete logic here
-    console.log(`Delete user with ID: ${_id}`);
+    console.log(`Delete user with ID: ${userId}`);
   };
 
-  const filteredUsers = users.filter((user) => {
-    const userId = user._id || '';
-    const name = (user.firstName || '') + ' ' + (user.lastName || '');
-    const email = user.email || '';
-    const mobile = user.phoneNumber || '';
-    const role = user.role || '';
-    const status = user.status || '';
-  
-    return (
-      userId.toString().includes(searchValue) ||
-      name.toLowerCase().includes(searchValue.toLowerCase()) ||
-      email.toLowerCase().includes(searchValue.toLowerCase()) ||
-      mobile.includes(searchValue) ||
-      role.toLowerCase().includes(searchValue.toLowerCase()) ||
-      status.toLowerCase().includes(searchValue.toLowerCase())
-    );
-  });
+  const filteredUsers = users.filter(user => 
+    user.user_id.toString().includes(searchValue) ||
+    user.name.toLowerCase().includes(searchValue.toLowerCase()) ||
+    user.email.toLowerCase().includes(searchValue.toLowerCase()) ||
+    user.mobile.includes(searchValue) ||
+    user.role.toLowerCase().includes(searchValue.toLowerCase()) ||
+    user.status.toLowerCase().includes(searchValue.toLowerCase())
+  );
 
   const handleModalOpen = () => {
     console.log('Opening modal');
@@ -122,6 +149,7 @@ const UserGrid = () => {
     console.log('Closing modal');
     setIsModalOpen(false);
   };
+  
 
   return (
     <div className="flex flex-col h-full">
@@ -150,8 +178,7 @@ const UserGrid = () => {
       }}
       pageSizeOptions={[10]}
       checkboxSelection
-      disableRowSelectionOnClick
-      getRowId={(row) => row._id}  
+      disableRowSelectionOnClick  
       />
       <ManageUserModal isOpen={isModalOpen} onClose={handleModalClose} onCancel={handleModalClose} />
     </div>
@@ -159,4 +186,4 @@ const UserGrid = () => {
   );
 };
 
-export default UserGrid;
+export default UserApprovalGrid;
