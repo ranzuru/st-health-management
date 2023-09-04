@@ -53,6 +53,23 @@ router.post('/login', async (req, res) => {
     }
 });
 
+router.get('/logout', (req, res) => {
+    try {
+    // Destroy the session (if using sessions)
+    req.session.destroy();
+  
+    // Clear any authentication tokens or cookies
+    // Example with cookies
+    localStorage.removeItem('authToken');
+  
+    // Send a response indicating successful logout
+    res.json({ message: 'Logged out successfully' });
+
+    } catch (error) {
+        res.status(500).json({ error: 'An error occurred' });
+    }
+  });
+
 // Protected route
 router.get('/protected', authenticateMiddleware, (req, res) => {
     // The middleware verifies the token and attaches user data to req.userData

@@ -3,6 +3,7 @@ const dotenv = require('dotenv');
 const authenticateMiddleware = require('./auth/authenticateMiddleware.js');
 const authRoutes = require('./auth/Routes.js');
 const connectDB = require('./mongodb/Connect.js');
+
 const cors = require('cors')
 
 
@@ -17,8 +18,13 @@ app.get('/', (req, res) => {
   res.send('Hello World!');
 });
 
+// Import and use the userRoutes with a prefix
+const userRoutes = require('./routes/users/manageUsers.js');
+app.use('/users', userRoutes);
+
 // Use the authentication routes with a prefix, for example: /auth/signup, /auth/login, etc.
 app.use('/auth', authRoutes);
+
 
 app.get('/protected', authenticateMiddleware, (req, res) => {
     // The middleware verifies the token and attaches user data to req.userData

@@ -14,7 +14,7 @@ const ManageUsers = () => {
         </Typography>
         </div>
 
-        <div className="flex flex-col items-center justify-center h-full p-4 overflow-y-auto">
+        <div className="flex flex-col items-center justify-center h-full p-4">
           <div className="flex items-center justify-center w-full">
             <ManageUserGrid />
           </div>

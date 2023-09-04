@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { List, ListItem, ListItemIcon, ListItemText, Collapse, Menu, MenuItem } from '@mui/material';
-import { DashboardOutlined, ManageAccountsOutlined, Person2Outlined, SupervisorAccountOutlined, AssignmentIndOutlined, MedicalServicesOutlined, EventOutlined, AutoGraphOutlined, ReceiptLongOutlined, SettingsOutlined, ExitToAppOutlined, ExpandLess, ExpandMore } from '@mui/icons-material';
+import { DashboardOutlined, ManageAccountsOutlined, Person2Outlined, SupervisorAccountOutlined, AssignmentIndOutlined, MedicalServicesOutlined, EventOutlined, AutoGraphOutlined, ReceiptLongOutlined, SettingsOutlined, ExpandLess, ExpandMore, ExitToAppOutlined  } from '@mui/icons-material';
 import SpaOutlinedIcon from '@mui/icons-material/SpaOutlined';
 import MenuOutlinedIcon from '@mui/icons-material/MenuOutlined';
 
@@ -10,19 +10,48 @@ import schoolLogo from './Data/DonjuanTransparent.png';
 const Sidebar = () => {
   const location = useLocation();
   const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const navigate = useNavigate(); 
 
   const toggleSidebar = () => {
     setSidebarCollapsed(!isSidebarCollapsed);
+  };
+
+  const handleLogout = async () => {
+    console.log('Logout clicked')
+    try {
+
+      localStorage.removeItem('authToken');
+      
+      // Send a request to the logout route on your server
+      const response = await fetch('auth/logout', {
+        method: 'GET',
+        credentials: 'include', // Include credentials (cookies)
+      });
+
+      if (response.ok) {
+        // Logout was successful
+        console.log('Logged out successfully');
+
+        // Redirect to the login page after logout
+        navigate('/'); // Replace '/login' with your login route
+      } else {
+        // Handle error cases
+        console.error('Logout failed. Response status:', response.status);
+      }
+    } catch (error) {
+      console.error('An error occurred:', error);
+    }
   };
 
   const isActive = (path) => {
     return location.pathname === path;
   };
 
-  const SidebarLink = ({ to, primary, icon, isActive }) => (
+  const SidebarLink = ({ to, primary, icon, isActive, onClick }) => (
     <ListItem
       component={Link}
       to={to}
+      onClick={onClick}
       sx={{
         backgroundColor: isActive ? '#343541' : 'transparent',
         color: isActive ? '#FEFEFE' : 'gray-300',
@@ -136,9 +165,19 @@ const Sidebar = () => {
     </div>
     </>
     )}
+    
     <List>
         <SidebarLink to="/dashboard" primary="Dashboard" isActive={isActive('/dashboard')} icon={<DashboardOutlined />}/>
-        <SidebarLink to="/manage-users" primary="Manage Users" isActive={isActive('/manage-users')} icon={<ManageAccountsOutlined />}/>
+        <SidebarSubmenu
+          primary="Users"
+          icon={<ManageAccountsOutlined />}
+          submenuName="users"
+          isActive={isActive}
+          submenuLinks={[
+            { to: '/user-approval', primary: 'User Approval' },
+            { to: '/manage-users', primary: 'Manage User' },
+          ]}
+        />
         <SidebarLink to="/students-profile" primary="Student Profile" isActive={isActive('/students-profile')} icon={<Person2Outlined />}/>
         <SidebarLink to="/faculty-profile" primary="Faculty Profile" isActive={isActive('/faculty-profile')} icon={<SupervisorAccountOutlined />}/>
         <SidebarSubmenu
@@ -161,7 +200,7 @@ const Sidebar = () => {
         <SidebarLink to="/analytics" primary="Analytics" isActive={isActive('/analytics')} icon={<AutoGraphOutlined />}/>
         <SidebarLink to="/logs" primary="Logs" isActive={isActive('/logs')} icon={<ReceiptLongOutlined />}/>
         <SidebarLink to="/settings" primary="Settings" isActive={isActive('/settings')} icon={<SettingsOutlined />}/>
-        <SidebarLink to="/logout" primary="Logout" isActive={isActive('/logout')} icon={<ExitToAppOutlined />}/>
+        <SidebarLink to="/" primary="Logout" isActive={isActive(false)} icon={<ExitToAppOutlined />} onClick= {handleLogout}/>
       </List>
     </div>
   );
