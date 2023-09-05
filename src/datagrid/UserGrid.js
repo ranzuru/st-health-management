@@ -5,7 +5,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
-import ManageUserModal from '../modal/ManageUserModal.js'
+import ManageUserModal from '../modal/ManageUserPop.js'
 
 const UserGrid = () => {
 
@@ -15,6 +15,14 @@ const UserGrid = () => {
   
   const handleSearchChange = (event) => {
     setSearchValue(event.target.value);
+  };
+
+  const formatYearFromDate = (dateString) => {
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0'); // Add leading zero if needed
+    const day = String(date.getDate()).padStart(2, '0'); // Add leading zero if needed
+    return `${year}-${month}-${day}`;
   };
 
   useEffect(() => {
@@ -48,7 +56,12 @@ const UserGrid = () => {
     { field: 'email', headerName: 'Email', width: 250},
     { field: 'gender', headerName: 'Gender', width: 150},
     { field: 'role', headerName: 'Role', width: 150},
-    { field: 'createdAt', headerName: 'Date Created', width: 250},
+    { 
+    field: 'createdAt', 
+    headerName: 'Date Created', 
+    width: 150,
+    valueGetter: (params) => formatYearFromDate(params.row.createdAt),
+    },
     {
       field: 'status',
       headerName: 'Status',
@@ -103,15 +116,17 @@ const UserGrid = () => {
     const role = user.role || '';
     const status = user.status || '';
   
-    return (
-      userId.toString().includes(searchValue) ||
-      name.toLowerCase().includes(searchValue.toLowerCase()) ||
-      email.toLowerCase().includes(searchValue.toLowerCase()) ||
-      mobile.includes(searchValue) ||
-      role.toLowerCase().includes(searchValue.toLowerCase()) ||
-      status.toLowerCase().includes(searchValue.toLowerCase())
-    );
-  });
+    const isApproved = user.approved === true;
+
+  return (
+    (isApproved && userId.toString().includes(searchValue)) ||
+    (isApproved && name.toLowerCase().includes(searchValue.toLowerCase())) ||
+    (isApproved && email.toLowerCase().includes(searchValue.toLowerCase())) ||
+    (isApproved && mobile.includes(searchValue)) ||
+    (isApproved && role.toLowerCase().includes(searchValue.toLowerCase())) ||
+    (isApproved && status.toLowerCase().includes(searchValue.toLowerCase()))
+  );
+});
 
   const handleModalOpen = () => {
     console.log('Opening modal');
@@ -153,7 +168,7 @@ const UserGrid = () => {
       disableRowSelectionOnClick
       getRowId={(row) => row._id}  
       />
-      <ManageUserModal isOpen={isModalOpen} onClose={handleModalClose} onCancel={handleModalClose} />
+      <ManageUserModal open={isModalOpen} onClose={handleModalClose} onCancel={handleModalClose} />
     </div>
     </div>
   );

@@ -60,8 +60,6 @@ const RegistrationPage = () => {
     validationSchema: validationSchema,
     onSubmit: async (values, { resetForm }) => {
       try {
-        console.log('Submitting form...');
-        console.log('Form values:', values);
         const response = await axios.post('http://localhost:8080/auth/register', values);
         console.log(response.data); // Display response from the server
 

@@ -1,108 +1,90 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DataGrid } from '@mui/x-data-grid';
 import IconButton from '@mui/material/IconButton';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined';
+import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined';
 import TextField from '@mui/material/TextField';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import DialogTitle from '@mui/material/DialogTitle';
 import Button from '@mui/material/Button';
-import ManageUserModal from '../modal/ManageUserModal.js'
+
 
 const UserApprovalGrid = () => {
 
   const [searchValue, setSearchValue] = useState('');
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [users, setUsers] = useState([]);
+  const [openDialog, setOpenDialog] = useState(false); //Dialog for declined
+  const [openApproveDialog, setOpenApproveDialog] = useState(false); //Dialog for openApprove
+  const [selectedUserId, setSelectedUserId] = useState("");
+
   
   const handleSearchChange = (event) => {
     setSearchValue(event.target.value);
   };
 
-  const users = [
-    {
-    _id: 1,
-    user_id: 'U101',
-    name: 'John Doe',
-    email: 'john@example.com',
-    mobile: '123-456-7890',
-    role: 'Admin',
-    status: 'Active',
-    },
-    {
-    _id: 2,
-    user_id: 'U102',
-    name: 'Jane Smith',
-    email: 'jane@example.com',
-    mobile: '987-654-3210',
-    role: 'User',
-    status: 'Inactive',
-    },
-     
-   {
-    _id: 3,
-    user_id: 'U103',
-    name: 'Michael Johnson',
-    email: 'michael@example.com',
-    mobile: '555-123-4567',
-    role: 'User',
-    status: 'Active',
-    },
+  const openDeclineDialog = () => {
+    setOpenDialog(true);
+  };
+  
+  const closeDialog = () => {
+    setOpenDialog(false);
+  };
 
-    {
-    _id: 4,
-    user_id: 'U104',
-    name: 'Emily Williams',
-    email: 'emily@example.com',
-    mobile: '777-555-8888',
-    role: 'Admin',
-    status: 'Active',
-    },
+  const openApproveConfirmation = () => {
+    setOpenApproveDialog(true);
+  };
 
-    {
-    _id: 5,
-    user_id: 'U105',
-    name: 'Daniel Brown',
-    email: 'daniel@example.com',
-    mobile: '444-222-1111',
-    role: 'User',
-    status: 'Inactive',
-    },
+  const closeApproveConfirmation = () => {
+    setOpenApproveDialog(false);
+  };
 
-    {
-      _id: 6,
-      user_id: 'U106',
-      name: 'Sophia Miller',
-      email: 'sophia@example.com',
-      mobile: '999-888-7777',
-      role: 'Admin',
-      status: 'Active'
-    },
-    // ... more user data
-  ];
+  const formatYearFromDate = (dateString) => {
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0'); // Add leading zero if needed
+    const day = String(date.getDate()).padStart(2, '0'); // Add leading zero if needed
+    return `${year}-${month}-${day}`;
+  };
+
+  useEffect(() => {
+    // Fetch user data from your server when the component mounts
+    const fetchData = async () => {
+      try {
+        const response = await fetch('http://localhost:8080/users/userFetch');
+        if (response.ok) {
+          const data = await response.json();
+          // Map the data to include an 'id' property
+          const formattedData = data.map((user) => ({
+        ...user,
+        id: user.user_id,
+      }));
+      setUsers(formattedData); // Update the users state with the formatted data
+        } else {
+          console.error('Error fetching user data:', response.statusText);
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
+    };
+
+    fetchData();
+  }, []); // The empty dependency array ensures the effect runs only once
 
   const columns = [
     { field: '_id', headerName: 'UserID', width: 100},
     { field: 'name', headerName: 'Name', width: 200},
+    { field: 'phoneNumber', headerName: 'Mobile Number', width: 150},
     { field: 'email', headerName: 'Email', width: 250},
-    { field: 'mobile', headerName: 'Mobile Number', width: 150},
+    { field: 'gender', headerName: 'Gender', width: 150},
     { field: 'role', headerName: 'Role', width: 150},
-    {
-      
-      field: 'status',
-      headerName: 'Status',
-      width: 150,
-      renderCell: (params) => (
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <div
-            style={{
-              width: 10,
-              height: 10,
-              borderRadius: '50%',
-              backgroundColor: params.value === 'Active' ? 'green' : 'red',
-              marginRight: 5,
-            }}
-          />
-          {params.value}
-        </div>
-      ),
+    { 
+    field: 'createdAt', 
+    headerName: 'Date Created', 
+    width: 150,
+    valueGetter: (params) => formatYearFromDate(params.row.createdAt),
     },
     {
       field: 'action',
@@ -110,52 +92,107 @@ const UserApprovalGrid = () => {
       width: 150,
       renderCell: (params) => (
         <div>
-        <IconButton onClick={() => handleAction(params.row.id)}>
-            <EditIcon />
+        <IconButton 
+          onClick={() => handleAccept(params.row._id)}
+          style={{ color: 'green' }}
+          >
+            <CheckCircleOutlinedIcon />
           </IconButton>
-          <IconButton onClick={() => handleDelete(params.row.id)}>
-            <DeleteOutlineIcon />
+        <IconButton 
+          onClick={() => handleDecline(params.row._id)}
+          style={{ color: 'red' }}
+          >
+            <CancelOutlinedIcon />
           </IconButton>
         </div>
       ),
     },
   ];
 
-  const handleAction = (userId) => {
-    // Implement your action logic here
-    console.log(`Edit user with ID: ${userId}`);
-  };
-
-  const handleDelete = (userId) => {
-    // Implement your delete logic here
-    console.log(`Delete user with ID: ${userId}`);
-  };
-
-  const filteredUsers = users.filter(user => 
-    user.user_id.toString().includes(searchValue) ||
-    user.name.toLowerCase().includes(searchValue.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchValue.toLowerCase()) ||
-    user.mobile.includes(searchValue) ||
-    user.role.toLowerCase().includes(searchValue.toLowerCase()) ||
-    user.status.toLowerCase().includes(searchValue.toLowerCase())
-  );
-
-  const handleModalOpen = () => {
-    console.log('Opening modal');
-    setIsModalOpen(true);
-  };
-
-  const handleModalClose = () => {
-    console.log('Closing modal');
-    setIsModalOpen(false);
-  };
+  const handleConfirmApprove = async () => {
+    try {
+      // Send a request to your server to update the 'approved' field for the user with the selectedUserId
+      const response = await fetch(`http://localhost:8080/users/approveUser/${selectedUserId}`, {
+        method: 'PUT',
+      });
   
+      if (response.ok) {
+        // Update the user in the state to mark them as approved
+        setUsers((prevUsers) => {
+          return prevUsers.map((user) => {
+            if (user._id === selectedUserId) {
+              return { ...user, approved: true };
+            }
+            return user;
+          });
+        });
+      } else {
+        console.error('Error confirming approval:', response.status, response.statusText);
+      }
+    } catch (error) {
+      console.error('Fetch error:', error);
+    }
+    closeApproveConfirmation();
+  };
+
+  const handleConfirmDecline = async () => {
+    try {
+      // Send a DELETE request to your server to delete the user with the selected '_id'
+      const response = await fetch(`http://localhost:8080/users/deleteUser/${selectedUserId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        // Update the UI by removing the declined user from the list
+        const updatedUsers = users.filter((user) => user._id !== selectedUserId);
+        setUsers(updatedUsers);
+        console.log(`Declined user with ID: ${selectedUserId}`);
+      } else {
+        console.error('Error declining user:', response.statusText);
+      }
+    } catch (error) {
+      console.error('Error declining user:', error);
+    }
+
+    // Close the dialog after the action is complete
+    closeDialog();
+  };
+
+  const handleDecline = async (_id) => {
+      // Set the selected user's _id to the state variable
+      setSelectedUserId(_id);
+      openDeclineDialog();
+    };
+
+    const handleAccept = async (_id) => {
+      // Set the selected user's _id to the state variable
+      setSelectedUserId(_id);
+      openApproveConfirmation();
+    };
+
+  const filteredUsers = users.filter((user) => {
+    const userId = user._id || '';
+    const name = (user.firstName || '') + ' ' + (user.lastName || '');
+    const email = user.email || '';
+    const mobile = user.phoneNumber || '';
+    const role = user.role || '';
+  
+    const isApproved = user.approved === false;
 
   return (
+    (isApproved && userId.toString().includes(searchValue)) ||
+    (isApproved && name.toLowerCase().includes(searchValue.toLowerCase())) ||
+    (isApproved && email.toLowerCase().includes(searchValue.toLowerCase())) ||
+    (isApproved && mobile.includes(searchValue)) ||
+    (isApproved && role.toLowerCase().includes(searchValue.toLowerCase()))
+    );
+});
+
+  return (
+    <div>
     <div className="flex flex-col h-full">
       <div className="w-full max-w-screen-xl mx-auto px-4">
        <div className="mb-4 flex justify-end items-center">
-       <Button variant="contained" color="primary" onClick={handleModalOpen}>New User</Button>
        <div className="ml-2">
         <TextField
           label="Search"
@@ -178,10 +215,43 @@ const UserApprovalGrid = () => {
       }}
       pageSizeOptions={[10]}
       checkboxSelection
-      disableRowSelectionOnClick  
+      disableRowSelectionOnClick
+      getRowId={(row) => row._id}  
       />
-      <ManageUserModal isOpen={isModalOpen} onClose={handleModalClose} onCancel={handleModalClose} />
     </div>
+    </div>
+        <Dialog open={openDialog} onClose={closeDialog}>
+        <DialogTitle>Confirm Decline</DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              Are you sure you want to decline this user?
+            </DialogContentText>
+          </DialogContent>
+        <DialogActions>
+          <Button onClick={closeDialog} color="primary">
+            Cancel
+          </Button>
+        <Button onClick={() => handleConfirmDecline()} color="primary">
+            Confirm
+        </Button>
+      </DialogActions>
+          </Dialog>
+          <Dialog open={openApproveDialog} onClose={closeApproveConfirmation}>
+          <DialogTitle>Confirm Approve</DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              Are you sure you want to approve this user?
+            </DialogContentText>
+          </DialogContent>
+        <DialogActions>
+          <Button onClick={closeApproveConfirmation} color="primary">
+            Cancel
+          </Button>
+        <Button onClick={() => handleConfirmApprove()} color="primary">
+            Confirm
+        </Button>
+      </DialogActions>
+          </Dialog>
     </div>
   );
 };
