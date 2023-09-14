@@ -1,4 +1,33 @@
 ###
 
-GET http://localhost:8080/users/userFetch
+POST http://localhost:8080/auth/login
+Content-Type: application/json
 
+
+  {
+  "firstName": "John",
+  "lastName": "Doe",
+  "phoneNumber": "1234567890",
+  "email": "admin12t@example.com",
+  "password": "password123",
+  "gender": "Male",
+  "role": "Admin"
+  }
+
+###
+
+# Login and get token
+POST http://localhost:8080/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "1234Admin"
+}
+
+###
+
+# Access Protected route
+
+GET http://localhost:8080/settings/user/fetchSettings
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJVMSIsImlhdCI6MTY5NDYxODU4MywiZXhwIjoxNjk0NjIyMTgzfQ.BleDXSM7jTDIa1AJyGOZG08SGbWo6pytEdxB47bpri4
