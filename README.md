@@ -74,3 +74,4 @@ VERSION:
 1.2.4 - Adding server side and minor bug fix in front-end
 1.2.5 - Fixing the front-end and adding authentication.
 1.2.7 - Adding fetch function in manage user.
+1.2.8 - Adding new modal and approvalGrid
