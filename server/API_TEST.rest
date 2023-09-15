@@ -30,4 +30,16 @@ Content-Type: application/json
 # Access Protected route
 
 GET http://localhost:8080/settings/user/fetchSettings
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJVMSIsImlhdCI6MTY5NDYxODU4MywiZXhwIjoxNjk0NjIyMTgzfQ.BleDXSM7jTDIa1AJyGOZG08SGbWo6pytEdxB47bpri4
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJVMSIsImlhdCI6MTY5NDY3MzkwMCwiZXhwIjoxNjk0Njc3NTAwfQ.R2r8nVs1QL6XvcYsDe-cNOdh31xKwElGvsKu4Cl1Ht8  
+
+
+
+###
+
+PUT http://localhost:8080/settings/user/updateLastName
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJVMSIsImlhdCI6MTY5NDY3MzkwMCwiZXhwIjoxNjk0Njc3NTAwfQ.R2r8nVs1QL6XvcYsDe-cNOdh31xKwElGvsKu4Cl1Ht8
+
+{
+  "lastName": "New Dela Cruz"
+}

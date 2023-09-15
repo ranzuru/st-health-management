@@ -15,6 +15,8 @@ import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import axiosInstance from "../config/axios-instance.js";
 import { CircularProgress } from "@mui/material";
+import Snackbar from "@mui/material/Snackbar";
+import Alert from "@mui/material/Alert";
 
 function SettingsInfo() {
   const [firstNameDialogOpen, setFirstNameDialogOpen] = useState(false);
@@ -23,26 +25,80 @@ function SettingsInfo() {
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [password, setPassword] = useState("");
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
 
-  const [showOldPassword, setShowOldPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmNewPassword, setConfirmNewPassword] = useState(false);
+  const [showOldPasswordIcon, setShowOldPasswordIcon] = useState(false);
+  const [showNewPasswordIcon, setShowNewPasswordIcon] = useState(false);
+  const [showConfirmNewPasswordIcon, setConfirmNewPasswordIcon] =
+    useState(false);
 
   const [userSettings, setUserSettings] = useState(null);
+  const [isFirstNameEmpty, setIsFirstNameEmpty] = useState(true);
+  const [isLastNameEmpty, setIsLastNameEmpty] = useState(true);
+  const [isOldPasswordFieldEmpty, setIsOldPasswordFieldEmpty] = useState(true);
+  const [isNewPasswordFieldEmpty, setIsNewPasswordFieldEmpty] = useState(true);
+  const [isConfirmNewPasswordFieldEmpty, setIsConfirmNewPasswordFieldEmpty] =
+    useState(true);
+
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarData, setSnackbarData] = useState({
+    message: "",
+    severity: "success",
+  });
+  const [passwordsMatch, setPasswordsMatch] = useState(true);
+  const [isSaveButtonDisabled, setIsSaveButtonDisabled] = useState(true);
+  const [isPasswordValid, setIsPasswordValid] = useState(false);
+
+  useEffect(() => {
+    const passwordsAreMatching = newPassword === confirmNewPassword;
+    const isPasswordLongEnough = newPassword.length >= 6;
+
+    setPasswordsMatch(passwordsAreMatching);
+    setIsPasswordValid(isPasswordLongEnough);
+
+    setIsSaveButtonDisabled(
+      isOldPasswordFieldEmpty ||
+        isNewPasswordFieldEmpty ||
+        isConfirmNewPasswordFieldEmpty ||
+        !passwordsAreMatching ||
+        !isPasswordLongEnough
+    );
+  }, [
+    newPassword,
+    confirmNewPassword,
+    isOldPasswordFieldEmpty,
+    isNewPasswordFieldEmpty,
+    isConfirmNewPasswordFieldEmpty,
+    passwordsMatch,
+  ]);
+
+  const showSnackbar = (message, severity) => {
+    setSnackbarData({ message, severity });
+    setSnackbarOpen(true);
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbarOpen(false);
+  };
 
   const handleShowOldPasswordClick = () => {
-    setShowOldPassword((prevShowOldPassword) => !prevShowOldPassword);
+    setShowOldPasswordIcon((prevShowOldPassword) => !prevShowOldPassword);
   };
 
   const handleShowNewPasswordClick = () => {
-    setShowNewPassword((prevShowNewPassword) => !prevShowNewPassword);
+    setShowNewPasswordIcon((prevShowNewPassword) => !prevShowNewPassword);
   };
 
-  useEffect(() => {
-    // Define the API endpoint URL
-    const apiUrl = "/settings/user/fetchSettings"; // Relative URL based on Axios base URL
-    // Make a GET request to fetch user settings using your Axios instance
+  const handleShowConfirmNewPasswordClick = () => {
+    setConfirmNewPasswordIcon(
+      (prevShowConfirmNewPassword) => !prevShowConfirmNewPassword
+    );
+  };
+
+  const fetchUserSettings = () => {
+    const apiUrl = "/settings/user/fetchSettings";
     axiosInstance
       .get(apiUrl)
       .then((response) => {
@@ -51,12 +107,69 @@ function SettingsInfo() {
       .catch((error) => {
         console.error("Error fetching user settings:", error);
       });
+  };
+
+  useEffect(() => {
+    fetchUserSettings();
   }, []);
 
-  const handleShowConfirmNewPasswordClick = () => {
-    setConfirmNewPassword(
-      (prevShowConfirmNewPassword) => !prevShowConfirmNewPassword
-    );
+  // Function to update first name
+  const updateFirstName = async (newFirstName) => {
+    try {
+      const response = await axiosInstance.put(
+        `settings/user/updateFirstName`,
+        {
+          firstName: newFirstName,
+        }
+      );
+      if (response.data.message === "First name updated successfully") {
+        // ... (Your existing code)
+        showSnackbar("First name updated successfully", "success");
+      } else {
+        showSnackbar("Update failed", "error");
+      }
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  // Function to update last name
+  const updateLastName = async (newLastName) => {
+    try {
+      const response = await axiosInstance.put(`settings/user/updateLastName`, {
+        lastName: newLastName,
+      });
+      if (response.data.message === "Last name updated successfully") {
+        // ... (Your existing code)
+        showSnackbar("Last name updated successfully", "success");
+      } else {
+        showSnackbar("Update failed", "error");
+      }
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  // Function to update password
+  const updatePassword = async (passwordObj) => {
+    try {
+      const response = await axiosInstance.put(`settings/user/updatePassword`, {
+        oldPassword: passwordObj.oldPassword,
+        newPassword: passwordObj.newPassword,
+        confirmPassword: passwordObj.confirmNewPassword,
+      });
+      if (response.data.message === "Password updated successfully") {
+        showSnackbar("Password updated successfully", "success");
+      } else {
+        showSnackbar("Update failed", "error");
+      }
+      return response.data;
+    } catch (error) {
+      showSnackbar("Old password is wrong", "error");
+      throw error;
+    }
   };
 
   const handleEditClick = (field) => {
@@ -101,30 +214,45 @@ function SettingsInfo() {
         setLastName("");
         break;
       case "password":
-        setPassword("");
+        setOldPassword("");
+        break;
+      case "newPassword":
+        setNewPassword("");
+        break;
+      case "confirmNewPassword":
+        setConfirmNewPassword("");
         break;
       default:
         break;
     }
   };
 
-  const handleSaveChanges = (field, value) => {
-    // Perform any actions needed to save changes for the specified field
-    // Close the dialog for the specified field
-    handleCloseDialog(field);
-    // Update the state with the new value
-    switch (field) {
-      case "firstName":
-        setFirstName(value);
-        break;
-      case "lastName":
-        setLastName(value);
-        break;
-      case "password":
-        setPassword(value);
-        break;
-      default:
-        break;
+  const handleSaveChanges = async (field, value) => {
+    try {
+      switch (field) {
+        case "firstName":
+          await updateFirstName(value);
+          break;
+        case "lastName":
+          await updateLastName(value);
+          break;
+        case "password":
+          // Create a properly structured passwordObj here
+          const passwordObj = {
+            oldPassword: oldPassword,
+            newPassword: newPassword,
+            confirmNewPassword: confirmNewPassword,
+          };
+          await updatePassword(passwordObj);
+          break;
+        default:
+          break;
+      }
+      fetchUserSettings();
+      resetTextFieldValue(field);
+      handleCloseDialog(field);
+    } catch (error) {
+      console.error("Error updating field:", error);
     }
   };
 
@@ -262,6 +390,7 @@ function SettingsInfo() {
                   .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
                   .join(" ");
                 setFirstName(capitalizedValue);
+                setIsFirstNameEmpty(value.trim() === "");
               }}
             />
           </div>
@@ -271,6 +400,7 @@ function SettingsInfo() {
           <Button
             onClick={() => handleSaveChanges("firstName", firstName)}
             color="primary"
+            disabled={isFirstNameEmpty}
           >
             Save
           </Button>
@@ -298,6 +428,7 @@ function SettingsInfo() {
                   .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
                   .join(" ");
                 setLastName(capitalizedValue);
+                setIsLastNameEmpty(value.trim() === "");
               }}
             />
           </div>
@@ -307,6 +438,7 @@ function SettingsInfo() {
           <Button
             onClick={() => handleSaveChanges("lastName", lastName)}
             color="primary"
+            disabled={isLastNameEmpty}
           >
             Save
           </Button>
@@ -325,7 +457,7 @@ function SettingsInfo() {
             <TextField
               name="oldPassword"
               label="Old Password"
-              type={showOldPassword ? "text" : "password"}
+              type={showOldPasswordIcon ? "text" : "password"}
               fullWidth
               required
               variant="outlined"
@@ -333,7 +465,7 @@ function SettingsInfo() {
                 endAdornment: (
                   <InputAdornment position="end">
                     {/* Toggle password visibility */}
-                    {showOldPassword ? (
+                    {showOldPasswordIcon ? (
                       <VisibilityOffIcon
                         onClick={handleShowOldPasswordClick}
                         style={{ cursor: "pointer" }}
@@ -348,13 +480,18 @@ function SettingsInfo() {
                 ),
               }}
               sx={{ marginBottom: 2 }}
+              onChange={(e) => {
+                const value = e.target.value;
+                setOldPassword(value);
+                setIsOldPasswordFieldEmpty(value.trim() === ""); // Check if the value is empty
+              }}
             />
 
             {/* New Password TextField */}
             <TextField
               name="newPassword"
               label="New Password"
-              type={showNewPassword ? "text" : "password"}
+              type={showNewPasswordIcon ? "text" : "password"}
               fullWidth
               required
               variant="outlined"
@@ -362,7 +499,7 @@ function SettingsInfo() {
                 endAdornment: (
                   <InputAdornment position="end">
                     {/* Toggle password visibility */}
-                    {showNewPassword ? (
+                    {showNewPasswordIcon ? (
                       <VisibilityOffIcon
                         onClick={handleShowNewPasswordClick}
                         style={{ cursor: "pointer" }}
@@ -377,12 +514,18 @@ function SettingsInfo() {
                 ),
               }}
               sx={{ marginBottom: 2 }}
+              onChange={(e) => {
+                const value = e.target.value;
+                setNewPassword(value); // Assuming you have a state variable for new password
+                setPasswordsMatch(newPassword === confirmNewPassword);
+                setIsNewPasswordFieldEmpty(value.trim() === "");
+              }}
             />
             {/* New Password Confirm TextField */}
             <TextField
               name="confirmNewPassword"
               label="Confirm New Password"
-              type={showConfirmNewPassword ? "text" : "password"}
+              type={showConfirmNewPasswordIcon ? "text" : "password"}
               fullWidth
               required
               variant="outlined"
@@ -390,7 +533,7 @@ function SettingsInfo() {
                 endAdornment: (
                   <InputAdornment position="end">
                     {/* Toggle password visibility */}
-                    {showConfirmNewPassword ? (
+                    {showConfirmNewPasswordIcon ? (
                       <VisibilityOffIcon
                         onClick={handleShowConfirmNewPasswordClick}
                         style={{ cursor: "pointer" }}
@@ -405,19 +548,56 @@ function SettingsInfo() {
                 ),
               }}
               sx={{ marginBottom: 2 }}
+              onChange={(e) => {
+                const value = e.target.value;
+                setConfirmNewPassword(value);
+                setPasswordsMatch(newPassword === value);
+                setIsConfirmNewPasswordFieldEmpty(value.trim() === "");
+              }}
             />
+            {/* Validation Message */}
+            <div style={{ color: "red", display: "block", marginTop: "8px" }}>
+              {!isPasswordValid && (
+                <span>
+                  New password should be at least 6 characters long
+                  <br />
+                </span>
+              )}
+              {!passwordsMatch && <span>Passwords do not match</span>}
+            </div>
           </div>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => handleCancelClick("password")}>Cancel</Button>
           <Button
-            onClick={() => handleSaveChanges("password", password)}
+            onClick={() =>
+              handleSaveChanges(
+                "password",
+                oldPassword,
+                newPassword,
+                confirmNewPassword
+              )
+            }
             color="primary"
+            disabled={isSaveButtonDisabled} // Use the new state variable here
           >
             Save
           </Button>
         </DialogActions>
       </Dialog>
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{
+          vertical: "top", // Position at the top
+          horizontal: "center", // Position at the center horizontally
+        }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbarData.severity}>
+          {snackbarData.message}
+        </Alert>
+      </Snackbar>
     </Paper>
   );
 }
