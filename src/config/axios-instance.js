@@ -36,7 +36,7 @@ axiosInstance.interceptors.response.use(
   },
   (error) => {
     // Handle errors, including the 401 Unauthorized error
-    console.error("Error fetching user settings:", error);
+    console.error("Error in response interceptor", error);
     return Promise.reject(error);
   }
 );

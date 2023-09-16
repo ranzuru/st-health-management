@@ -6,6 +6,7 @@ const connectDB = require("./mongodb/Connect.js");
 const userRoutes = require("./routes/users/manageUsers.js");
 const eventRoutes = require("./routes/users/eventRouter.js");
 const settingsRoutes = require("./routes/users/settingsRouter.js");
+const medicineInventoryRoutes = require("./routes/users/medicineInventoryRouter.js");
 
 const cors = require("cors");
 
@@ -27,6 +28,8 @@ app.use("/users", userRoutes);
 app.use("/events", eventRoutes);
 
 app.use("/settings", settingsRoutes);
+
+app.use("/medicineInventory", medicineInventoryRoutes);
 
 // Use the authentication routes with a prefix, for example: /auth/signup, /auth/login, etc.
 app.use("/auth", authRoutes);

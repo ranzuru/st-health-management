@@ -10,6 +10,7 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
 import Button from "@mui/material/Button";
+import axiosInstance from "../config/axios-instance.js";
 
 const UserApprovalGrid = () => {
   const [searchValue, setSearchValue] = useState("");
@@ -38,6 +39,10 @@ const UserApprovalGrid = () => {
     setOpenApproveDialog(false);
   };
 
+  useEffect(() => {
+    fetchData();
+  }, []);
+
   const formatYearFromDate = (dateString) => {
     const date = new Date(dateString);
     const year = date.getFullYear();
@@ -46,29 +51,20 @@ const UserApprovalGrid = () => {
     return `${year}-${month}-${day}`;
   };
 
-  useEffect(() => {
-    // Fetch user data from your server when the component mounts
-    const fetchData = async () => {
-      try {
-        const response = await fetch("http://localhost:8080/users/userFetch");
-        if (response.ok) {
-          const data = await response.json();
-          // Map the data to include an 'id' property
-          const formattedData = data.map((user) => ({
-            ...user,
-            id: user.user_id,
-          }));
-          setUsers(formattedData); // Update the users state with the formatted data
-        } else {
-          console.error("Error fetching user data:", response.statusText);
-        }
-      } catch (error) {
-        console.error("Error fetching user data:", error);
-      }
-    };
-
-    fetchData();
-  }, []); // The empty dependency array ensures the effect runs only once
+  // Fetch user data from your server when the component mounts
+  const fetchData = async () => {
+    try {
+      const response = await axiosInstance.get("/users/userFetch");
+      const data = response.data;
+      const formattedData = data.map((user) => ({
+        ...user,
+        id: user.user_id,
+      }));
+      setUsers(formattedData);
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+    }
+  };
 
   const columns = [
     { field: "_id", headerName: "UserID", width: 100 },
@@ -108,15 +104,10 @@ const UserApprovalGrid = () => {
 
   const handleConfirmApprove = async () => {
     try {
-      // Send a request to your server to update the 'approved' field for the user with the selectedUserId
-      const response = await fetch(
-        `http://localhost:8080/users/approveUser/${selectedUserId}`,
-        {
-          method: "PUT",
-        }
+      const response = await axiosInstance.put(
+        `/users/approveUser/${selectedUserId}`
       );
-
-      if (response.ok) {
+      if (response.status === 200) {
         // Update the user in the state to mark them as approved
         setUsers((prevUsers) => {
           return prevUsers.map((user) => {
@@ -127,11 +118,7 @@ const UserApprovalGrid = () => {
           });
         });
       } else {
-        console.error(
-          "Error confirming approval:",
-          response.status,
-          response.statusText
-        );
+        console.error("Error confirming approval:", response.statusText);
       }
     } catch (error) {
       console.error("Fetch error:", error);
@@ -141,28 +128,20 @@ const UserApprovalGrid = () => {
 
   const handleConfirmDecline = async () => {
     try {
-      // Send a DELETE request to your server to delete the user with the selected '_id'
-      const response = await fetch(
-        `http://localhost:8080/users/deleteUser/${selectedUserId}`,
-        {
-          method: "DELETE",
-        }
+      const response = await axiosInstance.delete(
+        `/users/deleteUser/${selectedUserId}`
       );
-
-      if (response.ok) {
+      if (response.status === 200) {
         // Update the UI by removing the declined user from the list
-        const updatedUsers = users.filter(
-          (user) => user._id !== selectedUserId
+        setUsers((prevUsers) =>
+          prevUsers.filter((user) => user._id !== selectedUserId)
         );
-        setUsers(updatedUsers);
       } else {
         console.error("Error declining user:", response.statusText);
       }
     } catch (error) {
       console.error("Error declining user:", error);
     }
-
-    // Close the dialog after the action is complete
     closeDialog();
   };
 

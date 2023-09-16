@@ -22,7 +22,7 @@ Content-Type: application/json
 
 {
   "email": "admin@example.com",
-  "password": "1234Admin"
+  "password": "1234Apple"
 }
 
 ###
@@ -43,3 +43,27 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJVMSIsI
 {
   "lastName": "New Dela Cruz"
 }
+
+###
+
+POST http://localhost:8080/medicineInventory/createMedicine
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJVMSIsImlhdCI6MTY5NDc4MTEwOSwiZXhwIjoxNjk0Nzg0NzA5fQ.DDxs3Xqu30wXTaK8xy_ac_1S-2wlnWr-6idZ2jWoMvw
+
+{
+  "product": "Heas",
+  "category": "World",
+  "quantity": 18,
+  "expirationDate": "2023-12-22",
+  "restockDate": "2023-09-16"
+}
+
+### Update Medicine Quantity
+PUT http://localhost:8080/medicineInventory/updateMedicine/65044f364dfb1040739147ac
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJVMSIsImlhdCI6MTY5NDc4MTEwOSwiZXhwIjoxNjk0Nzg0NzA5fQ.DDxs3Xqu30wXTaK8xy_ac_1S-2wlnWr-6idZ2jWoMvw
+Content-Type: application/json
+
+{
+  "quantity": 24
+}
+

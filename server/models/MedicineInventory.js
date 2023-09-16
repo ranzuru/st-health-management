@@ -13,10 +13,6 @@ const medicineSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
-  numericStockLevel: {
-    type: Number, // Store the numeric stock level
-    required: true,
-  },
   stockLevel: {
     type: String, // Store the descriptive stock level
     enum: ["High", "Moderate", "Low"],
@@ -26,12 +22,13 @@ const medicineSchema = new mongoose.Schema({
     type: Date,
     required: true,
   },
-  lastRestockDate: {
+  restockDate: {
     type: Date,
     required: true,
   },
   note: {
     type: String,
+    default: "None",
   },
 });
 
