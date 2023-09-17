@@ -19,18 +19,18 @@ import { useForm } from "react-hook-form";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import FormHelperText from "@mui/material/FormHelperText";
+import CircularProgress from "@mui/material/CircularProgress";
 
-const MedicineInventoryForm = (props) => {
-	const {
-		open = false,
-		onClose,
-		initialData,
-		addNewMedicine,
-		selectedMedicine,
-	} = props;
+const MedicineInventoryFormEdit = ({
+	open = false,
+	onClose,
+	initialData,
+	onMedicineUpdated,
+}) => {
 	const [selectedExpirationDate, setSelectedExpirationDate] = useState(null);
 	const [selectedRestockDate, setSelectedRestockDate] = useState(null);
 	const [snackbarOpen, setSnackbarOpen] = useState(false);
+	const [isLoading, setIsLoading] = useState(false);
 	const [snackbarData, setSnackbarData] = useState({
 		message: "",
 		severity: "success",
@@ -84,59 +84,38 @@ const MedicineInventoryForm = (props) => {
 		},
 	});
 
-	const handleCreate = async (data) => {
-		try {
-			console.log("Creating with values: ", data);
-			const response = await axiosInstance.post(
-				"medicineInventory/createMedicine",
-				data
-			);
-			if (response.data.product) {
-				if (typeof addNewMedicine === "function") {
-					addNewMedicine(response.data);
-				}
-				showSnackbar("Successfully added medicine", "success");
-				handleClose();
-			} else {
-				showSnackbar("Operation failed", "error");
+	useEffect(() => {
+		if (initialData) {
+			// Populate form fields with initial data
+			for (const [key, value] of Object.entries(initialData)) {
+				setValue(key, value);
 			}
-		} catch (error) {
-			console.error("An error occurred during adding medicine:", error);
-			showSnackbar("An error occurred during adding", "error");
+			setSelectedExpirationDate(initialData.expirationDate);
+			setSelectedRestockDate(initialData.restockDate);
 		}
-	};
+	}, [initialData, setValue]);
 
 	const handleUpdate = async (data) => {
-		console.log("Inside handleUpdate with data:", data);
-		console.log("Value of selectedMedicine:", selectedMedicine);
+		setIsLoading(true);
 		try {
+			// Make an HTTP PUT or PATCH request to update existing data
 			const response = await axiosInstance.put(
 				`medicineInventory/updateMedicine/${initialData._id}`,
 				data
 			);
 			if (response.data.product) {
-				if (typeof props.onMedicineUpdated === "function") {
-					props.onMedicineUpdated(response.data);
-				}
+				onMedicineUpdated(response.data);
 				showSnackbar("Successfully updated medicine", "success");
 				handleClose();
 			} else {
-				showSnackbar("Operation failed", "error");
+				showSnackbar("Update failed", "error");
 			}
+			return response.data;
 		} catch (error) {
-			console.error("An error occurred during updating medicine:", error);
-			showSnackbar("An error occurred during updating", "error");
+			console.error("An error occurred during medicine update:", error);
+			showSnackbar("An error occurred during update", error);
 		}
-	};
-
-	const handleSaveOrUpdate = (data) => {
-		if (selectedMedicine && selectedMedicine._id) {
-			console.log("Calling handleUpdate");
-			handleUpdate(data);
-		} else {
-			console.log("Calling handleCreate");
-			handleCreate(data);
-		}
+		setIsLoading(false);
 	};
 
 	const handleClose = () => {
@@ -145,28 +124,6 @@ const MedicineInventoryForm = (props) => {
 		handleExpirationDateChange(null);
 		handleRestockDateChange(null);
 	};
-
-	useEffect(() => {
-		if (selectedMedicine) {
-			console.log("Selected Medicine exists, preparing for update operation");
-			setValue("productName", selectedMedicine.product || "");
-			setValue("category", selectedMedicine.category || "");
-			setValue("quantity", selectedMedicine.quantity || "");
-			setValue("expirationDate", selectedMedicine.expirationDate || "");
-			setValue("restockDate", selectedMedicine.restockDate || "");
-			setValue("note", selectedMedicine.note || "");
-
-			const expDate = new Date(selectedMedicine.expirationDate);
-			const restockDate = new Date(selectedMedicine.restockDate);
-
-			setSelectedExpirationDate(expDate);
-			setSelectedRestockDate(restockDate);
-		} else {
-			console.log(
-				"Selected Medicine doesn't exist, preparing for create operation"
-			);
-		}
-	}, [selectedMedicine, setValue]);
 
 	return (
 		<>
@@ -184,10 +141,8 @@ const MedicineInventoryForm = (props) => {
 				</Alert>
 			</Snackbar>
 			<Dialog open={open} onClose={handleClose}>
-				<DialogTitle>
-					{selectedMedicine ? "Edit Medicine" : "Add Medicine"}
-				</DialogTitle>
-				<form onSubmit={handleSubmit(handleSaveOrUpdate)}>
+				<DialogTitle>Add Medicine</DialogTitle>
+				<form onSubmit={handleSubmit(handleUpdate)}>
 					<DialogContent>
 						<DialogContentText>Enter medicine details:</DialogContentText>
 						<TextField
@@ -283,8 +238,8 @@ const MedicineInventoryForm = (props) => {
 						<Button onClick={handleClose} color="primary">
 							Cancel
 						</Button>
-						<Button type="submit" color="primary">
-							{selectedMedicine ? "Update" : "Save"}
+						<Button type="submit" color="primary" disabled={isLoading}>
+							{isLoading ? <CircularProgress size={24} /> : "Save"}
 						</Button>
 					</DialogActions>
 				</form>
@@ -293,4 +248,4 @@ const MedicineInventoryForm = (props) => {
 	);
 };
 
-export default MedicineInventoryForm;
+export default MedicineInventoryFormEdit;
