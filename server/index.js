@@ -7,6 +7,8 @@ const userRoutes = require("./routes/users/manageUsers.js");
 const eventRoutes = require("./routes/users/eventRouter.js");
 const settingsRoutes = require("./routes/users/settingsRouter.js");
 const medicineInventoryRoutes = require("./routes/users/medicineInventoryRouter.js");
+const facultyProfileRoutes = require("./routes/users/facultyProfileRouter.js");
+const classProfileRoutes = require("./routes/users/classProfileRouter.js");
 
 const cors = require("cors");
 
@@ -31,7 +33,10 @@ app.use("/settings", settingsRoutes);
 
 app.use("/medicineInventory", medicineInventoryRoutes);
 
-// Use the authentication routes with a prefix, for example: /auth/signup, /auth/login, etc.
+app.use("/facultyProfile", facultyProfileRoutes);
+
+app.use("/classProfile", classProfileRoutes);
+
 app.use("/auth", authRoutes);
 
 app.get("/protected", authenticateMiddleware, (req, res) => {

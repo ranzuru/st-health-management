@@ -7,6 +7,7 @@ import UserApproval from "./navbar/UserApproval";
 import ManageUsers from "./navbar/ManageUsers";
 import StudentsProfile from "./navbar/StudentsProfile";
 import FacultyProfile from "./navbar/FacultyProfile";
+import ClassProfile from "./navbar/ClassProfile";
 import ClinicPrograms from "./navbar/ClinicPrograms";
 import DengueMonitoring from "./navbar/DengueMonitoring";
 import Immunization from "./navbar/Immunization";
@@ -46,6 +47,7 @@ function AppLayout() {
             <Route path="/user-approval" element={<UserApproval />} />
             <Route path="/students-profile" element={<StudentsProfile />} />
             <Route path="/faculty-profile" element={<FacultyProfile />} />
+            <Route path="/class-profile" element={<ClassProfile />} />
             <Route path="/clinic-programs" element={<ClinicPrograms />} />
             <Route path="/dengue-monitoring" element={<DengueMonitoring />} />
             <Route path="/immunization" element={<Immunization />} />

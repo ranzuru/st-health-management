@@ -12,7 +12,6 @@ import {
 import {
   DashboardOutlined,
   ManageAccountsOutlined,
-  Person2Outlined,
   SupervisorAccountOutlined,
   AssignmentIndOutlined,
   MedicalServicesOutlined,
@@ -229,17 +228,16 @@ const Sidebar = () => {
             { to: "/manage-users", primary: "Manage User" },
           ]}
         />
-        <SidebarLink
-          to="/students-profile"
-          primary="Student Profile"
-          isActive={isActive("/students-profile")}
-          icon={<Person2Outlined />}
-        />
-        <SidebarLink
-          to="/faculty-profile"
-          primary="Faculty Profile"
-          isActive={isActive("/faculty-profile")}
+        <SidebarSubmenu
+          primary="Profile"
           icon={<SupervisorAccountOutlined />}
+          submenuName="profile"
+          isActive={isActive}
+          submenuLinks={[
+            { to: "/students-profile", primary: "Student Profile" },
+            { to: "/faculty-profile", primary: "Faculty Profile" },
+            { to: "/class-profile", primary: "Class Profile" },
+          ]}
         />
         <SidebarSubmenu
           primary="Clinic Programs"

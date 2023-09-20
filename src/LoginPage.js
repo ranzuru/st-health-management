@@ -20,7 +20,7 @@ import { CircularProgress } from "@mui/material";
 import axios from "axios";
 
 import schoolLogo from "./Data/DonjuanTransparent.png";
-import clinicLogo from "./Data/medical.png";
+import clinicLogo from "./Data/DonjuanStock.png";
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -103,7 +103,6 @@ const LoginPage = () => {
         md={7}
         sx={{
           display: isSmallScreen ? "none" : "block",
-          backgroundColor: "#6C63FF",
           minHeight: "100vh",
         }}
       >
@@ -111,7 +110,7 @@ const LoginPage = () => {
           <img
             src={clinicLogo}
             alt="Clinic Logo"
-            style={{ width: "600px", height: "430px" }}
+            style={{ width: "100%", height: "100vh" }}
           />
         </div>
       </Grid>
