@@ -30,7 +30,7 @@ const Dashboard = () => {
 
   return (
     <div className="flex">
-      <div className="bg-black h-64 w-full mb-4">
+      <div className="bg-blue-900 h-64 w-full mb-4">
       <div className="flex-grow p-4">
       <Typography variant="h3" sx={{ 
         fontSize: { xs: '2rem', sm: '2rem', md: '3rem' }, 

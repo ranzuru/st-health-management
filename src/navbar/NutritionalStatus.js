@@ -1,11 +1,11 @@
 import React from "react";
-import DengueDataGrid from "../datagrid/DengueGrid.js";
+import NutritionalDataGrid from "../datagrid/NutritionalGrid.js";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
-import DengueForm from "../modal/DengueForm.js";
+import NutritionalForm from "../modal/NutritionalForm.js";
 import { Typography } from "@mui/material";
 
-const DengueNavBar = () => {
+const NutritionalNavBar = () => {
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <div className="flex flex-col">
@@ -21,15 +21,15 @@ const DengueNavBar = () => {
                 pl: 2,
               }}
             >
-              Dengue Monitoring
+              Nutritional Status (Form 8)
             </Typography>
           </div>
 
           <div className="flex flex-col items-center justify-center h-full p-4">
             <div className="flex items-center justify-center w-full">
-              <DengueDataGrid />
+              <NutritionalDataGrid />
             </div>
-            <DengueForm />
+            <NutritionalForm />
           </div>
         </div>
       </div>
@@ -37,4 +37,4 @@ const DengueNavBar = () => {
   );
 };
 
-export default DengueNavBar;
+export default NutritionalNavBar;

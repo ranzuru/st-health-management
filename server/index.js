@@ -1,10 +1,16 @@
-const express = require('express');
-const dotenv = require('dotenv');
-const authenticateMiddleware = require('./auth/authenticateMiddleware.js');
-const authRoutes = require('./auth/Routes.js');
-const connectDB = require('./mongodb/Connect.js');
-
 const cors = require('cors')
+const express = require("express");
+const dotenv = require("dotenv");
+const authenticateMiddleware = require("./auth/authenticateMiddleware.js");
+const authRoutes = require("./auth/Routes.js");
+const connectDB = require("./mongodb/Connect.js");
+const userRoutes = require("./routes/users/manageUsers.js");
+const eventRoutes = require("./routes/users/eventRouter.js");
+const settingsRoutes = require("./routes/users/settingsRouter.js");
+const medicineInventoryRoutes = require("./routes/users/medicineInventoryRouter.js");
+const studentRoutes = require("./routes/users/studentRouter.js");
+const dengueRoutes = require("./routes/users/dengueRouter.js");
+const nutritionalStatusRoutes = require("./routes/users/nutritionalStatusRouter.js");
 
 
 dotenv.config();
@@ -18,9 +24,17 @@ app.get('/', (req, res) => {
   res.send('Hello World!');
 });
 
-// Import and use the userRoutes with a prefix
-const userRoutes = require('./routes/users/manageUsers.js');
-app.use('/users', userRoutes);
+// Import and use the userRoutes with a prefi
+
+app.use("/users", userRoutes);
+
+app.use("/student-profile", studentRoutes);
+
+app.use("/events", eventRoutes);
+
+app.use("/settings", settingsRoutes);
+
+app.use("/medicineInventory", medicineInventoryRoutes);
 
 // Use the authentication routes with a prefix, for example: /auth/signup, /auth/login, etc.
 app.use('/auth', authRoutes);
