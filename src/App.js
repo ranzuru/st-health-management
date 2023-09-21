@@ -5,10 +5,16 @@ import RegistrationPage from "./RegistrationPage";
 import Dashboard from "./Dashboard";
 import UserApproval from "./navbar/UserApproval";
 import ManageUsers from "./navbar/ManageUsers";
+
 import StudentNavBar from "./navbar/StudentsProfile";
-import FacultyProfile from "./navbar/FacultyProfile";
-import ClinicPrograms from "./navbar/ClinicPrograms";
+
+
 import DengueNavBar from "./navbar/DengueMonitoring";
+
+import FacultyProfile from "./navbar/FacultyProfile";
+import ClassProfile from "./navbar/ClassProfile";
+import ClinicPrograms from "./navbar/ClinicPrograms";
+
 import Immunization from "./navbar/Immunization";
 import MedicalCheckup from "./navbar/MedicalCheckup";
 import FacultyCheckup from "./navbar/FacultyCheckup";
@@ -19,7 +25,9 @@ import MedicineInventory from "./navbar/MedicineInventory";
 import Events from "./navbar/Events";
 import Analytics from "./navbar/Analytics";
 import Logs from "./navbar/Logs";
+
 import NutritionalNavBar from "./navbar/NutritionalStatus";
+
 import Settings from "./navbar/Settings";
 import Sidebar from "./Sidebar.js";
 
@@ -46,15 +54,17 @@ function AppLayout() {
             <Route path="/manage-users" element={<ManageUsers />} />
             <Route path="/user-approval" element={<UserApproval />} />
             <Route path="/student-profile" element={<StudentNavBar />} />
-            <Route path="/faculty-profile" element={<FacultyProfile />} />
-            <Route path="/clinic-programs" element={<ClinicPrograms />} />
             <Route path="/dengue-monitoring" element={<DengueNavBar />} />
+            <Route path="/nutritional-status" element={<NutritionalNavBar />} />
+            <Route path="/faculty-profile" element={<FacultyProfile />} />
+            <Route path="/class-profile" element={<ClassProfile />} />
+            <Route path="/clinic-programs" element={<ClinicPrograms />} />
+            <Route path="/dengue-monitoring" element={<DengueMonitoring />} />
             <Route path="/immunization" element={<Immunization />} />
             <Route path="/medical-checkup" element={<MedicalCheckup />} />
             <Route path="/faculty-checkup" element={<FacultyCheckup />} />
             <Route path="/deworming-monitoring" element={<DewormingMonitoring />} />
             <Route path="/feeding-program" element={<FeedingProgram />} />
-            <Route path="/nutritional-status" element={<NutritionalNavBar />} />
             <Route path="/clinic-records" element={<ClinicRecords />} />
             <Route path="/medicine-inventory" element={<MedicineInventory />} />
             <Route path="/events" element={<Events />} />
