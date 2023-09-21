@@ -36,26 +36,32 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJVMSIsI
 
 ###
 
-PUT http://localhost:8080/settings/user/updateLastName
+POST http://localhost:8080/facultyProfile/createFacultyProfiles
 Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJVMSIsImlhdCI6MTY5NDY3MzkwMCwiZXhwIjoxNjk0Njc3NTAwfQ.R2r8nVs1QL6XvcYsDe-cNOdh31xKwElGvsKu4Cl1Ht8
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJVMSIsImlhdCI6MTY5NTAzNDQ2NiwiZXhwIjoxNjk1MDM4MDY2fQ.vlISKs1Z85fcBzWsqoOexIx6nRpCRbucVMK1BF8sCTE
 
 {
-  "lastName": "New Dela Cruz"
+  "employeeId": "FAC12347",
+  "lastName": "Dela Cruz",
+  "firstName": "Jeremiah",
+  "middleName": "McCaddo",
+  "gender": "Male",
+  "mobileNumber": 1234567890,
+  "role": "Professor",
+  "status": "Active"
 }
 
 ###
 
-POST http://localhost:8080/medicineInventory/createMedicine
+PUT http://localhost:8080/classProfile/updateClassProfile/650a9c5ef6abc70da815c9e0
 Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJVMSIsImlhdCI6MTY5NDc4MTEwOSwiZXhwIjoxNjk0Nzg0NzA5fQ.DDxs3Xqu30wXTaK8xy_ac_1S-2wlnWr-6idZ2jWoMvw
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJVMSIsImlhdCI6MTY5NTIwMzMzOCwiZXhwIjoxNjk1MjA2OTM4fQ.TLKLgZkAfnZXfdcovCO_KC0HOtyBuFlyUK9sv40sl2c
 
 {
-  "product": "Heas",
-  "category": "World",
-  "quantity": 18,
-  "expirationDate": "2023-12-22",
-  "restockDate": "2023-09-16"
+  "grade": "Grade 6",
+  "section": "Batung",
+  "room": "111",
+  "employeeId": "124231312"
 }
 
 ### Update Medicine Quantity

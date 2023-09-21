@@ -10,7 +10,7 @@ import {
   MenuItem,
 } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
-import clinicLogo from "./Data/medical.png";
+import clinicLogo from "./Data/DonjuanStock.png";
 import { Link } from "react-router-dom";
 import { useMediaQuery } from "@mui/material";
 import axios from "axios";
@@ -111,7 +111,6 @@ const RegistrationPage = () => {
         md={7}
         sx={{
           display: isSmallScreen ? "none" : "block",
-          backgroundColor: "#6C63FF",
           minHeight: "100vh",
         }}
       >
@@ -119,7 +118,7 @@ const RegistrationPage = () => {
           <img
             src={clinicLogo}
             alt="Clinic Logo"
-            style={{ width: "600px", height: "430px" }}
+            style={{ width: "100%", height: "100vh" }}
           />
         </div>
       </Grid>
