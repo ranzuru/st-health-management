@@ -1,3 +1,5 @@
+
+
 const express = require("express");
 const dotenv = require("dotenv");
 const authenticateMiddleware = require("./auth/authenticateMiddleware.js");
@@ -7,10 +9,16 @@ const userRoutes = require("./routes/users/manageUsers.js");
 const eventRoutes = require("./routes/users/eventRouter.js");
 const settingsRoutes = require("./routes/users/settingsRouter.js");
 const medicineInventoryRoutes = require("./routes/users/medicineInventoryRouter.js");
+
+const studentRoutes = require("./routes/users/studentRouter.js");
+const dengueRoutes = require("./routes/users/dengueRouter.js");
+const nutritionalStatusRoutes = require("./routes/users/nutritionalStatusRouter.js");
+
 const facultyProfileRoutes = require("./routes/users/facultyProfileRouter.js");
 const classProfileRoutes = require("./routes/users/classProfileRouter.js");
 
 const cors = require("cors");
+
 
 dotenv.config();
 
@@ -23,7 +31,11 @@ app.get("/", (req, res) => {
   res.send("Hello World!");
 });
 
+
+app.use("/student-profile", studentRoutes);
+
 // Import and use the userRoutes with a prefix
+
 
 app.use("/users", userRoutes);
 

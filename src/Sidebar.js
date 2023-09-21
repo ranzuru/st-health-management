@@ -239,6 +239,20 @@ const Sidebar = () => {
             { to: "/class-profile", primary: "Class Profile" },
           ]}
         />
+
+        <SidebarLink
+          to="/student-profile"
+          primary="Student Profile"
+          isActive={isActive("/student-profile")}
+          icon={<Person2Outlined />}
+        />
+        <SidebarLink
+          to="/faculty-profile"
+          primary="Faculty Profile"
+          isActive={isActive("/faculty-profile")}
+          icon={<SupervisorAccountOutlined />}
+        />
+
         <SidebarSubmenu
           primary="Clinic Programs"
           icon={<SpaOutlinedIcon />}
@@ -251,6 +265,9 @@ const Sidebar = () => {
             { to: "/faculty-checkup", primary: "Faculty Checkup" },
             { to: "/deworming-monitoring", primary: "Deworming Monitoring" },
             { to: "/feeding-program", primary: "Feeding Program" },
+
+            { to: "/nutritional-status", primary: "Nutritional Status" },
+
           ]}
         />
         <SidebarLink
