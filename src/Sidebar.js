@@ -55,10 +55,10 @@ const Sidebar = () => {
       to={to}
       onClick={onClick}
       sx={{
-        backgroundColor: isActive ? "#343541" : "transparent",
+        backgroundColor: isActive ? "#094FC2" : "transparent",
         color: isActive ? "#FEFEFE" : "gray-300",
         "&:hover": {
-          backgroundColor: "#2A2B32",
+          backgroundColor: "#094FC2",
           borderRadius: "0.5rem",
           color: "#FEFEFE",
           justifyContent: "center",
@@ -73,7 +73,7 @@ const Sidebar = () => {
     >
       <ListItemIcon
         style={{
-          color: isActive || isSidebarCollapsed ? "white" : "#E0E0E0",
+          color: isActive || isSidebarCollapsed ? "white" : "#FEFEFE",
           minWidth: isSidebarCollapsed ? "1rem" : "2rem",
         }}
       >
@@ -110,7 +110,7 @@ const Sidebar = () => {
             justifyContent: isSidebarCollapsed ? "center" : undefined, // Center icon horizontally when collapsed
             alignItems: isSidebarCollapsed ? "center" : undefined,
             "&:hover": {
-              backgroundColor: "#2A2B32",
+              backgroundColor: "#094FC2",
               borderRadius: "0.5rem",
               color: "#FEFEFE",
               justifyContent: "center",
@@ -122,7 +122,7 @@ const Sidebar = () => {
           <ListItemIcon
             style={{
               minWidth: isSidebarCollapsed ? "1rem" : "2rem",
-              color: "#E0E0E0",
+              color: "#ffffff",
               justifyContent: isSidebarCollapsed ? "center" : undefined,
               marginLeft: isSidebarCollapsed ? "1rem" : undefined,
             }}
@@ -181,7 +181,7 @@ const Sidebar = () => {
 
   return (
     <div
-      className={`bg-black text-gray-300 flex flex-col p-4 ${
+      className={`bg-blue-700 text-white flex flex-col p-4 ${
         isSidebarCollapsed ? "collapsed" : ""
       }`}
       style={{
@@ -271,11 +271,25 @@ const Sidebar = () => {
           isActive={isActive("/events")}
           icon={<EventOutlined />}
         />
-        <SidebarLink
-          to="/analytics"
+        <SidebarSubmenu
           primary="Analytics"
-          isActive={isActive("/analytics")}
           icon={<AutoGraphOutlined />}
+          submenuName="analytics"
+          isActive={isActive}
+          submenuLinks={[
+            { to: "/dengue-monitoring-analytics", primary: "Dengue Analytics" },
+            {
+              to: "/dewormed-monitoring-analytics",
+              primary: "Dewormed Analytics",
+            },
+            {
+              to: "/immunization-analytics",
+              primary: "Immunization Analytics",
+            },
+            { to: "/medical-checkup-analytics", primary: "Checkup Analytics" },
+            { to: "/clinic-visitors-analytics", primary: "Clinic Analytics" },
+            { to: "/feeding-program-analytics", primary: "Feeding Analytics" },
+          ]}
         />
         <SidebarLink
           to="/logs"

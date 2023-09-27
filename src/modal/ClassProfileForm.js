@@ -11,7 +11,6 @@ import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
 import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
-import Grid from "@mui/material/Grid";
 import axiosInstance from "../config/axios-instance";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -85,42 +84,7 @@ const ClassProfileForm = (props) => {
       ),
     section: yup.string().required("Section is required"),
     room: yup.string().required("Room is required"),
-    syFrom: yup
-      .string()
-      .required("Start Year is required")
-      .matches(/^\d{4}$/, "Invalid year format (YYYY)")
-      .test({
-        name: "yearComparison",
-        message: "End Year must be one year greater than Start Year",
-        test: function (syFrom) {
-          const syTo = this.parent.syTo;
-          if (!syFrom || !syTo) {
-            // If either field is empty, the validation is not applicable
-            return true;
-          }
-          const syFromNumber = parseInt(syFrom, 10);
-          const syToNumber = parseInt(syTo, 10);
-          return syFromNumber + 1 === syToNumber;
-        },
-      }),
-    syTo: yup
-      .string()
-      .required("End Year is required")
-      .matches(/^\d{4}$/, "Invalid year format (YYYY)")
-      .test({
-        name: "yearComparison",
-        message: "End Year must be one year greater than Start Year",
-        test: function (syTo) {
-          const syFrom = this.parent.syFrom;
-          if (!syFrom || !syTo) {
-            // If either field is empty, the validation is not applicable
-            return true;
-          }
-          const syFromNumber = parseInt(syFrom, 10);
-          const syToNumber = parseInt(syTo, 10);
-          return syFromNumber + 1 === syToNumber;
-        },
-      }),
+    academicYear: yup.string().required("Academic Year is required"),
     faculty: yup.string().required("Faculty is required"),
   });
 
@@ -135,8 +99,7 @@ const ClassProfileForm = (props) => {
       grade: "",
       section: "",
       room: "",
-      syFrom: "",
-      syTo: "",
+      academicYear: "",
       faculty: "", // Set the default faculty as empty
     },
     resolver: yupResolver(validationSchema),
@@ -180,7 +143,6 @@ const ClassProfileForm = (props) => {
       if (response.data && response.data.classProfile) {
         const newClassProfile = {
           ...response.data.classProfile,
-          schoolYear: `${response.data.classProfile.syFrom} - ${response.data.classProfile.syTo}`,
         };
         if (typeof addNewClassProfile === "function") {
           addNewClassProfile(newClassProfile);
@@ -210,7 +172,6 @@ const ClassProfileForm = (props) => {
           if (response.data.classProfile) {
             const updatedClassProfile = {
               ...response.data.classProfile,
-              schoolYear: `${response.data.classProfile.syFrom} - ${response.data.classProfile.syTo}`,
             };
             if (typeof props.onClassProfileUpdated === "function") {
               props.onClassProfileUpdated(updatedClassProfile);
@@ -252,6 +213,9 @@ const ClassProfileForm = (props) => {
     }
   };
 
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 10 }, (_, i) => currentYear + i);
+
   const handleClose = () => {
     reset();
     onClose();
@@ -266,8 +230,7 @@ const ClassProfileForm = (props) => {
       setValue("grade", selectedClassProfile.grade || "");
       setValue("section", selectedClassProfile.section || "");
       setValue("room", selectedClassProfile.room || "");
-      setValue("syFrom", selectedClassProfile.syFrom || "");
-      setValue("syTo", selectedClassProfile.syTo || "");
+      setValue("academicYear", selectedClassProfile.academicYear || "");
       setValue("faculty", selectedFacultyId || "");
     }
   }, [selectedClassProfile, setValue, facultyOptions]);
@@ -294,107 +257,85 @@ const ClassProfileForm = (props) => {
         <form onSubmit={handleSubmit(handleSaveOrUpdate)}>
           <DialogContent>
             <DialogContentText>Enter class profile details:</DialogContentText>
-            <Grid container spacing={3}>
-              <Grid item xs={12} sm={6}>
-                <Controller
-                  name="grade"
-                  control={control}
-                  render={({ field }) => (
-                    <FormControl
-                      margin="normal"
-                      required
-                      fullWidth
-                      error={!!errors.grade}
-                    >
-                      <InputLabel id="grade-label">Grade</InputLabel>
-                      <Select labelId="grade-label" label="Grade" {...field}>
-                        {gradeOptions.map((option) => (
-                          <MenuItem key={option} value={option}>
-                            {option}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                      {errors.grade && (
-                        <FormHelperText>{errors.grade.message}</FormHelperText>
-                      )}
-                    </FormControl>
+            <Controller
+              name="grade"
+              control={control}
+              render={({ field }) => (
+                <FormControl
+                  margin="normal"
+                  required
+                  fullWidth
+                  error={!!errors.grade}
+                >
+                  <InputLabel id="grade-label">Grade</InputLabel>
+                  <Select labelId="grade-label" label="Grade" {...field}>
+                    {gradeOptions.map((option) => (
+                      <MenuItem key={option} value={option}>
+                        {option}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {errors.grade && (
+                    <FormHelperText>{errors.grade.message}</FormHelperText>
                   )}
+                </FormControl>
+              )}
+            />
+            <Controller
+              name="section"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  label="Section"
+                  margin="normal"
+                  fullWidth
+                  {...field}
+                  required
+                  error={!!errors.section}
+                  helperText={errors.section?.message}
+                  onBlur={field.onBlur}
+                  onChange={(e) => {
+                    e.target.value = e.target.value.replace(
+                      /(?:^|\s)\S/g,
+                      function (a) {
+                        return a.toUpperCase();
+                      }
+                    );
+                    field.onChange(e);
+                  }}
                 />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <Controller
-                  name="section"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      label="Section"
-                      margin="normal"
-                      fullWidth
-                      {...field}
-                      required
-                      error={!!errors.section}
-                      helperText={errors.section?.message}
-                      onBlur={field.onBlur}
-                      onChange={(e) => {
-                        e.target.value = e.target.value.replace(
-                          /(?:^|\s)\S/g,
-                          function (a) {
-                            return a.toUpperCase();
-                          }
-                        );
-                        field.onChange(e);
-                      }}
-                    />
+              )}
+            />
+            <Controller
+              name="academicYear"
+              control={control}
+              render={({ field }) => (
+                <FormControl
+                  fullWidth
+                  margin="normal"
+                  required
+                  error={!!errors.academicYear}
+                >
+                  <InputLabel id="academicYear-label">Academic Year</InputLabel>
+                  <Select
+                    labelId="academicYear-label"
+                    label="Academic Year"
+                    {...field}
+                  >
+                    {years.map((year, index) => (
+                      <MenuItem key={index} value={`${year}-${year + 1}`}>
+                        {`${year}-${year + 1}`}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {errors.academicYear && (
+                    <FormHelperText>
+                      {errors.academicYear.message}
+                    </FormHelperText>
                   )}
-                />
-              </Grid>
-            </Grid>
-            <Grid container spacing={3}>
-              <Grid item xs={12} sm={6}>
-                <Controller
-                  name="syFrom"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      label="Start Year"
-                      fullWidth
-                      margin="normal"
-                      {...field}
-                      required
-                      error={!!errors.syFrom}
-                      helperText={errors.syFrom?.message}
-                      onBlur={field.onBlur}
-                      inputProps={{
-                        maxLength: 4,
-                        pattern: "[0-9]*", // Allow only numeric input
-                      }}
-                    />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <Controller
-                  name="syTo"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      label="End Year"
-                      fullWidth
-                      margin="normal"
-                      {...field}
-                      required
-                      error={!!errors.syTo}
-                      helperText={errors.syTo?.message}
-                      onBlur={field.onBlur}
-                      inputProps={{
-                        maxLength: 4,
-                        pattern: "[0-9]*", // Allow only numeric input
-                      }}
-                    />
-                  )}
-                />
-              </Grid>
-            </Grid>
+                </FormControl>
+              )}
+            />
             <Controller
               name="room"
               control={control}

@@ -9,6 +9,7 @@ const settingsRoutes = require("./routes/users/settingsRouter.js");
 const medicineInventoryRoutes = require("./routes/users/medicineInventoryRouter.js");
 const facultyProfileRoutes = require("./routes/users/facultyProfileRouter.js");
 const classProfileRoutes = require("./routes/users/classProfileRouter.js");
+const studentProfileRoutes = require("./routes/users/studentProfileRouter.js");
 
 const cors = require("cors");
 
@@ -36,6 +37,8 @@ app.use("/medicineInventory", medicineInventoryRoutes);
 app.use("/facultyProfile", facultyProfileRoutes);
 
 app.use("/classProfile", classProfileRoutes);
+
+app.use("/studentProfile", studentProfileRoutes);
 
 app.use("/auth", authRoutes);
 

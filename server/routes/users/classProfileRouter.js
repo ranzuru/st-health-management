@@ -7,7 +7,7 @@ const authenticateMiddleware = require("../../auth/authenticateMiddleware.js");
 // Create a new ClassProfile with a reference to a FacultyProfile using employeeId
 router.post("/createClassProfile", authenticateMiddleware, async (req, res) => {
   try {
-    const { grade, section, room, syFrom, syTo, faculty } = req.body;
+    const { grade, section, room, academicYear, faculty } = req.body;
 
     // Check if the provided employeeId is valid
     const facultyProfile = await FacultyProfile.findOne({
@@ -18,7 +18,7 @@ router.post("/createClassProfile", authenticateMiddleware, async (req, res) => {
     }
 
     // Validate that none of the fields are missing
-    if (!grade || !section || !room || !syFrom || !syTo || !faculty) {
+    if (!grade || !section || !room || !academicYear || !faculty) {
       return res.status(400).json({ error: "All fields are required" });
     }
 
@@ -34,8 +34,7 @@ router.post("/createClassProfile", authenticateMiddleware, async (req, res) => {
       grade,
       section,
       room,
-      syFrom,
-      syTo,
+      academicYear,
       faculty: facultyProfile._id,
     });
 
@@ -127,7 +126,7 @@ router.put(
   authenticateMiddleware,
   async (req, res) => {
     try {
-      const { grade, section, room, syFrom, syTo, faculty } = req.body; // change employeeId to faculty
+      const { grade, section, room, academicYear, faculty } = req.body; // change employeeId to faculty
       const facultyProfile = await FacultyProfile.findOne({
         employeeId: faculty,
       }); // change employeeId to faculty
@@ -142,8 +141,7 @@ router.put(
           grade,
           section,
           room,
-          syFrom,
-          syTo,
+          academicYear,
           faculty: facultyProfile._id,
         },
         { new: true }

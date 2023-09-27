@@ -1,75 +1,37 @@
-###
-
-POST http://localhost:8080/auth/login
-Content-Type: application/json
 
 
-  {
-  "firstName": "John",
-  "lastName": "Doe",
-  "phoneNumber": "1234567890",
-  "email": "admin12t@example.com",
-  "password": "password123",
-  "gender": "Male",
-  "role": "Admin"
-  }
 
 ###
-
-# Login and get token
-POST http://localhost:8080/auth/login
-Content-Type: application/json
-
-{
-  "email": "admin@example.com",
-  "password": "1234Apple"
-}
-
-###
-
-# Access Protected route
-
 GET http://localhost:8080/settings/user/fetchSettings
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJVMSIsImlhdCI6MTY5NDY3MzkwMCwiZXhwIjoxNjk0Njc3NTAwfQ.R2r8nVs1QL6XvcYsDe-cNOdh31xKwElGvsKu4Cl1Ht8  
 
 
-
-###
-
-POST http://localhost:8080/facultyProfile/createFacultyProfiles
+### Create a new student profile
+POST http://localhost:8080/studentProfile/createStudent
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJVMSIsImlhdCI6MTY5NTcyOTAyOSwiZXhwIjoxNjk1NzMyNjI5fQ.AjYx4W3r5Ca3cXRX-nVbN3iAwZHmbIwntqUGqDpSRrU
 Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJVMSIsImlhdCI6MTY5NTAzNDQ2NiwiZXhwIjoxNjk1MDM4MDY2fQ.vlISKs1Z85fcBzWsqoOexIx6nRpCRbucVMK1BF8sCTE
 
 {
-  "employeeId": "FAC12347",
-  "lastName": "Dela Cruz",
-  "firstName": "Jeremiah",
-  "middleName": "McCaddo",
+  "lrn": "1234567890",
+  "lastName": "Doe",
+  "firstName": "John",
+  "middleName": "M",
+  "nameExtension": "",
   "gender": "Male",
-  "mobileNumber": 1234567890,
-  "role": "Professor",
-  "status": "Active"
+  "birthDate": "2005-05-15",
+  "age": 18,
+  "is4p": true,
+  "parentName1": "Jane Doe",
+  "parentContact1": 9876543210,
+  "parentName2": "John Doe Sr.",
+  "parentContact2": 1122334455,
+  "address": "123 Main St, City, Country",
+  "status": "Enrolled",
+  "classProfile": "6512c9b87e797f669bb2a5ed"
 }
 
 ###
+GET http://localhost:8080/studentProfile/1234567890
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJVMSIsImlhdCI6MTY5NTcyOTAyOSwiZXhwIjoxNjk1NzMyNjI5fQ.AjYx4W3r5Ca3cXRX-nVbN3iAwZHmbIwntqUGqDpSRrU
 
-PUT http://localhost:8080/classProfile/updateClassProfile/650a9c5ef6abc70da815c9e0
-Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJVMSIsImlhdCI6MTY5NTIwMzMzOCwiZXhwIjoxNjk1MjA2OTM4fQ.TLKLgZkAfnZXfdcovCO_KC0HOtyBuFlyUK9sv40sl2c
-
-{
-  "grade": "Grade 6",
-  "section": "Batung",
-  "room": "111",
-  "employeeId": "124231312"
-}
-
-### Update Medicine Quantity
-PUT http://localhost:8080/medicineInventory/updateMedicine/65044f364dfb1040739147ac
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJVMSIsImlhdCI6MTY5NDc4MTEwOSwiZXhwIjoxNjk0Nzg0NzA5fQ.DDxs3Xqu30wXTaK8xy_ac_1S-2wlnWr-6idZ2jWoMvw
-Content-Type: application/json
-
-{
-  "quantity": 24
-}
 

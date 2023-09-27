@@ -19,6 +19,12 @@ import ClinicRecords from "./navbar/ClinicRecords";
 import MedicineInventory from "./navbar/MedicineInventory";
 import Events from "./navbar/Events";
 import Analytics from "./navbar/Analytics";
+import DengueMonitoringAnalytics from "./navbar/DengueMonitoringAnalytics";
+import DewormedMonitoringAnalytics from "./navbar/DewormedMonitoringAnalytics";
+import ImmunizationAnalytics from "./navbar/ImmunizationAnalytics";
+import MedicalCheckUpAnalytics from "./navbar/MedicalCheckUpAnalytics";
+import ClinicVisitorsAnalytics from "./navbar/ClinicVisitorsAnalytics";
+import FeedingProgramAnalytics from "./navbar/FeedingProgramAnalytics";
 import Logs from "./navbar/Logs";
 import Settings from "./navbar/Settings";
 import Sidebar from "./Sidebar.js";
@@ -62,6 +68,30 @@ function AppLayout() {
             <Route path="/medicine-inventory" element={<MedicineInventory />} />
             <Route path="/events" element={<Events />} />
             <Route path="/analytics" element={<Analytics />} />
+            <Route
+              path="/dengue-monitoring-analytics"
+              element={<DengueMonitoringAnalytics />}
+            />
+            <Route
+              path="/dewormed-monitoring-analytics"
+              element={<DewormedMonitoringAnalytics />}
+            />
+            <Route
+              path="/immunization-analytics"
+              element={<ImmunizationAnalytics />}
+            />
+            <Route
+              path="/medical-checkup-analytics"
+              element={<MedicalCheckUpAnalytics />}
+            />
+            <Route
+              path="/clinic-visitors-analytics"
+              element={<ClinicVisitorsAnalytics />}
+            />
+            <Route
+              path="/feeding-program-analytics"
+              element={<FeedingProgramAnalytics />}
+            />
             <Route path="/logs" element={<Logs />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>

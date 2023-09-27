@@ -17,7 +17,7 @@ import { useMediaQuery } from "@mui/material";
 import { Link as MuiLink } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
 import { CircularProgress } from "@mui/material";
-import axios from "axios";
+import axiosInstance from "./config/axios-instance";
 
 import schoolLogo from "./Data/DonjuanTransparent.png";
 import clinicLogo from "./Data/DonjuanStock.png";
@@ -65,7 +65,7 @@ const LoginPage = () => {
     }
 
     try {
-      const response = await axios.post("http://localhost:8080/auth/login", {
+      const response = await axiosInstance.post("/auth/login", {
         email: email,
         password: password,
       });

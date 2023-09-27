@@ -14,13 +14,7 @@ const classProfileSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    syFrom: {
-      // Represents the start year of the academic year
-      type: String,
-      required: true,
-    },
-    syTo: {
-      // Represents the end year of the academic year
+    academicYear: {
       type: String,
       required: true,
     },

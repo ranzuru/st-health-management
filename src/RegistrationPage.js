@@ -13,7 +13,7 @@ import { Visibility, VisibilityOff } from "@mui/icons-material";
 import clinicLogo from "./Data/DonjuanStock.png";
 import { Link } from "react-router-dom";
 import { useMediaQuery } from "@mui/material";
-import axios from "axios";
+import axiosInstance from "./config/axios-instance";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import Snackbar from "@mui/material/Snackbar";
@@ -77,10 +77,7 @@ const RegistrationPage = () => {
     validationSchema: validationSchema,
     onSubmit: async (values, { resetForm }) => {
       try {
-        const response = await axios.post(
-          "http://localhost:8080/auth/register",
-          values
-        );
+        const response = await axiosInstance.post("/auth/register", values);
         console.log(response.data); // Display response from the server
 
         resetForm();

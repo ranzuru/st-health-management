@@ -5,3 +5,7 @@ dist/
 
 # Environment variables
 .env
+
+
+# REST API
+API_TEST.rest

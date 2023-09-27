@@ -1,281 +1,125 @@
-import React, { useState } from 'react';
-import { DataGrid } from '@mui/x-data-grid';
-import IconButton from '@mui/material/IconButton';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
-import TextField from '@mui/material/TextField';
-import Button from '@mui/material/Button';
-import StudentProfileModal from '../modal/StudentProfileModal.js'
+import { useState, useEffect } from "react";
+import { DataGrid } from "@mui/x-data-grid";
+import IconButton from "@mui/material/IconButton";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import TextField from "@mui/material/TextField";
+import Button from "@mui/material/Button";
+import StudentProfileForm from "../modal/StudentProfileForm.js";
+import axiosInstance from "../config/axios-instance";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogContentText from "@mui/material/DialogContentText";
+import DialogTitle from "@mui/material/DialogTitle";
 
 const StudentsProfileGrid = () => {
+  const [students, setStudents] = useState([]);
+  const [searchValue, setSearchValue] = useState("");
+  const [formOpen, setFormOpen] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [studentIdToDelete, setStudentIdToDelete] = useState(null);
+  const [selectedStudent, setSelectedStudent] = useState(null);
 
-  const [searchValue, setSearchValue] = useState('');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  
   const handleSearchChange = (event) => {
     setSearchValue(event.target.value);
   };
 
-  const students = [
-    {
-        id: 1,
-        stud_id: 101,
-        name: 'Anna Smith',
-        mobile: '987-654-3210',
-        section: 'Magalang',
-        grade: '1',
-        gender: 'Female',
-        status: 'Active'
-      },
-     
-      {
-        id: 2,
-        stud_id: 102,
-        name: 'Michael Johnson',
-        mobile: '555-123-4567',
-        section: 'Magalang',
-        grade: '1',
-        gender: 'Male',
-        status: 'Inactive'
-      },
-     
-      {
-        id: 3,
-        stud_id: 103,
-        name: 'Emily Davis',
-        mobile: '777-888-9999',
-        section: 'Masunurin',
-        grade: '1',
-        gender: 'Female',
-        status: 'Active'
-      },
-     
-      {
-        id: 4,
-        stud_id: 104,
-        name: 'David Miller',
-        mobile: '444-555-6666',
-        section: 'Masunurin',
-        grade: '1',
-        gender: 'Male',
-        status: 'Active'
-      },
-     
-      {
-        id: 5,
-        stud_id: 105,
-        name: 'Olivia Martinez',
-        mobile: '111-222-3333',
-        section: 'Mabait',
-        grade: '2',
-        gender: 'Female',
-        status: 'Active'
-      },
-     
-      {
-        id: 6,
-        stud_id: 106,
-        name: 'William Anderson',
-        mobile: '888-999-0000',
-        section: 'Mabait',
-        grade: '2',
-        gender: 'Male',
-        status: 'Active'
-      },
-     
-      {
-        id: 7,
-        stud_id: 107,
-        name: 'Sophia Wilson',
-        mobile: '333-444-5555',
-        section: 'Magalang',
-        grade: '2',
-        gender: 'Female',
-        status: 'Active'
-      },
-     
-      {
-        id: 8,
-        stud_id: 108,
-        name: 'Daniel Lee',
-        mobile: '666-777-8888',
-        section: 'Magalang',
-        grade: '2',
-        gender: 'Male',
-        status: 'Active'
-      },
-     
-      {
-        id: 9,
-        stud_id: 109,
-        name: 'Isabella Taylor',
-        mobile: '222-333-4444',
-        section: 'Masunurin',
-        grade: '2',
-        gender: 'Female',
-        status: 'Active'
-      },
-     
-      {
-         id: 10,
-         stud_id: 110,
-         name: 'James Martinez',
-         mobile: '999-000-1111',
-         section: 'Masunurin',
-         grade: '2',
-         gender: 'Male',
-         status: 'Active'
-      },
-     
-      {
-         id: 11,
-         stud_id: 111,
-         name: 'Grace Johnson',
-         mobile: '444-555-6666',
-         section: 'Mabait',
-         grade: '3',
-         gender: 'Female',
-         status: 'Active'
-      },
-     
-      {
-         id: 12,
-         stud_id: 112,
-         name: 'Joseph Brown',
-         mobile: '111-222-3333',
-         section: 'Mabait',
-         grade: '3',
-         gender: 'Male',
-         status: 'Active'
-      },
-      
-      {
-         id: 13,
-         stud_id: 113,
-         name: 'Chloe Davis',
-         mobile: '777-888-9999',
-         section: 'Magalang',
-         grade: '3',
-         gender: 'Female',
-         status: 'Active'
-      },
-     
-      {
-         id: 14,
-         stud_id: 114,
-         name: 'Liam Wilson',
-         mobile: '555-123-4567',
-         section: 'Magalang',
-         grade: '3',
-         gender: 'Male',
-         status: 'Inactive'
-      },
-     
-      {
-         id: 15,
-         stud_id: 115,
-         name: 'Emma Smith',
-         mobile: '987-654-3210',
-         section: 'Masunurin',
-         grade: '3',
-         gender: 'Female',
-         status: 'Active'
-      },
-     
-      {
-         id: 16,
-         stud_id: 116,
-         name: 'Noah Johnson',
-         mobile: '888-999-0000',
-         section: 'Masunurin',
-         grade: '3',
-         gender: 'Male',
-         status: 'Active'
-      },
-     
-      {
-         id: 17,
-         stud_id: 117,
-         name: 'Ava Martinez',
-         mobile: '333-444-5555',
-         section: 'Mabait',
-         grade: '4',
-         gender: 'Female',
-         status: 'Active'
-      },
-     
-      {
-         id: 18,
-         stud_id: 118,
-         name: 'Ethan Anderson',
-         mobile: '666-777-8888',
-         section: 'Mabait',
-         grade: '4',
-         gender: 'Male',
-         status: 'Active'
-      },
-     
-      {
-         id: 19,
-         stud_id: 119,
-         name: 'Mia Taylor',
-         mobile: '222-333-4444',
-         section: 'Magalang',
-         grade: '4',
-         gender: 'Female',
-         status: 'Active'
-      },
-     
-      {
-         id: 20,
-         stud_id: 120,
-         name: 'Alexander Lee',
-         mobile: '999-000-1111',
-         section: 'Magalang',
-         grade: '4',
-         gender: 'Male',
-         status: 'Active'
-      }
-    // ... more user data
-  ];
+  const handleDialogOpen = (lrn) => {
+    setStudentIdToDelete(lrn);
+    setDialogOpen(true);
+  };
+
+  const handleDialogClose = () => {
+    setStudentIdToDelete(null);
+    setDialogOpen(false);
+  };
+
+  const formatYearFromDate = (dateString) => {
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0"); // Add leading zero if needed
+    const day = String(date.getDate()).padStart(2, "0"); // Add leading zero if needed
+    return `${year}-${month}-${day}`;
+  };
+
+  const fetchStudents = async () => {
+    try {
+      const response = await axiosInstance.get("studentProfile/fetchStudent");
+      const updatedStudents = response.data.map((student) => {
+        return {
+          ...student,
+          id: student._id, // Assuming _id is the unique identifier for students
+          name: `${student.firstName} ${student.lastName}`,
+          grade: student.classProfile ? student.classProfile.grade : "N/A",
+          section: student.classProfile ? student.classProfile.section : "N/A",
+        };
+      });
+      setStudents(updatedStudents);
+    } catch (error) {
+      console.error("An error occurred while fetching students:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchStudents();
+  }, []);
+
+  const onStudentUpdated = (updatedStudentData) => {
+    const updatedStudent = updatedStudentData.student; // I'm assuming the updated student is available like this from your API response
+    const updatedStudents = students.map((student) =>
+      student.lrn === updatedStudent.lrn
+        ? {
+            ...updatedStudent,
+            id: updatedStudent._id,
+            name: `${updatedStudent.firstName} ${updatedStudent.lastName}`,
+            grade: updatedStudent.classProfile
+              ? updatedStudent.classProfile.grade
+              : "N/A",
+            section: updatedStudent.classProfile
+              ? updatedStudent.classProfile.section
+              : "N/A",
+          }
+        : student
+    );
+    setStudents(updatedStudents);
+  };
+
+  const addNewStudent = (newStudent) => {
+    setStudents((prevStudent) => [...prevStudent, newStudent]);
+  };
 
   const columns = [
-    { field: 'stud_id', headerName: 'Stud ID', width: 100 },
-    { field: 'name', headerName: 'Name', width: 200 },
-    { field: 'mobile', headerName: 'Mobile Number', width: 150 },
-    { field: 'section', headerName: 'Section', width: 150 },
-    { field: 'grade', headerName: 'Grade Level', width: 150 },
-    { field: 'gender', headerName: 'Gender', width: 150 },
+    { field: "lrn", headerName: "LRN", width: 200 },
+    { field: "name", headerName: "Name", width: 200 },
+    { field: "gender", headerName: "Gender", width: 100 },
     {
-      
-      field: 'status',
-      headerName: 'Status',
+      field: "birthDate",
+      headerName: "BirthDate",
       width: 150,
-      renderCell: (params) => (
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <div
-            style={{
-              width: 10,
-              height: 10,
-              borderRadius: '50%',
-              backgroundColor: params.value === 'Active' ? 'green' : 'red',
-              marginRight: 5,
-            }}
-          />
-          {params.value}
-        </div>
-      ),
+      valueGetter: (params) => formatYearFromDate(params.row.birthDate),
     },
+    { field: "age", headerName: "Age", width: 75 },
+    { field: "grade", headerName: "Grade Level", width: 150 },
+    { field: "section", headerName: "Section", width: 150 },
+    { field: "parentContact1", headerName: "Parent Contact", width: 150 },
     {
-      field: 'action',
-      headerName: 'Action',
+      field: "is4p",
+      headerName: "4P's Member",
+      width: 100,
+      valueGetter: (params) => (params.row.is4p ? "Yes" : "No"),
+    },
+    { field: "status", headerName: "Status", width: 150 },
+    {
+      field: "action",
+      headerName: "Action",
       width: 150,
       renderCell: (params) => (
         <div>
-        <IconButton onClick={() => handleAction(params.row.id)}>
+          <IconButton onClick={() => handleEditStudent(params.row.lrn)}>
             <EditIcon />
           </IconButton>
-          <IconButton onClick={() => handleDelete(params.row.id)}>
+          <IconButton onClick={() => handleDialogOpen(params.row.lrn)}>
             <DeleteOutlineIcon />
           </IconButton>
         </div>
@@ -283,68 +127,140 @@ const StudentsProfileGrid = () => {
     },
   ];
 
-  const handleAction = (userId) => {
-    // Implement your action logic here
-    console.log(`Edit user with ID: ${userId}`);
+  const handleEditStudent = (lrn) => {
+    const studentToEdit = students.find((student) => student.lrn === lrn);
+    setSelectedStudent(studentToEdit);
+    setFormOpen(true); // This would open the form dialog for editing
   };
 
-  const handleDelete = (userId) => {
-    // Implement your delete logic here
-    console.log(`Delete user with ID: ${userId}`);
+  const handleDelete = () => {
+    console.log(`Deactivating student with LRN:`, studentIdToDelete);
+    if (studentIdToDelete) {
+      axiosInstance
+        .put(`studentProfile/updateStudent/${studentIdToDelete}`, {
+          status: "Inactive",
+        })
+        .then((response) => {
+          if (response.status === 200) {
+            // Update the student status in your local state
+            setStudents((prevStudents) =>
+              prevStudents.map((student) =>
+                student.lrn === studentIdToDelete
+                  ? { ...student, status: "Inactive" }
+                  : student
+              )
+            );
+          } else {
+            console.error("Deactivating student failed:", response.statusText);
+          }
+        })
+        .catch((error) => console.error("Deactivating student failed:", error));
+    }
+    handleDialogClose();
   };
-
-  const filteredStudents = students.filter(user => 
-    user.id.toString().includes(searchValue) ||
-    user.name.toLowerCase().includes(searchValue.toLowerCase()) ||
-    user.mobile.includes(searchValue) ||
-    user.section.toLowerCase().includes(searchValue.toLowerCase()) ||
-    user.grade.toLowerCase().includes(searchValue.toLowerCase()) ||
-    user.gender.toLowerCase().includes(searchValue.toLowerCase()) ||
-    user.status.toLowerCase().includes(searchValue.toLowerCase())
-  );
 
   const handleModalOpen = () => {
-    console.log('Opening modal');
-    setIsModalOpen(true);
+    setFormOpen(true);
   };
 
   const handleModalClose = () => {
-    console.log('Closing modal');
-    setIsModalOpen(false);
+    setFormOpen(false);
   };
-  
+
+  const filteredStudents = students
+    .filter(
+      (student) =>
+        (student?.id?.toString()?.includes(searchValue) ?? false) ||
+        (student?.lrn?.toString()?.includes(searchValue) ?? false) ||
+        (student?.name?.toLowerCase()?.includes(searchValue.toLowerCase()) ??
+          false) ||
+        (student?.gender?.toLowerCase()?.includes(searchValue.toLowerCase()) ??
+          false) ||
+        (student?.birthDate?.includes(searchValue) ?? false) ||
+        (student?.age?.toString()?.includes(searchValue) ?? false) ||
+        (student?.grade?.toLowerCase()?.includes(searchValue.toLowerCase()) ??
+          false) ||
+        (student?.section?.toLowerCase()?.includes(searchValue.toLowerCase()) ??
+          false) ||
+        (student?.contact?.toString()?.includes(searchValue) ?? false) ||
+        (student?.is4p
+          ?.toString()
+          ?.toLowerCase()
+          ?.includes(searchValue.toLowerCase()) ??
+          false) ||
+        (student?.status?.toLowerCase()?.includes(searchValue.toLowerCase()) ??
+          false)
+    )
+    .filter((student) => student.status === "Enrolled") // Filter only active faculty
+    .map((student) => ({
+      ...student,
+      id: student.lrn,
+    }));
 
   return (
     <div className="flex flex-col h-full">
       <div className="w-full max-w-screen-xl mx-auto px-4">
-       <div className="mb-4 flex justify-end items-center">
-       <Button variant="contained" color="primary" onClick={handleModalOpen}>Add Student</Button>
-       <div className="ml-2">
-        <TextField
-          label="Search"
-          variant="outlined"
-          size="small"
-          value={searchValue}
-          onChange={handleSearchChange}
+        <div className="mb-4 flex justify-end items-center">
+          <Button variant="contained" color="primary" onClick={handleModalOpen}>
+            Add Student
+          </Button>
+          <div className="ml-2">
+            <TextField
+              label="Search"
+              variant="outlined"
+              size="small"
+              value={searchValue}
+              onChange={handleSearchChange}
+            />
+          </div>
+        </div>
+        <DataGrid
+          rows={filteredStudents}
+          columns={columns}
+          getRowId={(row) => row.lrn}
+          initialState={{
+            pagination: {
+              paginationModel: {
+                pageSize: 10,
+              },
+            },
+          }}
+          pageSizeOptions={[10]}
+          checkboxSelection
+          disableRowSelectionOnClick
+        />
+        <StudentProfileForm
+          open={formOpen}
+          isEditing={!!selectedStudent}
+          onStudentUpdated={onStudentUpdated}
+          addNewStudent={addNewStudent}
+          selectedStudent={selectedStudent}
+          onClose={() => {
+            setSelectedStudent(null);
+            handleModalClose();
+          }}
+          onCancel={() => {
+            setSelectedStudent(null);
+            handleModalClose();
+          }}
         />
       </div>
-      </div>
-      <DataGrid 
-      rows={filteredStudents}
-      columns={columns}
-      initialState={{
-        pagination: {
-          paginationModel: {
-            pageSize: 10,
-          },
-        },
-      }}
-      pageSizeOptions={[10]}
-      checkboxSelection
-      disableRowSelectionOnClick  
-      />
-      <StudentProfileModal isOpen={isModalOpen} onClose={handleModalClose} onCancel={handleModalClose} />
-    </div>
+      <Dialog open={dialogOpen} onClose={handleDialogClose}>
+        <DialogTitle>Confirm Delete!</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to delete this student record?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDialogClose} color="primary">
+            Cancel
+          </Button>
+          <Button onClick={handleDelete} color="primary">
+            Confirm
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 };

@@ -59,8 +59,6 @@ const FacultyProfileGrid = () => {
   }, []);
 
   // Function to update state after a faculty is updated
-  // Function to update state after a faculty item is updated
-  // Function to update state after a faculty item is updated
   const onFacultyUpdated = (updatedFaculty) => {
     const updatedFaculties = faculty.map((faculty) =>
       faculty.employeeId === updatedFaculty.faculty.employeeId

@@ -42,11 +42,9 @@ const ClassProfileGrid = () => {
       );
       const updatedClassProfiles = response.data.map((classProfile) => {
         const facultyName = classProfile.faculty.name;
-        const schoolYear = `${classProfile.syFrom} - ${classProfile.syTo}`;
         return {
           ...classProfile,
           faculty: facultyName,
-          schoolYear,
         };
       });
       setClassProfiles(updatedClassProfiles);
@@ -79,11 +77,9 @@ const ClassProfileGrid = () => {
 
   const mapClassProfile = (classProfile) => {
     const facultyName = `${classProfile.faculty.firstName} ${classProfile.faculty.lastName}`;
-    const schoolYear = `${classProfile.syFrom} - ${classProfile.syTo}`;
     return {
       ...classProfile,
       faculty: facultyName,
-      schoolYear,
     };
   };
 
@@ -100,7 +96,7 @@ const ClassProfileGrid = () => {
     { field: "grade", headerName: "Grade Level", width: 100 },
     { field: "section", headerName: "Section", width: 150 },
     { field: "room", headerName: "Room", width: 100 },
-    { field: "schoolYear", headerName: "School Year", width: 150 },
+    { field: "academicYear", headerName: "School Year", width: 150 },
     { field: "faculty", headerName: "Adviser", width: 150 },
     {
       field: "status",
@@ -190,8 +186,8 @@ const ClassProfileGrid = () => {
         (classProfile.room ? classProfile.room.toLowerCase() : "").includes(
           searchValue.toLowerCase()
         ) ||
-        (classProfile.schoolYear
-          ? classProfile.schoolYear.toLowerCase()
+        (classProfile.academicYear
+          ? classProfile.academicYear.toLowerCase()
           : ""
         ).includes(searchValue.toLowerCase()) ||
         (classProfile.status ? classProfile.status.toLowerCase() : "").includes(
