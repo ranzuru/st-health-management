@@ -24,7 +24,6 @@ const MedicineInGrid = () => {
     const day = String(date.getDate()).padStart(2, "0"); // Add leading zero if needed
     return `${year}-${month}-${day}`;
   };
-  
 
   // Fetch medicines when the component mounts
   useEffect(() => {

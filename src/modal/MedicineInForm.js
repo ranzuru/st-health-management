@@ -14,10 +14,12 @@ import { Controller, useForm } from "react-hook-form";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import FormHelperText from "@mui/material/FormHelperText";
+import FormControl from "@mui/material/FormControl";
 
 const MedicineInForm = (props) => {
   const { open = false, onClose, addNewDocument} = props;
-  const [documentData, setDocumentData] = useState(null);
+  const [expirationDate, setExpirationDate] = useState(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarData, setSnackbarData] = useState({
     message: "",
@@ -35,6 +37,11 @@ const MedicineInForm = (props) => {
     setSnackbarOpen(true);
   };
 
+  const handleExpirationDateChange = (date) => {
+    setExpirationDate(date);
+    setValue("expirationDate", date);
+  };
+
   const handleCloseSnackbar = () => {
     setSnackbarOpen(false);
   };
@@ -43,31 +50,15 @@ const MedicineInForm = (props) => {
     control,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors },
   } = useForm({
     resolver: yupResolver(validationSchema),
     defaultValues: {
-      product: "",
+      quantity: 1,
       note: "",
     },
   });
-
-  // Function to fetch product based on item ID
-  const fetchDocumentByItemId = async (itemId) => {
-    try {
-      const response = await axiosInstance.get(`medicineInventory/getItem/${itemId}`); // Replace with your endpoint
-      setDocumentData(response.data); // Assuming response contains product data
-    } catch (error) {
-      console.error("An error occurred while fetching product:", error);
-      // Handle the error accordingly (e.g., show an error message)
-    }
-  };
-
-  // Event handler for Item ID change
-  const handleItemIdChange = (event) => {
-    const itemId = event.target.value;
-    fetchDocumentByItemId(itemId);
-  };
 
   const handleCreate = async (data) => {
     try {
@@ -135,24 +126,6 @@ const MedicineInForm = (props) => {
                   error={!!errors.itemId}
                   helperText={errors.itemId?.message}
                   onBlur={field.onBlur}
-                  onChange={handleItemIdChange}
-                />
-              )}
-            />
-            <Controller
-              name="product"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  label="Product (Name)"
-                  fullWidth
-                  margin="normal"
-                  {...field}
-                  disabled
-                  value={documentData ? documentData.product : ''}
-                  error={!!errors.product}
-                  helperText={errors.product?.message}
-                  onBlur={field.onBlur}
                 />
               )}
             />
@@ -195,7 +168,7 @@ const MedicineInForm = (props) => {
               control={control}
               render={({ field }) => (
                 <TextField
-                  label="Quantity"
+                  label="Quantity (Medicine)"
                   fullWidth
                   margin="normal"
                   {...field}
@@ -210,22 +183,16 @@ const MedicineInForm = (props) => {
             />
               </Grid>
               <Grid item xs={12} sm={6}>
-              <Controller
-              name="expirationDate"
-              control={control}
-              render={({ field }) => (
-                <DatePicker
-                  label="Expiration Date"
-                  fullWidth
-                  margin="normal"
-                  {...field}
-                  required
-                  error={!!errors.expirationDate}
-                  helperText={errors.expirationDate?.message}
-                  onBlur={field.onBlur}
-                />
-              )}
-            />
+              <FormControl error={!!errors.expirationDate}>
+                  <DatePicker
+                    label="Expiration Date"
+                    value={expirationDate}
+                    onChange={handleExpirationDateChange}
+                  />
+                  <FormHelperText>
+                    {errors.expirationDate?.message}
+                  </FormHelperText>
+                </FormControl>
               </Grid>
             </Grid>
             <Controller

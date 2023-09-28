@@ -40,14 +40,14 @@ router.post("/postItem", async (req, res) => {
 // Create a stock in record
 router.post("/postIn", async (req, res) => {
     try {
-      const { itemId, batchId, quantity, expirationDate } = req.body;
+      const { itemId, batchId, receiptId, quantity, expirationDate, note } = req.body;
   
-      if (!itemId || !batchId || !quantity || !expirationDate) {
+      if (!itemId || !batchId || !receiptId || !quantity || !expirationDate || !note) {
         console.log("Missing required fields");
-        return res.status(400).json({ error: "Missing required fields: itemId, batchId, quantity, expirationDate",});
+        return res.status(400).json({ error: "Missing required fields: itemId, batchId, receiptId, quantity, expirationDate, note",});
       }
 
-      const document = new MedicineIn({ itemId, batchId, quantity, expirationDate });
+      const document = new MedicineIn({ itemId, product: "sample", batchId, receiptId, quantity, expirationDate, note });
   
       await document.save();
       res.status(201).json(document);
