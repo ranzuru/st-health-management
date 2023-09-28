@@ -16,6 +16,7 @@ import {
   AssignmentIndOutlined,
   MedicalServicesOutlined,
   EventOutlined,
+  Person2Outlined,
   AutoGraphOutlined,
   ReceiptLongOutlined,
   SettingsOutlined,
@@ -229,28 +230,15 @@ const Sidebar = () => {
           ]}
         />
         <SidebarSubmenu
-          primary="Profile"
+          primary="Profiles"
           icon={<SupervisorAccountOutlined />}
           submenuName="profile"
           isActive={isActive}
           submenuLinks={[
-            { to: "/students-profile", primary: "Student Profile" },
+            { to: "/student-profile", primary: "Student Profile" },
             { to: "/faculty-profile", primary: "Faculty Profile" },
             { to: "/class-profile", primary: "Class Profile" },
           ]}
-        />
-
-        <SidebarLink
-          to="/student-profile"
-          primary="Student Profile"
-          isActive={isActive("/student-profile")}
-          icon={<Person2Outlined />}
-        />
-        <SidebarLink
-          to="/faculty-profile"
-          primary="Faculty Profile"
-          isActive={isActive("/faculty-profile")}
-          icon={<SupervisorAccountOutlined />}
         />
 
         <SidebarSubmenu
@@ -276,11 +264,17 @@ const Sidebar = () => {
           isActive={isActive("/clinic-records")}
           icon={<AssignmentIndOutlined />}
         />
-        <SidebarLink
-          to="/medicine-inventory"
+        <SidebarSubmenu
           primary="Medicine Inventory"
-          isActive={isActive("/medicine-inventory")}
           icon={<MedicalServicesOutlined />}
+          submenuName="medicineInventory"
+          isActive={isActive}
+          submenuLinks={[
+            { to: "/medicine-item", primary: "Medicine Item" },
+            { to: "/medicine-in", primary: "Stock In" },
+            { to: "/medicine-disposal", primary: "Stock Disposal" },
+            { to: "/medicine-adjustment", primary: "Stock Adjustment" },
+          ]}
         />
         <SidebarLink
           to="/events"

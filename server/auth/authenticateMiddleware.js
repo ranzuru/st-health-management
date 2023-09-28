@@ -2,7 +2,7 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/User.js");
 
 const generateNewAccessToken = (userId, refreshTokenSecret) => {
-  return jwt.sign({ userId }, refreshTokenSecret, { expiresIn: "1h" });
+  return jwt.sign({ userId }, refreshTokenSecret, { expiresIn: "24h" });
 };
 
 const authenticateMiddleware = async (req, res, next) => {

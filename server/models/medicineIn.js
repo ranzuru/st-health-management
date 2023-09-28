@@ -9,33 +9,28 @@ const medicineSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  category: {
+  batchId: {
     type: String,
     required: true,
   },
-  quantity: {
-    type: Number,
-    required: true,
-  },
-  stockLevel: {
-    type: String, // Store the descriptive stock level
-    enum: ["High", "Moderate", "Low"],
+  receiptId: {
+    type: String,
     required: true,
   },
   expirationDate: {
     type: Date,
     required: true,
   },
-  restockDate: {
-    type: Date,
+  quantity: {
+    type: Number,
     required: true,
   },
-  note: {
+  notes: {
     type: String,
-    default: "None",
+    default: "",
   },
-});
+}, { timestamps: true });
 
-const Medicine = mongoose.model("Medicine", medicineSchema);
+const MedicineIn = mongoose.model("medicine_in", medicineSchema);
 
-module.exports = Medicine;
+module.exports = MedicineIn;

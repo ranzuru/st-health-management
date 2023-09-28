@@ -21,8 +21,9 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import FormHelperText from "@mui/material/FormHelperText";
 
 const StudentForm = (props) => {
-  const { open = false, onClose, addDocument, selectedDocument } = props;
+  const { open = false, onClose, initialData, addDocument, selectedDocument } = props;
   const [selectedBirthDate, setSelectedBirthDate] = useState(null);
+  const [classOption, setClassOption] = useState([]);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarData, setSnackbarData] = useState({
     message: "",
@@ -44,6 +45,7 @@ const StudentForm = (props) => {
     parentMobile2: yup.string().nullable(),
     address: yup.string().required("Address is required"),
     status: yup.string().required("Status is required"),
+    student_class: yup.string().required("Class is required"),
   });
 
   const handleBirthDateChange = (date) => {
@@ -62,33 +64,57 @@ const StudentForm = (props) => {
 
   const {
     control,
-    register,
     handleSubmit,
     reset,
     setValue,
     formState: { errors },
   } = useForm({
-    resolver: yupResolver(validationSchema),
-    defaultValues: {
-      gender: "Male",
-      is4p: false,
-      status: "Active"
+    defaultValues: initialData || {
+      lrn: "", 
+      lastName: "", 
+      firstName: "", 
+      middleName: "", 
+      nameExtension: "", 
+      gender: "", 
+      birthDate: "", 
+      is4p: "", 
+      parentName1: "", 
+      parentMobile1: "", 
+      parentName2: "", 
+      parentMobile2: "", 
+      address: "", 
+      status: "", 
+      student_class: "", 
     },
+    resolver: yupResolver(validationSchema),
   });
 
+  useEffect(() => {
+    const fetchClassProfiles = async () => {
+      try {
+        const response = await axiosInstance.get(
+          "/classProfile/fetchClassProfile"
+        );
+        if (response.data) {
+          // Map advisers to options for the dropdown
+          const options = response.data.map((data) => ({
+            value: data._id, // Use the unique identifier for the value
+            class: `${data.grade} - ${data.section} (${data.syFrom} - ${data.syTo})`, // Display name
+          }));
+          setClassOption(options);
+        }
+      } catch (error) {
+        console.error("An error occurred while fetching class profiles:", error);
+      }
+    };
+
+    fetchClassProfiles();
+  }, []);
+
   const handleCreate = async (data) => {
-    if (!data.nameExtension) {
-      data.nameExtension = "";
-    }
-    if (!data.parentName2) {
-      data.parentName2 = "None";
-    }
-    if (!data.parentMobile2) {
-      data.parentMobile2 = "None";
-    }
     try {
-      const response = await axiosInstance.post("student-profile/post", data );
-      if (response.data.lrn) {
+      const response = await axiosInstance.post("studentProfile/post", data);
+      if (response.data && response.data._id) {
         if (typeof addDocument === "function") {
           addDocument(response.data);
         }
@@ -101,28 +127,21 @@ const StudentForm = (props) => {
       console.error("An error occurred during adding data:", error);
       if (error.response && error.response.data) {
         console.error("Server responded with:", error.response.data);
+        showSnackbar(error.response.data.error || "An error occurred during adding data", "error");
+      } else {
+        showSnackbar("An error occurred during adding data", "error");
       }
-      showSnackbar("An error occurred during adding data", "error");
     }
   };
 
   const handleUpdate = async (data) => {
-    if (!data.nameExtension) {
-      data.nameExtension = "";
-    }
-    if (!data.parentName2) {
-      data.parentName2 = "None";
-    }
-    if (!data.parentMobile2) {
-      data.parentMobile2 = "None";
-    }
-    // Check if selectedMedicine is not undefined or null
+    // Check if selectedDocument is not undefined or null
     if (selectedDocument) {
-      // Check if selectedMedicine._id is not undefined or null
+      // Check if selectedDocument._id is not undefined or null
       if (selectedDocument._id) {
         try {
-          const response = await axiosInstance.put(`student-profile/put/${selectedDocument._id}`, data);
-          if (response.data.lrn) {
+          const response = await axiosInstance.put(`studentProfile/put/${selectedDocument._id}`, data);
+          if (response.data._id) {
             if (typeof props.onDocumentUpdated === "function") {
               props.onDocumentUpdated(response.data);
             }
@@ -133,7 +152,12 @@ const StudentForm = (props) => {
           }
         } catch (error) {
           console.error("An error occurred during updating data:", error);
-          showSnackbar("An error occurred during updating data", "error");
+          if (error.response && error.response.data) {
+            console.error("Server responded with:", error.response.data);
+            showSnackbar(error.response.data.error || "An error occurred during updating data", "error");
+          } else {
+            showSnackbar("An error occurred during updating data", "error");
+          }
         }
       } else {
         console.error("selectedDocument._id is undefined");
@@ -149,11 +173,16 @@ const StudentForm = (props) => {
   };
   // Function to handle Save or Update operation
   const handleSaveOrUpdate = (data) => {
-    if (selectedDocument && selectedDocument._id) {
-      handleUpdate(data);
-    } else {
-      handleCreate(data);
+    try {
+      if (selectedDocument && selectedDocument._id) {
+        handleUpdate(data);
+      } else {
+        handleCreate(data);
+      }
+    } catch (error) {
+      console.error("Error in handleSaveOrUpdate", error);
     }
+    
   };
 
   // Function to close the dialog and reset form values
@@ -165,6 +194,10 @@ const StudentForm = (props) => {
   // useEffect to populate form fields when selectedMedicine changes
   useEffect(() => {
     if (selectedDocument) {
+      const selectedClassId = classOption.find(
+        (option) => option.class === selectedDocument.student_class
+      )?.value;
+
       setValue("lrn", selectedDocument.lrn || "");
       setValue("lastName", selectedDocument.lastName || "");
       setValue("firstName", selectedDocument.firstName || "");
@@ -180,8 +213,15 @@ const StudentForm = (props) => {
       setValue("status", selectedDocument.status || "");
       const birthDate = new Date(selectedDocument.birthDate);
       setSelectedBirthDate(birthDate);
+      setValue("student_class", selectedClassId || "");
     }
-  }, [selectedDocument, setValue]);
+
+    if (!selectedDocument) {
+      setValue("status", "Active");
+      setValue("gender", "Male");
+      setValue("is4p", "false");
+    }
+  }, [selectedDocument, setValue, classOption]);
 
   return (
     <>
@@ -206,223 +246,307 @@ const StudentForm = (props) => {
           <DialogContent>
             <DialogContentText>Enter details:</DialogContentText>
             
-            <TextField
-              autoFocus
-              margin="normal"
-              label="Learner Reference Number (LRN)"
-              {...register("lrn")}
-              fullWidth
-              required
-              error={!!errors.lrn}
-              helperText={errors.lrn?.message}
+            
+            <Grid container spacing={3}>
+              <Grid item xs={12} sm={8}>
+                <Controller
+                  name="lrn"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      label="Learner Reference Number (LRN)"
+                      fullWidth
+                      margin="normal"
+                      {...field}
+                      required
+                      error={!!errors.lrn}
+                      helperText={errors.lrn?.message}
+                      onBlur={field.onBlur}
+                    />
+                  )}
+                />
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <Controller
+                  name="status"
+                  control={control}
+                  render={({ field }) => (
+                    <FormControl
+                      fullWidth
+                      margin="normal"
+                      required
+                      error={!!errors.status}
+                    >
+                      <InputLabel>Status</InputLabel>
+                      <Select label="Status" {...field}>
+                          <MenuItem value={"Active"}>Active</MenuItem>
+                          <MenuItem value={"Inactive"}>Inactive</MenuItem>
+                      </Select>
+                      {errors.status && (
+                        <FormHelperText>{errors.status.message}</FormHelperText>
+                      )}
+                    </FormControl>
+                  )}
+                />
+              </Grid>
+            </Grid>
+            <Controller
+              name="lastName"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  label="Last Name"
+                  fullWidth
+                  margin="normal"
+                  {...field}
+                  required
+                  error={!!errors.lastName}
+                  helperText={errors.lastName?.message}
+                  onBlur={field.onBlur}
+                />
+              )}
             />
-            <TextField
-              autoFocus
-              margin="normal"
-              label="Last Name"
-              {...register("lastName")}
-              fullWidth
-              required
-              error={!!errors.lastName}
-              helperText={errors.lastName?.message}
+            <Controller
+              name="firstName"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  label="First Name"
+                  fullWidth
+                  margin="normal"
+                  {...field}
+                  required
+                  error={!!errors.firstName}
+                  helperText={errors.firstName?.message}
+                  onBlur={field.onBlur}
+                />
+              )}
             />
-            <TextField
-              autoFocus
-              margin="normal"
-              label="First Name"
-              {...register("firstName")}
-              fullWidth
-              required
-              error={!!errors.firstName}
-              helperText={errors.firstName?.message}
-            /> 
             <Grid container spacing={3}>
-              <Grid item xs={12} sm={6} className="flex items-center">
-                  <TextField
-                    className="w-full"
-                    margin="normal"
-                    label="Middle Name"
-                    autoFocus
-                    {...register("middleName")}
-                    fullWidth
-                    required
-                    error={!!errors.middleName}
-                    helperText={errors.middleName?.message}
-                  />
+              <Grid item xs={12} sm={6}>
+                <Controller
+                  name="middleName"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      label="Middle Name"
+                      fullWidth
+                      margin="normal"
+                      {...field}
+                      required
+                      error={!!errors.middleName}
+                      helperText={errors.middleName?.message}
+                      onBlur={field.onBlur}
+                    />
+                  )}
+                />
               </Grid>
-              <Grid item xs={12} sm={6} className="flex items-center">
-                  <TextField
-                    className="w-full"
-                    margin="normal"
-                    label="Name Extension"
-                    autoFocus
-                    {...register("nameExtension")}
-                    fullWidth
-                    error={!!errors.nameExtension}
-                    helperText={errors.nameExtension?.message}
-                  />
+              <Grid item xs={12} sm={6}>
+              <Controller
+                  name="nameExtension"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      label="Name Extension"
+                      fullWidth
+                      margin="normal"
+                      {...field}
+                      error={!!errors.nameExtension}
+                      helperText={errors.nameExtension?.message}
+                      onBlur={field.onBlur}
+                    />
+                  )}
+                />
               </Grid>
             </Grid>
             <Grid container spacing={3}>
-              <Grid item xs={12} sm={6} className="flex items-center">
-              <FormControl fullWidth required margin="normal">
-                  <InputLabel id="category-label">Gender</InputLabel>
-                  <Controller
-                    name="gender"
-                    control={control}
-                    defaultValue={
-                      selectedDocument ? selectedDocument.gender : 'Male'
-                    }
-                    rules={{ required: true }}
-                    render={({ field }) => (
-                      <Select
-                        {...field}
-                        labelId="category-label"
-                        id="is4p"
-                        label="Gender"
-                        error={!!errors.gender}
-                      >
-                        <MenuItem value={"Male"}>Male</MenuItem>
-                        <MenuItem value={"Female"}>Female</MenuItem>
+              <Grid item xs={12} sm={4}>
+                <Controller
+                  name="gender"
+                  control={control}
+                  render={({ field }) => (
+                    <FormControl
+                      fullWidth
+                      margin="normal"
+                      required
+                      error={!!errors.gender}
+                    >
+                      <InputLabel>Gender</InputLabel>
+                      <Select label="Gender" {...field}>
+                          <MenuItem value={"Male"}>Male</MenuItem>
+                          <MenuItem value={"Female"}>Female</MenuItem>
                       </Select>
+                      {errors.gender && (
+                        <FormHelperText>{errors.gender.message}</FormHelperText>
+                      )}
+                    </FormControl>
                     )}
-                  />
-                  <FormHelperText error={!!errors.gender}>
-                    {errors.gender?.message}
-                  </FormHelperText>
-                </FormControl>
-                <FormControl fullWidth required margin="normal">
-                  <InputLabel id="category-label">4P</InputLabel>
-                  <Controller
-                    name="is4p"
-                    control={control}
-                    defaultValue={
-                      selectedDocument ? selectedDocument.is4p : 'false'
-                    }
-                    rules={{ required: true }}
-                    render={({ field }) => (
-                      <Select
-                        {...field}
-                        labelId="category-label"
-                        id="is4p"
-                        label="4P"
-                        error={!!errors.is4p}
-                      >
-                        <MenuItem value={"true"}>Yes</MenuItem>
-                        <MenuItem value={"false"}>No</MenuItem>
-                      </Select>
-                    )}
-                  />
-                  <FormHelperText error={!!errors.is4p}>
-                    {errors.is4p?.message}
-                  </FormHelperText>
-                </FormControl>
+                />
               </Grid>
-              <Grid item xs={12} sm={6} className="flex items-center">
-              <FormControl fullWidth error={!!errors.birthDate}>
-                  <DatePicker
-                    label="Birth Date"
-                    value={selectedBirthDate}
-                    onChange={handleBirthDateChange}
-                  />
-                  <FormHelperText>
-                    {errors.birthDate?.message}
-                  </FormHelperText>
+              <Grid item xs={12} sm={3}>
+                <Controller
+                  name="is4p"
+                  control={control}
+                  render={({ field }) => (
+                    <FormControl
+                      fullWidth
+                      margin="normal"
+                      required
+                      error={!!errors.is4p}
+                    >
+                      <InputLabel>4P</InputLabel>
+                      <Select label="4P" {...field}>
+                          <MenuItem value={"true"}>Yes</MenuItem>
+                          <MenuItem value={"false"}>No</MenuItem>
+                      </Select>
+                      {errors.is4p && (
+                        <FormHelperText>{errors.is4p.message}</FormHelperText>
+                      )}
+                    </FormControl>
+                    )}
+                />
+              </Grid>
+              <Grid item xs={12} sm={5}>
+                <Controller
+                  name="birthDate"
+                  control={control}
+                  render={({ field }) => (
+                    <FormControl 
+                    fullWidth 
+                    required
+                    margin="normal" 
+                    error={!!errors.birthDate}>
+                      <DatePicker
+                        label="Birth Date"
+                        value={selectedBirthDate}
+                        onChange={(birthDate) => field.onChange(birthDate)} 
+                      />
+                      <FormHelperText>
+                        {errors.birthDate?.message}
+                      </FormHelperText>
+                    </FormControl>
+                  )}
+                />
+              </Grid>
+            </Grid>
+            <Controller
+              name="student_class"
+              control={control}
+              render={({ field }) => (
+                <FormControl
+                  fullWidth
+                  margin="normal"
+                  required
+                  error={!!errors.student_class}
+                >
+                  <InputLabel id="class-label">Class</InputLabel>
+                  <Select 
+                  labelId="class-label" 
+                  label="Class" 
+                  {...field}
+                  >
+                    {classOption.map((option) => (
+                      <MenuItem key={option.value} value={option.value}>
+                        {option.class}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {errors.faculty && (
+                    <FormHelperText>{errors.student_class.message}</FormHelperText>
+                  )}
                 </FormControl>
+              )}
+            />
+            <Grid container spacing={3}>
+              <Grid item xs={12} sm={6}>
+                <Controller
+                  name="parentName1"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      label="Parent 1 Name"
+                      fullWidth
+                      margin="normal"
+                      {...field}
+                      required
+                      error={!!errors.parentName1}
+                      helperText={errors.parentName1?.message}
+                      onBlur={field.onBlur}
+                    />
+                  )}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+              <Controller
+                  name="parentMobile1"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      label="Parent 1 Mobile"
+                      fullWidth
+                      margin="normal"
+                      required
+                      {...field}
+                      error={!!errors.parentMobile1}
+                      helperText={errors.parentMobile1?.message}
+                      onBlur={field.onBlur}
+                    />
+                  )}
+                />
               </Grid>
             </Grid>
             <Grid container spacing={3}>
-              <Grid item xs={12} sm={6} className="flex items-center">
-                  <TextField
-                    className="w-full"
-                    margin="normal"
-                    label="Parent 1 Name"
-                    autoFocus
-                    {...register("parentName1")}
-                    fullWidth
-                    required
-                    error={!!errors.parentName1}
-                    helperText={errors.parentName1?.message}
-                  />
+              <Grid item xs={12} sm={6}>
+                <Controller
+                  name="parentName2"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      label="Parent 2 Name"
+                      fullWidth
+                      margin="normal"
+                      {...field}
+                      error={!!errors.parentName2}
+                      helperText={errors.parentName2?.message}
+                      onBlur={field.onBlur}
+                    />
+                  )}
+                />
               </Grid>
-              <Grid item xs={12} sm={6} className="flex items-center">
-                  <TextField
-                    className="w-full"
-                    margin="normal"
-                    label="Parent 1 Mobile #"
-                    autoFocus
-                    placeholder= '9952155436'
-                    {...register("parentMobile1")}
-                    fullWidth
-                    required
-                    error={!!errors.parentMobile1}
-                    helperText={errors.parentMobile1?.message}
-                  />
-              </Grid>
-            </Grid>
-            <Grid container spacing={3}>
-              <Grid item xs={12} sm={6} className="flex items-center">
-                  <TextField
-                    className="w-full"
-                    margin="normal"
-                    label="Parent 2 Name"
-                    autoFocus
-                    {...register("parentName2")}
-                    fullWidth
-                    error={!!errors.parentName2}
-                    helperText={errors.parentName2?.message}
-                  />
-              </Grid>
-              <Grid item xs={12} sm={6} className="flex items-center">
-                  <TextField
-                    className="w-full"
-                    margin="normal"
-                    label="Parent 2 Mobile #"
-                    autoFocus
-                    placeholder= '9952155436'
-                    {...register("parentMobile2")}
-                    fullWidth
-                    error={!!errors.parentMobile2}
-                    helperText={errors.parentMobile2?.message}
-                  />
+              <Grid item xs={12} sm={6}>
+              <Controller
+                  name="parentMobile2"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      label="Parent 2 Mobile"
+                      fullWidth
+                      margin="normal"
+                      {...field}
+                      error={!!errors.parentMobile2}
+                      helperText={errors.parentMobile2?.message}
+                      onBlur={field.onBlur}
+                    />
+                  )}
+                />
               </Grid>
             </Grid>
-            <TextField
-              autoFocus
-              margin="normal"
-              label="Address"
-              {...register("address")}
-              fullWidth
-              required
-              error={!!errors.address}
-              helperText={errors.address?.message}
-            /> 
-            <FormControl fullWidth required margin="normal">
-                  <InputLabel id="category-label">Status</InputLabel>
-                  <Controller
-                    name="status"
-                    control={control}
-                    defaultValue={
-                      selectedDocument ? selectedDocument.status : 'Active'
-                    }
-                    rules={{ required: true }}
-                    render={({ field }) => (
-                      <Select
-                        {...field}
-                        labelId="category-label"
-                        id="status"
-                        label="Status"
-                        error={!!errors.category}
-                      >
-                        <MenuItem value={"Active"}>Active</MenuItem>
-                        <MenuItem value={"Inactive"}>Inactive</MenuItem>
-                      </Select>
-                    )}
-                  />
-                  <FormHelperText error={!!errors.status}>
-                    {errors.status?.message}
-                  </FormHelperText>
-                </FormControl>
+            <Controller
+              name="address"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  label="Address"
+                  fullWidth
+                  margin="normal"
+                  {...field}
+                  required
+                  error={!!errors.address}
+                  helperText={errors.address?.message}
+                  onBlur={field.onBlur}
+                />
+              )}
+            />
 
           </DialogContent>
           <DialogActions>

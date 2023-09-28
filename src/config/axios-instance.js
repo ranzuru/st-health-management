@@ -8,6 +8,8 @@ const getAuthToken = () => {
 
 // Create an Axios instance with default headers
 const axiosInstance = axios.create({
+  // local    - http://localhost:8080
+  // deployed - https://st-health-api.onrender.com
   baseURL: "http://localhost:8080", // Adjust the base URL to match your API server
   headers: {
     "Content-Type": "application/json",

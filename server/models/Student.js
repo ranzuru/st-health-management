@@ -43,11 +43,11 @@ const schema = new mongoose.Schema({
   },
   parentName2: {
     type: String,
-    required: true,
+    default: "None",
   },
   parentMobile2: {
     type: String,
-    required: true,
+    default: "None",
   },
   address: {
     type: String,
@@ -57,8 +57,13 @@ const schema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  student_class: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "class_profile", // Reference to the 'ClassProfile' model
+    required: true,
+  },
 }, {timestamps: true});
 
-const Schema = mongoose.model("student_profile", schema);
+const StudentSchema = mongoose.model("student_profile", schema);
 
-module.exports = Schema;
+module.exports = StudentSchema;

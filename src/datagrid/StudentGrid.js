@@ -12,7 +12,7 @@ const StudentDataGrid = () => {
   const [documents, setDocuments] = useState([]);
   const [formOpen, setFormOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState(null);
-
+  
 
   // Function to handle search input changes
   const handleSearchChange = (event) => {
@@ -31,9 +31,16 @@ const StudentDataGrid = () => {
   const fetchDocuments = async () => {
     try {
       const response = await axiosInstance.get(
-        "student-profile/get"
+        "studentProfile/get"
       );
-      setDocuments(response.data);
+      const adjustedResponse = response.data.map((studentProfile) => {
+        const classProfile = studentProfile.student_class.class;
+        return {
+          ...studentProfile,
+          student_class: classProfile,
+        };
+      });
+      setDocuments(adjustedResponse);
     } catch (error) {
       console.error("Fetching data error:", error);
     }
@@ -46,25 +53,40 @@ const StudentDataGrid = () => {
 
   // Function to update state after a medicine item is updated
   const onDocumentUpdate = (updatedDocument) => {
+    const classProfile = updatedDocument.student_class 
+      ? `${updatedDocument.student_class.grade} - ${updatedDocument.student_class.section} (${updatedDocument.student_class.syFrom} - ${updatedDocument.student_class.syTo})` 
+      : "";
+
     const updatedDocuments = documents.map((document) =>
-      document._id === updatedDocument._id ? updatedDocument : document
+      document._id === updatedDocument._id ? {
+        ...updatedDocument,
+        student_class: classProfile,
+      } : document
     );
     setDocuments(updatedDocuments);
   };
 
-  // Function to add a new medicine item
+  const mapStudentDocument = (newDocument) => {
+    const classProfile = `${newDocument.student_class.grade} - ${newDocument.student_class.section} (${newDocument.student_class.syFrom} - ${newDocument.student_class.syTo})`;
+    return {
+      ...newDocument,
+      student_class: classProfile,
+    };
+  };
+
   const onDocumentCreate = (newDocument) => {
-    setDocuments([...documents, newDocument]);
+    const updatedDocuments = mapStudentDocument(newDocument);
+    setDocuments((documents) => [...documents, updatedDocuments]);
   };
 
   const columns = [
-    { field: "lrn", headerName: "LRN", width: 150 },
+    { field: "lrn", headerName: "LRN", width: 300 },
     { field: "lastName", headerName: "Last Name", width: 150 },
-    { field: "firstName", headerName: "First Name", width: 100 },
-    { field: "middleName", headerName: "Middle Name", width: 100 },
-    { field: "nameExtension", headerName: "Name Extension", width: 100 },
+    { field: "firstName", headerName: "First Name", width: 150 },
+    { field: "middleName", headerName: "Middle Name", width: 150 },
+    { field: "nameExtension", headerName: "Name Extension", width: 150 },
     { field: "gender", headerName: "Gender", width: 100 },
-    { field: "birthDate", headerName: "BirthDate", width: 150,
+    { field: "birthDate", headerName: "BirthDate", width: 100,
       valueGetter: (params) => dateFormat(params.row.birthDate),
     },
     { field: 'is4p', headerName: '4P', width: 75, renderCell: (params) => (
@@ -72,12 +94,13 @@ const StudentDataGrid = () => {
         {params.value ? 'Yes' : 'No'}
       </div>
     ), },
-    { field: "parentName1", headerName: "Parent 1 Name", width: 100 },
-    { field: "parentMobile1", headerName: "Parent 1 Mobile", width: 100 },
-    { field: "parentName2", headerName: "Parent 2 Name", width: 100 },
-    { field: "parentMobile2", headerName: "Parent 2 Mobile", width: 100 },
-    { field: "address", headerName: "Address", width: 150 },
-    { field: "status", headerName: "Status", width: 150,
+    { field: "student_class", headerName: "Class", width: 250 },
+    { field: "parentName1", headerName: "Parent 1 Name", width: 150 },
+    { field: "parentMobile1", headerName: "Parent 1 Mobile", width: 150 },
+    { field: "parentName2", headerName: "Parent 2 Name", width: 150 },
+    { field: "parentMobile2", headerName: "Parent 2 Mobile", width: 150 },
+    { field: "address", headerName: "Address", width: 300 },
+    { field: "status", headerName: "Status", width: 100,
       renderCell: (params) => {
         const assessment = params.value;
         let color = "";
@@ -93,16 +116,16 @@ const StudentDataGrid = () => {
         }
         return <span style={{ color }}>{assessment}</span>;
       }, },
-    { field: "createdAt", headerName: "Created",  width: 150,
+    { field: "createdAt", headerName: "Created",  width: 100,
       valueGetter: (params) => dateFormat(params.row.createdAt),
     },
-    { field: "updatedAt", headerName: "Updated",  width: 150,
+    { field: "updatedAt", headerName: "Updated",  width: 100,
       valueGetter: (params) => dateFormat(params.row.updatedAt),
     },
     {
       field: "action",
       headerName: "Action",
-      width: 150,
+      width: 70,
       renderCell: (params) => {
         return (
           <div>
@@ -129,29 +152,61 @@ const StudentDataGrid = () => {
     setFormOpen(true);
   };
 
-  const filteredDocumentData = documents.filter((document) => {
-    const lowerSearchValue = searchValue.toLowerCase();
-
-    // Explicitly convert numeric or date fields to string before using `toLowerCase()`.
-    return (
-      (document.lrn?.toLowerCase() || "").includes(lowerSearchValue) ||
-      (document.lastName?.toLowerCase() || "").includes(lowerSearchValue) ||
-      (document.firstName?.toLowerCase() || "").includes(lowerSearchValue) ||
-      (document.middleName?.toLowerCase() || "").includes(lowerSearchValue) ||
-      (document.nameExtension?.toLowerCase() || "").includes(lowerSearchValue) ||
-      (document.gender?.toLowerCase() || "").includes(lowerSearchValue) ||
-      (new Date(document.birthDate).toLocaleDateString()?.toLowerCase() || "").includes(lowerSearchValue) ||
-      (document.is4p?.toLowerCase() || "").includes(lowerSearchValue) ||
-      (document.parentName1?.toLowerCase() || "").includes(lowerSearchValue) ||
-      (document.parentMobile1?.toString() || "").includes(searchValue) ||
-      (document.parentName2?.toLowerCase() || "").includes(lowerSearchValue) ||
-      (document.parentMobile2?.toString() || "").includes(searchValue) ||
-      (document.address?.toLowerCase() || "").includes(lowerSearchValue) ||
-      (document.status?.toLowerCase() || "").includes(lowerSearchValue) ||
-      (new Date(document.createdAt).toLocaleDateString()?.toLowerCase() || "").includes(lowerSearchValue) ||
-      (new Date(document.updatedAt).toLocaleDateString()?.toLowerCase() || "").includes(lowerSearchValue)
-    );
-  });
+  const filteredDocumentData = documents.filter((document) => 
+    (
+      (document.lrn 
+        ? document.lrn.toLowerCase() 
+        : "").includes(searchValue) ||
+      (document.lastName 
+        ? document.lastName.toLowerCase() 
+        : "").includes(searchValue) ||
+      (document.firstName 
+        ? document.firstName.toLowerCase() 
+        : "").includes(searchValue) ||
+      (document.middleName 
+        ? document.middleName.toLowerCase() 
+        : "").includes(searchValue) ||
+      (document.nameExtension 
+        ? document.nameExtension.toLowerCase() 
+        : "").includes(searchValue) ||
+      (document.gender 
+        ? document.gender.toLowerCase() 
+        : "").includes(searchValue) ||
+      (new Date(document.birthDate).toLocaleDateString() 
+        ? new Date(document.birthDate).toLocaleDateString().toLowerCase() 
+        : "").includes(searchValue) ||
+      (document.is4p 
+        ? document.is4p.toLowerCase() 
+        : "").includes(searchValue) ||
+      (document.classProfile 
+        ? document.classProfile.toLowerCase() 
+        : "").includes(searchValue) ||
+      (document.parentName1 
+        ? document.parentName1.toLowerCase() 
+        : "").includes(searchValue) ||
+      (document.parentMobile1 
+        ? document.parentMobile1.toString() 
+        : "").includes(searchValue) ||
+      (document.parentName2 
+        ? document.parentName2.toLowerCase() 
+        : "").includes(searchValue) ||
+      (document.parentMobile2 
+        ? document.parentMobile2.toString() 
+        : "").includes(searchValue) ||
+      (document.address 
+        ? document.address.toLowerCase() 
+        : "").includes(searchValue) ||
+      (document.status 
+        ? document.status.toLowerCase() 
+        : "").includes(searchValue) ||
+      (new Date(document.createdAt).toLocaleDateString() 
+        ? new Date(document.createdAt).toLocaleDateString().toLowerCase() 
+        : "").includes(searchValue) ||
+      (new Date(document.updatedAt).toLocaleDateString() 
+        ? new Date(document.updatedAt).toLocaleDateString().toLowerCase() 
+        : "").includes(searchValue)
+    )
+  );
 
   return (
     <div className="flex flex-col h-full">

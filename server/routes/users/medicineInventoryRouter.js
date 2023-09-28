@@ -1,120 +1,212 @@
 const express = require("express");
-const Medicine = require("../../models/MedicineInventory.js");
+const MedicineItem = require("../../models/medicineItem.js");
+const MedicineIn = require("../../models/medicineIn.js");
+const MedicineDisposal = require("../../models/medicineDisposal.js");
+const MedicineAdjustment = require("../../models/medicineAdjustment.js");
 const authenticateMiddleware = require("../../auth/authenticateMiddleware.js");
 const router = express.Router();
 
 // Middleware to authenticate routes if needed
 router.use(authenticateMiddleware);
 
-// Create a new medicine
-router.post("/createMedicine", async (req, res) => {
+// Create a medicine item
+router.post("/postItem", async (req, res) => {
   try {
-    const { product, category, quantity, expirationDate, restockDate, note } =
-      req.body;
+    const { product, overallQuantity, description } = req.body;
 
-    if (!product || !category || !quantity || !expirationDate || !restockDate) {
+    if (!product || !description ) {
       console.log("Missing required fields");
-      return res.status(400).json({
-        error:
-          "Missing required fields: product, category, quantity, expirationDate, restockDate",
-      });
+      return res.status(400).json({ error: "Missing required fields: product, description",});
     }
 
-    // Explicitly creating Date objects
-    const expiration = new Date(expirationDate);
-    const restock = new Date(restockDate);
-
-    // Calculate stockLevel based on quantity
-    let stockLevel = "Low";
-    if (quantity > 50) {
-      stockLevel = "High";
-    } else if (quantity > 20) {
-      stockLevel = "Moderate";
+    let quantityLevel = "Low";
+    if (overallQuantity > 50) {
+        quantityLevel = "High";
+    } else if (overallQuantity > 20) {
+        quantityLevel = "Moderate";
     }
 
     // Create a new medicine document
-    const medicine = new Medicine({
-      product,
-      category,
-      quantity,
-      stockLevel,
-      expirationDate: expiration,
-      restockDate: restock,
-      note,
-    });
+    const document = new MedicineItem({ product, overallQuantity, quantityLevel, description });
 
     // Save the medicine document to the database
-    await medicine.save();
-    res.status(201).json(medicine);
+    await document.save();
+    res.status(201).json(document);
   } catch (error) {
     console.error("Internal server error:", error);
     res.status(500).json({ error: "Internal server error: " + error.message });
   }
 });
+// Create a stock in record
+router.post("/postIn", async (req, res) => {
+    try {
+      const { itemId, batchId, quantity, expirationDate } = req.body;
+  
+      if (!itemId || !batchId || !quantity || !expirationDate) {
+        console.log("Missing required fields");
+        return res.status(400).json({ error: "Missing required fields: itemId, batchId, quantity, expirationDate",});
+      }
 
-// Get all medicines
-router.get("/fetchMedicine", async (req, res) => {
+      const document = new MedicineIn({ itemId, batchId, quantity, expirationDate });
+  
+      await document.save();
+      res.status(201).json(document);
+    } catch (error) {
+      console.error("Internal server error:", error);
+      res.status(500).json({ error: "Internal server error: " + error.message });
+    }
+});
+// Create a stock disposal record
+router.post("/postDisposal", async (req, res) => {
+    try {
+      const { itemId, batchId, quantity, } = req.body;
+  
+      if (!itemId || !batchId || !quantity ) {
+        console.log("Missing required fields");
+        return res.status(400).json({ error: "Missing required fields: itemId, batchId, quantity,",});
+      }
+  
+      const document = new MedicineDisposal({ itemId, batchId, quantity, });
+  
+      await document.save();
+      res.status(201).json(document);
+    } catch (error) {
+      console.error("Internal server error:", error);
+      res.status(500).json({ error: "Internal server error: " + error.message });
+    }
+});
+// Create a stock adjustment record
+router.post("/postAdjustment", async (req, res) => {
+    try {
+      const { itemId, batchId, quantity, expirationDate, type, reason } = req.body;
+  
+      if (!itemId || !batchId  || !quantity || !expirationDate || !type || !reason) {
+        console.log("Missing required fields");
+        return res.status(400).json({ error: "Missing required fields: itemId, batchId, quantity, expirationDate, type, reason",});
+      }
+  
+      // Create a new medicine document
+      const document = new MedicineAdjustment({ itemId, batchId, quantity, expirationDate, type, reason });
+  
+      // Save the medicine document to the database
+      await document.save();
+      res.status(201).json(document);
+    } catch (error) {
+      console.error("Internal server error:", error);
+      res.status(500).json({ error: "Internal server error: " + error.message });
+    }
+});
+// =================================================================
+// Get all medicine item
+router.get("/getItem", async (req, res) => {
   try {
-    const medicines = await Medicine.find();
-    res.json(medicines);
+    const document = await MedicineItem.find();
+    res.json(document);
   } catch (error) {
     res.status(500).json({ error: "Internal server error" });
   }
 });
-
-// Get a specific medicine by ID
-router.get("/medicines/:id", async (req, res) => {
-  try {
-    const medicine = await Medicine.findById(req.params.id);
-    if (!medicine) {
-      return res.status(404).json({ error: "Medicine not found" });
+// Get all stock in record
+router.get("/getIn", async (req, res) => {
+    try {
+      const document = await MedicineIn.find();
+      res.json(document);
+    } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
     }
-    res.json(medicine);
+  });
+// Get all stock disposal record
+router.get("/getDisposal", async (req, res) => {
+    try {
+      const document = await MedicineDisposal.find();
+      res.json(document);
+    } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+// Get all stock adjustment record
+router.get("/getAdjustment", async (req, res) => {
+    try {
+      const document = await MedicineAdjustment.find();
+      res.json(document);
+    } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+// =================================================================
+// Get a specific stock in record by ID
+router.get("/getItem/:id", async (req, res) => {
+  try {
+    const document = await MedicineItem.findById(req.params.id);
+    if (!document) {
+      return res.status(404).json({ error: "Record not found" });
+    }
+    res.json(document);
   } catch (error) {
     res.status(500).json({ error: "Internal server error" });
   }
 });
-
-// Update a specific medicine by ID
-router.put("/updateMedicine/:id", async (req, res) => {
+// Get a specific stock in record by ID
+router.get("/getIn/:id", async (req, res) => {
   try {
-    const { quantity } = req.body;
-
-    let stockLevel = "Low";
-    if (quantity > 50) {
-      stockLevel = "High";
-    } else if (quantity > 20) {
-      stockLevel = "Moderate";
+    const document = await MedicineIn.findById(req.params.id);
+    if (!document) {
+      return res.status(404).json({ error: "Record not found" });
     }
-
-    const updatedMedicineData = {
-      ...req.body,
-      stockLevel, // Overwrite stockLevel with newly calculated value
-    };
-
-    const updatedMedicine = await Medicine.findByIdAndUpdate(
-      req.params.id,
-      updatedMedicineData,
-      { new: true }
-    );
-
-    if (!updatedMedicine) {
-      return res.status(404).json({ error: "Medicine not found" });
-    }
-    res.json(updatedMedicine);
+    res.json(document);
   } catch (error) {
     res.status(500).json({ error: "Internal server error" });
   }
 });
-
-// Delete a specific medicine by ID
-router.delete("/deleteMedicine/:id", async (req, res) => {
-  try {
-    const deletedMedicine = await Medicine.findByIdAndRemove(req.params.id);
-    if (!deletedMedicine) {
-      return res.status(404).json({ error: "Medicine not found" });
+// Get a specific stock disposal record by ID
+router.get("/getDisposal/:id", async (req, res) => {
+    try {
+      const document = await MedicineDisposal.findById(req.params.id);
+      if (!document) {
+        return res.status(404).json({ error: "Record not found" });
+      }
+      res.json(document);
+    } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
     }
-    res.json({ message: "Medicine deleted successfully" });
+  });
+// Get a specific stock adjustment record by ID
+router.get("/getAdjustment/:id", async (req, res) => {
+    try {
+      const document = await MedicineAdjustment.findById(req.params.id);
+      if (!document) {
+        return res.status(404).json({ error: "Record not found" });
+      }
+      res.json(document);
+    } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+// =================================================================
+// Update a specific medicine item by ID
+router.put("/putItem/:id", async (req, res) => {
+  try {
+    const { product, description } = req.body;
+
+    const overallQuantity = parseInt(req.body.overallQuantity, 10);
+
+    let quantityLevel = "Low";
+    if (overallQuantity > 50) {
+        quantityLevel = "High";
+    } else if (overallQuantity > 20) {
+        quantityLevel = "Moderate"; 
+    }
+
+    const document = await MedicineItem.findByIdAndUpdate( req.params.id, { 
+      product, 
+      overallQuantity, 
+      quantityLevel, 
+      description }, { new: true });
+
+    if (!document) {
+      return res.status(404).json({ error: "Medicine item not found" });
+    }
+    res.json({document});
   } catch (error) {
     res.status(500).json({ error: "Internal server error" });
   }

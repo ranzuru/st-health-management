@@ -21,6 +21,7 @@ import axios from "axios";
 
 import schoolLogo from "./Data/DonjuanTransparent.png";
 import clinicLogo from "./Data/DonjuanStock.png";
+import axiosInstance from "./config/axios-instance";
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -65,7 +66,7 @@ const LoginPage = () => {
     }
 
     try {
-      const response = await axios.post("http://localhost:8080/auth/login", {
+      const response = await axiosInstance.post("auth/login", {
         email: email,
         password: password,
       });

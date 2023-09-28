@@ -5,7 +5,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
-import MedicineInventoryForm from "../modal/MedicineInventoryForm.js";
+import MedicineInventoryForm from "../modal/MedicineItemForm.js";
 import axiosInstance from "../config/axios-instance.js";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";

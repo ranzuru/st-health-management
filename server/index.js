@@ -32,7 +32,8 @@ app.get("/", (req, res) => {
 });
 
 
-app.use("/student-profile", studentRoutes);
+app.use("/studentProfile", studentRoutes);
+app.use("/dengueProfile", dengueRoutes);
 
 // Import and use the userRoutes with a prefix
 

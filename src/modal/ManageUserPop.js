@@ -21,6 +21,7 @@ import axios from "axios";
 import Snackbar from "@mui/material/Snackbar";
 import MuiAlert from "@mui/material/Alert";
 import FormHelperText from "@mui/material/FormHelperText";
+import axiosInstance from "../config/axios-instance.js";
 
 const AddUserDialog = ({ open, onClose }) => {
   const [showPassword, setShowPassword] = useState(false);
@@ -83,7 +84,7 @@ const AddUserDialog = ({ open, onClose }) => {
   const onSubmit = async (data, e) => {
     try {
       // Make an HTTP POST request to your API endpoint
-      await axios.post("http://localhost:8080/auth/register", data);
+      await axiosInstance.post("auth/register", data);
       // Check if Snackbar is not open before setting the success message
 
       // Update snackbar state

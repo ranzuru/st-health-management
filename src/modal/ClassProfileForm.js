@@ -56,33 +56,7 @@ const ClassProfileForm = (props) => {
   const validationSchema = yup.object().shape({
     grade: yup
       .string()
-      .required("Grade is required")
-      .test(
-        "check-unique",
-        "Grade and Section combination already exists",
-        async function (grade) {
-          const { section } = this.parent;
-
-          if (
-            isEditing &&
-            selectedClassProfile &&
-            selectedClassProfile.grade === grade &&
-            selectedClassProfile.section === section
-          ) {
-            return true;
-          }
-
-          const response = await axiosInstance.post(
-            "/classProfile/checkGradeSectionUnique",
-            {
-              grade,
-              section,
-            }
-          );
-
-          return response.data.isUnique;
-        }
-      ),
+      .required("Grade is required"),
     section: yup.string().required("Section is required"),
     room: yup.string().required("Room is required"),
     syFrom: yup

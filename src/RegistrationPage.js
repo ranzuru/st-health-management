@@ -18,6 +18,7 @@ import { useFormik } from "formik";
 import * as Yup from "yup";
 import Snackbar from "@mui/material/Snackbar";
 import MuiAlert from "@mui/material/Alert";
+import axiosInstance from "./config/axios-instance.js";
 
 const RegistrationPage = () => {
   const isSmallScreen = useMediaQuery("(max-width:600px)");
@@ -77,8 +78,8 @@ const RegistrationPage = () => {
     validationSchema: validationSchema,
     onSubmit: async (values, { resetForm }) => {
       try {
-        const response = await axios.post(
-          "http://localhost:8080/auth/register",
+        const response = await axiosInstance.post(
+          "auth/register",
           values
         );
         console.log(response.data); // Display response from the server

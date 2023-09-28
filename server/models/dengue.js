@@ -7,15 +7,34 @@ onsetDate: {
 },
 admissionDate: {
     type: Date,
-    required: true,
+    default: null,
 },
 admissionHospital: {
     type: String,
-    required: true,
+    default: "",
 },
 dischargeDate: {
     type: Date,
+    default: null,
+},
+student_data: {
+    type: String,
+    ref: "student_profile", 
     required: true,
+},
+student_age: {
+  type: Number,
+  required: true,
+},
+class_data: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "class_profile", 
+  required: true,
+},
+adviser_data: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "faculty_profile", 
+  required: true,
 },
 }, {timestamps: true});
 

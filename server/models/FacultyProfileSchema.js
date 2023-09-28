@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const facultyProfileSchema = new mongoose.Schema(
+const facultySchema = new mongoose.Schema(
   {
     employeeId: {
       type: String,
@@ -39,4 +39,6 @@ const facultyProfileSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model("FacultyProfile", facultyProfileSchema);
+const FacultySchema = mongoose.model("faculty_profile", facultySchema);
+
+module.exports = FacultySchema

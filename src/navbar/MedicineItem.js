@@ -1,11 +1,11 @@
 import React from "react";
-import MedicineInventoryGrid from "../datagrid/MedicineInventoryGrid.js";
+import MedicineItemGrid from "../datagrid/MedicineItemGrid.js";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
-import MedicineInventoryForm from "../modal/MedicineInventoryForm.js";
+import MedicineItemForm from "../modal/MedicineItemForm.js";
 import { Typography } from "@mui/material";
 
-const MedicineInventory = () => {
+const MedicineItemNavBar = () => {
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <div className="flex flex-col">
@@ -21,15 +21,15 @@ const MedicineInventory = () => {
                 pl: 2,
               }}
             >
-              Medicine Inventory
+              Medicine Item
             </Typography>
           </div>
 
           <div className="flex flex-col items-center justify-center h-full p-4">
             <div className="flex items-center justify-center w-full">
-              <MedicineInventoryGrid />
+              <MedicineItemGrid />
             </div>
-            <MedicineInventoryForm />
+            <MedicineItemForm />
           </div>
         </div>
       </div>
@@ -37,4 +37,4 @@ const MedicineInventory = () => {
   );
 };
 
-export default MedicineInventory;
+export default MedicineItemNavBar;
