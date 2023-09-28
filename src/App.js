@@ -5,7 +5,6 @@ import RegistrationPage from "./RegistrationPage";
 import Dashboard from "./Dashboard";
 import UserApproval from "./navbar/UserApproval";
 import ManageUsers from "./navbar/ManageUsers";
-
 import StudentNavBar from "./navbar/StudentsProfile";
 import DengueNavBar from "./navbar/DengueMonitoring";
 import FacultyProfile from "./navbar/FacultyProfile";
