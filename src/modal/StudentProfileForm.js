@@ -83,8 +83,16 @@ const StudentProfileForm = (props) => {
     nameExtension: yup.string(),
     gender: yup.string().required("Gender is required"),
     birthDate: yup
-      .date()
-      .max(new Date(), "Birth date cannot be in the future")
+      .string()
+      .test(
+        "is-date-in-past",
+        "Birth date cannot be in the future",
+        function (birthDateString) {
+          const birthDate = new Date(birthDateString);
+          const today = new Date();
+          return birthDate <= today;
+        }
+      )
       .required("Birth Date is required"),
     age: yup
       .number()
@@ -94,13 +102,13 @@ const StudentProfileForm = (props) => {
         "age-birthDate-consistency",
         "Age and Birth Date must be consistent",
         function (age) {
-          const birthDate = this.parent.birthDate; // Access the birthDate field
-
-          if (!birthDate || !age) {
+          const birthDateString = this.parent.birthDate; // Now it's a string
+          if (!birthDateString || !age) {
             return true;
           }
 
-          const birthYear = new Date(birthDate).getFullYear();
+          const birthDate = new Date(birthDateString); // Convert it to a Date object here
+          const birthYear = birthDate.getFullYear();
           const currentYear = new Date().getFullYear();
           const ageDifference = Math.abs(currentYear - birthYear - age);
 
@@ -180,7 +188,7 @@ const StudentProfileForm = (props) => {
       if (response.data && response.data.newStudent) {
         let enrichedNewStudent = {
           ...response.data.newStudent,
-          name: `${data.firstName} ${data.lastName}`,
+          name: `${data.lastName}, ${data.firstName} `,
           grade: data.grade,
           section: data.section,
         };
@@ -290,16 +298,7 @@ const StudentProfileForm = (props) => {
       setValue("middleName", selectedStudent.middleName || "");
       setValue("nameExtension", selectedStudent.nameExtension || "");
       setValue("gender", selectedStudent.gender || "");
-      const adjustForTimezone = (date) => {
-        var timeOffsetInMS = date.getTimezoneOffset() * 60000;
-        date.setTime(date.getTime() - timeOffsetInMS);
-        return date;
-      };
-
-      const isoDate = new Date(selectedStudent.birthDate);
-      const adjustedDate = adjustForTimezone(isoDate);
-      const localDate = adjustedDate.toISOString().slice(0, 10);
-      setValue("birthDate", localDate || null);
+      setValue("birthDate", selectedStudent.birthDate || null);
       setValue("age", selectedStudent.age || "");
       setValue("is4p", selectedStudent.is4p || false);
       setValue("grade", selectedStudent.grade || "");

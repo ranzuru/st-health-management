@@ -6,21 +6,21 @@ const generateNewAccessToken = (userId, refreshTokenSecret) => {
 };
 
 const authenticateMiddleware = async (req, res, next) => {
+  const authorizationHeader = req.headers.authorization;
+
+  if (!authorizationHeader) {
+    return res.status(401).json({ error: "No token provided" });
+  }
+
+  const token = authorizationHeader.split(" ")[1];
+
   try {
-    const token = req.headers.authorization.split(" ")[1];
-    if (!token) {
-      return res.status(401).json({ error: "No token provided" });
-    }
-
     const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
-
-    // Verify the user exists in the database
     const user = await User.findById(decodedToken.userId);
     if (!user) {
       return res.status(401).json({ error: "User does not exist" });
     }
-
-    req.userData = { userId: decodedToken.userId };
+    req.user = user.toObject();
     next();
   } catch (error) {
     if (error.name === "TokenExpiredError") {
@@ -41,7 +41,9 @@ const authenticateMiddleware = async (req, res, next) => {
         );
 
         res.setHeader("x-new-access-token", newAccessToken);
-        req.userData = { userId: decodedRefreshToken.userId };
+        req.user = (await User.findById(decodedRefreshToken.userId)).toObject();
+        // Potentially issue a new refresh token here
+
         next();
       } catch (refreshTokenError) {
         return res.status(401).json({ error: "Invalid refresh token" });
@@ -49,7 +51,6 @@ const authenticateMiddleware = async (req, res, next) => {
     } else if (error.name === "JsonWebTokenError") {
       return res.status(401).json({ error: "Invalid token" });
     } else {
-      // Handle other errors gracefully, possibly by logging and responding accordingly
       return res.status(500).json({ error: "Internal server error" });
     }
   }

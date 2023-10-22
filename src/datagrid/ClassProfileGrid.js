@@ -84,7 +84,6 @@ const ClassProfileGrid = () => {
   };
 
   const addNewClassProfile = (newClassProfile) => {
-    console.log("New class profile:", newClassProfile);
     const updatedClassProfile = mapClassProfile(newClassProfile);
     setClassProfiles((prevClassProfiles) => [
       ...prevClassProfiles,

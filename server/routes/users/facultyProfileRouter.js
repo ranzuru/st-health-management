@@ -9,39 +9,18 @@ router.post(
   authenticateMiddleware,
   async (req, res) => {
     try {
-      const { employeeId, lastName, firstName, gender, mobileNumber, role } =
-        req.body;
+      const { email } = req.body;
 
-      // Validate request body
-      if (
-        !employeeId ||
-        !lastName ||
-        !firstName ||
-        !gender ||
-        !mobileNumber ||
-        !role
-      ) {
-        console.log("Error: All fields are required."); // Debugging line
-        return res.status(400).json({ error: "All fields are required." });
+      // Check if the email is unique
+      const existingProfile = await FacultyProfile.findOne({ email });
+      if (existingProfile) {
+        return res.status(400).json({ error: "Email already exists" });
       }
 
-      const mobileNum = Number(mobileNumber);
-
-      // Validate the mobile number
-      if (isNaN(mobileNum) || mobileNum.toString().length !== 10) {
-        console.log("Error: Invalid mobile number."); // Debugging line
-        return res.status(400).json({ error: "Invalid mobile number." });
-      }
-
-      const facultyProfile = new FacultyProfile({
-        ...req.body,
-        name: `${firstName} ${lastName}`, // Combine firstName and lastName
-      });
+      const facultyProfile = new FacultyProfile(req.body);
       const savedProfile = await facultyProfile.save();
-
       res.status(201).json({ faculty: savedProfile });
     } catch (error) {
-      console.error("Error occurred:", error); // Debugging line
       res.status(400).json({ error: error.message });
     }
   }

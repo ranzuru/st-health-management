@@ -68,6 +68,27 @@ router.get("/:lrn", authenticateMiddleware, async (req, res) => {
   }
 });
 
+router.get("/search/:partialLrn", authenticateMiddleware, async (req, res) => {
+  try {
+    const partialLrn = req.params.partialLrn;
+    const students = await StudentProfile.find({
+      lrn: new RegExp(partialLrn, "i"),
+      status: "Enrolled",
+    })
+      .populate("classProfile", "grade section academicYear -_id") // Populating grade and section from ClassProfile
+      .select(
+        "lrn lastName firstName middleName nameExtension gender age birthDate classProfile -_id"
+      );
+
+    if (!students || students.length === 0)
+      return res.status(404).json({ error: "No matches found" });
+
+    res.status(200).json(students);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Update a student profile
 router.put("/updateStudent/:lrn", authenticateMiddleware, async (req, res) => {
   const { grade, section, ...updateData } = req.body;

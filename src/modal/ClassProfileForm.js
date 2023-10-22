@@ -27,6 +27,17 @@ const gradeOptions = [
   "Grade 6",
 ];
 
+const ITEM_HEIGHT = 48;
+const ITEM_PADDING_TOP = 8;
+const MenuProps = {
+  PaperProps: {
+    style: {
+      maxHeight: ITEM_HEIGHT * 3 + ITEM_PADDING_TOP,
+      width: 250,
+    },
+  },
+};
+
 const ClassProfileForm = (props) => {
   const {
     open,
@@ -214,7 +225,7 @@ const ClassProfileForm = (props) => {
   };
 
   const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 10 }, (_, i) => currentYear + i);
+  const years = Array.from({ length: 27 }, (_, i) => currentYear + i);
 
   const handleClose = () => {
     reset();
@@ -266,6 +277,7 @@ const ClassProfileForm = (props) => {
                   required
                   fullWidth
                   error={!!errors.grade}
+                  className="rounded-md shadow-md"
                 >
                   <InputLabel id="grade-label">Grade</InputLabel>
                   <Select labelId="grade-label" label="Grade" {...field}>
@@ -288,6 +300,7 @@ const ClassProfileForm = (props) => {
                 <TextField
                   label="Section"
                   margin="normal"
+                  className="rounded-md shadow-md"
                   fullWidth
                   {...field}
                   required
@@ -315,12 +328,14 @@ const ClassProfileForm = (props) => {
                   margin="normal"
                   required
                   error={!!errors.academicYear}
+                  className="rounded-md shadow-md"
                 >
                   <InputLabel id="academicYear-label">Academic Year</InputLabel>
                   <Select
                     labelId="academicYear-label"
                     label="Academic Year"
                     {...field}
+                    MenuProps={MenuProps}
                   >
                     {years.map((year, index) => (
                       <MenuItem key={index} value={`${year}-${year + 1}`}>
@@ -344,6 +359,7 @@ const ClassProfileForm = (props) => {
                   label="Room"
                   fullWidth
                   margin="normal"
+                  className="rounded-md shadow-md"
                   {...field}
                   required
                   error={!!errors.room}
@@ -361,9 +377,15 @@ const ClassProfileForm = (props) => {
                   margin="normal"
                   required
                   error={!!errors.faculty}
+                  className="rounded-md shadow-md"
                 >
                   <InputLabel id="faculty-label">Adviser</InputLabel>
-                  <Select labelId="faculty-label" label="Faculty" {...field}>
+                  <Select
+                    labelId="faculty-label"
+                    label="Faculty"
+                    {...field}
+                    MenuProps={MenuProps}
+                  >
                     {facultyOptions.map((option) => (
                       <MenuItem key={option.value} value={option.value}>
                         {option.label}

@@ -11,6 +11,8 @@ import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
 import Button from "@mui/material/Button";
 import axiosInstance from "../config/axios-instance.js";
+import Snackbar from "@mui/material/Snackbar";
+import Alert from "@mui/material/Alert";
 
 const UserApprovalGrid = () => {
   const [searchValue, setSearchValue] = useState("");
@@ -18,6 +20,11 @@ const UserApprovalGrid = () => {
   const [openDialog, setOpenDialog] = useState(false); //Dialog for declined
   const [openApproveDialog, setOpenApproveDialog] = useState(false); //Dialog for openApprove
   const [selectedUserId, setSelectedUserId] = useState("");
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarData, setSnackbarData] = useState({
+    message: "",
+    severity: "success",
+  });
 
   const handleSearchChange = (event) => {
     setSearchValue(event.target.value);
@@ -39,9 +46,14 @@ const UserApprovalGrid = () => {
     setOpenApproveDialog(false);
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const showSnackbar = (message, severity) => {
+    setSnackbarData({ message, severity });
+    setSnackbarOpen(true);
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbarOpen(false);
+  };
 
   const formatYearFromDate = (dateString) => {
     const date = new Date(dateString);
@@ -65,6 +77,10 @@ const UserApprovalGrid = () => {
       console.error("Error fetching user data:", error);
     }
   };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const columns = [
     { field: "_id", headerName: "UserID", width: 100 },
@@ -108,7 +124,7 @@ const UserApprovalGrid = () => {
         `/users/approveUser/${selectedUserId}`
       );
       if (response.status === 200) {
-        // Update the user in the state to mark them as approved
+        showSnackbar("Successfully approved an account", "success");
         setUsers((prevUsers) => {
           return prevUsers.map((user) => {
             if (user._id === selectedUserId) {
@@ -118,10 +134,14 @@ const UserApprovalGrid = () => {
           });
         });
       } else {
-        console.error("Error confirming approval:", response.statusText);
+        showSnackbar(response.statusText, "error");
       }
     } catch (error) {
-      console.error("Fetch error:", error);
+      const errorMessage =
+        error.response && error.response.data.error
+          ? error.response.data.error
+          : "Something went wrong!";
+      showSnackbar(errorMessage, "error");
     }
     closeApproveConfirmation();
   };
@@ -132,15 +152,19 @@ const UserApprovalGrid = () => {
         `/users/deleteUser/${selectedUserId}`
       );
       if (response.status === 200) {
-        // Update the UI by removing the declined user from the list
+        showSnackbar("Successfully deleted an account", "success");
         setUsers((prevUsers) =>
           prevUsers.filter((user) => user._id !== selectedUserId)
         );
       } else {
-        console.error("Error declining user:", response.statusText);
+        showSnackbar(response.statusText, "error");
       }
     } catch (error) {
-      console.error("Error declining user:", error);
+      const errorMessage =
+        error.response && error.response.data.error
+          ? error.response.data.error
+          : "Something went wrong!";
+      showSnackbar(errorMessage, "error");
     }
     closeDialog();
   };
@@ -176,70 +200,85 @@ const UserApprovalGrid = () => {
   });
 
   return (
-    <div>
-      <div className="flex flex-col h-full">
-        <div className="w-full max-w-screen-xl mx-auto px-4">
-          <div className="mb-4 flex justify-end items-center">
-            <div className="ml-2">
-              <TextField
-                label="Search"
-                variant="outlined"
-                size="small"
-                value={searchValue}
-                onChange={handleSearchChange}
-              />
+    <>
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{
+          vertical: "top", // Position at the top
+          horizontal: "center", // Position at the center horizontally
+        }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbarData.severity}>
+          {snackbarData.message}
+        </Alert>
+      </Snackbar>
+      <div>
+        <div className="flex flex-col h-full">
+          <div className="w-full max-w-screen-xl mx-auto px-4">
+            <div className="mb-4 flex justify-end items-center">
+              <div className="ml-2">
+                <TextField
+                  label="Search"
+                  variant="outlined"
+                  size="small"
+                  value={searchValue}
+                  onChange={handleSearchChange}
+                />
+              </div>
             </div>
-          </div>
-          <DataGrid
-            rows={filteredUsers}
-            columns={columns}
-            initialState={{
-              pagination: {
-                paginationModel: {
-                  pageSize: 10,
+            <DataGrid
+              rows={filteredUsers}
+              columns={columns}
+              initialState={{
+                pagination: {
+                  paginationModel: {
+                    pageSize: 10,
+                  },
                 },
-              },
-            }}
-            pageSizeOptions={[10]}
-            checkboxSelection
-            disableRowSelectionOnClick
-            getRowId={(row) => row._id}
-          />
+              }}
+              pageSizeOptions={[10]}
+              checkboxSelection
+              disableRowSelectionOnClick
+              getRowId={(row) => row._id}
+            />
+          </div>
         </div>
+        <Dialog open={openDialog} onClose={closeDialog}>
+          <DialogTitle>Confirm Decline</DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              Are you sure you want to decline this user?
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={closeDialog} color="primary">
+              Cancel
+            </Button>
+            <Button onClick={() => handleConfirmDecline()} color="primary">
+              Confirm
+            </Button>
+          </DialogActions>
+        </Dialog>
+        <Dialog open={openApproveDialog} onClose={closeApproveConfirmation}>
+          <DialogTitle>Confirm Approve</DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              Are you sure you want to approve this user?
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={closeApproveConfirmation} color="primary">
+              Cancel
+            </Button>
+            <Button onClick={() => handleConfirmApprove()} color="primary">
+              Confirm
+            </Button>
+          </DialogActions>
+        </Dialog>
       </div>
-      <Dialog open={openDialog} onClose={closeDialog}>
-        <DialogTitle>Confirm Decline</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Are you sure you want to decline this user?
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={closeDialog} color="primary">
-            Cancel
-          </Button>
-          <Button onClick={() => handleConfirmDecline()} color="primary">
-            Confirm
-          </Button>
-        </DialogActions>
-      </Dialog>
-      <Dialog open={openApproveDialog} onClose={closeApproveConfirmation}>
-        <DialogTitle>Confirm Approve</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Are you sure you want to approve this user?
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={closeApproveConfirmation} color="primary">
-            Cancel
-          </Button>
-          <Button onClick={() => handleConfirmApprove()} color="primary">
-            Confirm
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </div>
+    </>
   );
 };
 

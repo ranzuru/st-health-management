@@ -21,15 +21,15 @@ const DengueMonitoringAnalytics = () => {
           Dengue Monitoring Analytics
         </Typography>
       </div>
-      <div className="flex flex-col items-center justify-center h-full p-4">
+      <div className="flex flex-col items-center justify-center p-4">
         <div className="flex items-center justify-center w-full">
           <DengueLineCharts />
         </div>
         <div className="flex items-center justify-center w-full mt-6">
-          <DengueHeatmapCharts /> {/* Add this line */}
+          <DengueHeatmapCharts />
         </div>
         <div className="flex items-center justify-center w-full mt-6">
-          <DengueGroupBarCharts /> {/* Add this line */}
+          <DengueGroupBarCharts />
         </div>
       </div>
     </div>

@@ -18,21 +18,20 @@ const Dashboard = () => {
   const navigate = useNavigate();
 
   const handleCardClickManageUser = () => {
-    navigate("/manage-users");
+    navigate("/app/manage-users");
   };
 
   const handleCardClickStudents = () => {
-    navigate("/students-profile");
+    navigate("/app/students-profile");
   };
 
   const handleCardClickClinic = () => {
-    navigate("/clinic-records");
+    navigate("/app/clinic-records");
   };
 
   const handleCardClickFeeding = () => {
-    navigate("/feeding-program");
+    navigate("/app/feeding-program");
   };
-
   return (
     <div className="flex">
       <div className="bg-blue-900 h-64 w-full mb-4">

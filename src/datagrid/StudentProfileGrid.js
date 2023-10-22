@@ -3,10 +3,13 @@ import { DataGrid } from "@mui/x-data-grid";
 import IconButton from "@mui/material/IconButton";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
+
 import StudentProfileForm from "../modal/StudentProfileForm.js";
 import axiosInstance from "../config/axios-instance";
+
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
@@ -50,7 +53,7 @@ const StudentsProfileGrid = () => {
         return {
           ...student,
           id: student._id, // Assuming _id is the unique identifier for students
-          name: `${student.firstName} ${student.lastName}`,
+          name: `${student.lastName}, ${student.firstName} ${student.nameExtension}`,
           grade: student.classProfile ? student.classProfile.grade : "N/A",
           section: student.classProfile ? student.classProfile.section : "N/A",
         };
@@ -72,7 +75,7 @@ const StudentsProfileGrid = () => {
         ? {
             ...updatedStudent,
             id: updatedStudent._id,
-            name: `${updatedStudent.firstName} ${updatedStudent.lastName}`,
+            name: `${updatedStudent.lastName}, ${updatedStudent.firstName} ${updatedStudent.nameExtension} `,
             grade: updatedStudent.classProfile
               ? updatedStudent.classProfile.grade
               : "N/A",
@@ -121,6 +124,9 @@ const StudentsProfileGrid = () => {
           </IconButton>
           <IconButton onClick={() => handleDialogOpen(params.row.lrn)}>
             <DeleteOutlineIcon />
+          </IconButton>
+          <IconButton onClick={() => handleDialogOpen(params.row.lrn)}>
+            <VisibilityOutlinedIcon />
           </IconButton>
         </div>
       ),
@@ -199,7 +205,7 @@ const StudentsProfileGrid = () => {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="w-full max-w-screen-xl mx-auto px-4">
+      <div className="w-full max-w-screen-xl mx-auto px-8">
         <div className="mb-4 flex justify-end items-center">
           <Button variant="contained" color="primary" onClick={handleModalOpen}>
             Add Student

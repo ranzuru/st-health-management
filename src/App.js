@@ -1,5 +1,11 @@
-import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import React, { useEffect } from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  useNavigate,
+  Outlet,
+} from "react-router-dom";
 import LoginPage from "./LoginPage";
 import RegistrationPage from "./RegistrationPage";
 import Dashboard from "./Dashboard";
@@ -27,25 +33,55 @@ import ClinicVisitorsAnalytics from "./navbar/ClinicVisitorsAnalytics";
 import FeedingProgramAnalytics from "./navbar/FeedingProgramAnalytics";
 import Logs from "./navbar/Logs";
 import Settings from "./navbar/Settings";
-import Sidebar from "./Sidebar.js";
+import Sidebar from "./components/Sidebar";
+import PageNotFound from "./pages/pageNotFound";
+import { Provider } from "react-redux";
+import store, { persistor } from "./redux/store";
+import ProtectedRoute from "./utils/ProtectedRoutes";
+import { useSelector } from "react-redux";
+import { PersistGate } from "redux-persist/integration/react";
 
+function AuthRedirect() {
+  const navigate = useNavigate();
+  const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
+  const currentPath = window.location.pathname;
+
+  useEffect(() => {
+    if (currentPath === "/" && isAuthenticated) {
+      navigate("/app/dashboard");
+    } else if (!isAuthenticated && currentPath.startsWith("/app")) {
+      navigate("/");
+    }
+  }, [isAuthenticated, navigate, currentPath]);
+
+  return null;
+}
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<LoginPage />} />
-        <Route path="/register" element={<RegistrationPage />} />
-        <Route path="/*" element={<AppLayout />} />
-      </Routes>
-    </Router>
+    <Provider store={store}>
+      <PersistGate loading={null} persistor={persistor}>
+        <Router>
+          <AuthRedirect />
+          <Routes>
+            <Route path="/" element={<LoginPage />} />
+            <Route path="/register" element={<RegistrationPage />} />
+            <Route
+              path="/app/*"
+              element={<ProtectedRoute component={AppLayout} />}
+            />
+            <Route path="*" element={<PageNotFound />} />
+          </Routes>
+        </Router>
+      </PersistGate>
+    </Provider>
   );
 }
 
 function AppLayout() {
   return (
     <>
-      <div className="flex">
-        <Sidebar className="w-64 flex-shrink-0" />
+      <div className="flex h-screen">
+        <Sidebar className="w-64 overflow-y-auto" />
         <main className="flex-1 overflow-y-auto">
           <Routes>
             <Route path="/dashboard" element={<Dashboard />} />
@@ -95,6 +131,7 @@ function AppLayout() {
             <Route path="/logs" element={<Logs />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>
+          <Outlet />
         </main>
       </div>
     </>

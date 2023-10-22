@@ -10,6 +10,10 @@ const medicineInventoryRoutes = require("./routes/users/medicineInventoryRouter.
 const facultyProfileRoutes = require("./routes/users/facultyProfileRouter.js");
 const classProfileRoutes = require("./routes/users/classProfileRouter.js");
 const studentProfileRoutes = require("./routes/users/studentProfileRouter.js");
+const medicalCheckupRoutes = require("./routes/users/medicalCheckupRouter.js");
+const dewormingReportRoutes = require("./routes/users/dewormingReportRouter.js");
+const nutritionalStatusRoutes = require("./routes/users/nutritionalStatusRouter.js");
+const facultyMedicalRoutes = require("./routes/users/facultyCheckupRouter.js");
 
 const cors = require("cors");
 
@@ -39,6 +43,14 @@ app.use("/facultyProfile", facultyProfileRoutes);
 app.use("/classProfile", classProfileRoutes);
 
 app.use("/studentProfile", studentProfileRoutes);
+
+app.use("/medicalCheckup", medicalCheckupRoutes);
+
+app.use("/dewormingReport", dewormingReportRoutes);
+
+app.use("/nutritionalStatus", nutritionalStatusRoutes);
+
+app.use("/facultyMedical", facultyMedicalRoutes);
 
 app.use("/auth", authRoutes);
 

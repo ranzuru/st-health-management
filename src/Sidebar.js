@@ -25,6 +25,8 @@ import {
 } from "@mui/icons-material";
 import SpaOutlinedIcon from "@mui/icons-material/SpaOutlined";
 import MenuOutlinedIcon from "@mui/icons-material/MenuOutlined";
+import { useDispatch } from "react-redux";
+import { removeUser } from "././redux/actions/authActions.js";
 
 import schoolLogo from "./Data/DonjuanTransparent.png";
 
@@ -32,6 +34,7 @@ const Sidebar = () => {
   const location = useLocation();
   const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const toggleSidebar = () => {
     setSidebarCollapsed(!isSidebarCollapsed);
@@ -40,9 +43,9 @@ const Sidebar = () => {
   const handleLogout = () => {
     // Remove the token from local storage
     localStorage.removeItem("authToken");
-
+    dispatch(removeUser());
     // Redirect to the login page after logout
-    navigate("/"); // Replace '/login' with your login route
+    navigate("/");
   };
 
   const isActive = (path) => {
@@ -181,12 +184,11 @@ const Sidebar = () => {
 
   return (
     <div
-      className={`bg-blue-700 text-white flex flex-col p-4 ${
+      className={`h-screen overflow-y-auto bg-blue-700 text-white flex flex-col p-4 ${
         isSidebarCollapsed ? "collapsed" : ""
       }`}
       style={{
         width: isSidebarCollapsed ? "4rem" : "16rem",
-        minHeight: "100vh",
       }}
     >
       <div className="flex justify-between items-center mb-4">

@@ -1,9 +1,14 @@
 import axios from "axios";
+import { removeUser, setToken } from "../redux/actions/authActions.js";
+import store from "../redux/store.js";
 
 // Function to retrieve the authentication token from storage
 const getAuthToken = () => {
-  // Replace this logic with your code to retrieve the token from cookies or local storage
   return localStorage.getItem("authToken"); // Example for local storage
+};
+
+const getRefreshToken = () => {
+  return localStorage.getItem("refreshToken");
 };
 
 // Create an Axios instance with default headers
@@ -31,12 +36,41 @@ axiosInstance.interceptors.request.use(
 // Axios response interceptor to handle errors globally
 axiosInstance.interceptors.response.use(
   (response) => {
-    // Handle the successful response here
+    const newToken = response.headers["x-new-access-token"];
+    if (newToken) {
+      store.dispatch(setToken(newToken));
+      localStorage.setItem("authToken", newToken);
+    }
     return response;
   },
-  (error) => {
-    // Handle errors, including the 401 Unauthorized error
-    console.error("Error in response interceptor", error);
+  async (error) => {
+    const originalRequest = error.config;
+    if (error.response.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      const refreshToken = getRefreshToken();
+      if (!refreshToken) {
+        store.dispatch(removeUser());
+        return Promise.reject(error);
+      }
+      try {
+        const res = await axios.post(
+          "http://localhost:8080/auth/refresh-token",
+          {
+            refreshToken: refreshToken,
+          }
+        );
+        const newToken = res.data.newToken;
+        store.dispatch(setToken(newToken));
+        localStorage.setItem("authToken", newToken);
+        axiosInstance.defaults.headers.Authorization = `Bearer ${newToken}`;
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        return axiosInstance(originalRequest);
+      } catch (err) {
+        store.dispatch(removeUser());
+        localStorage.removeItem("refreshToken");
+        return Promise.reject(err);
+      }
+    }
     return Promise.reject(error);
   }
 );

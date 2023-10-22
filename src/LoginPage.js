@@ -1,4 +1,7 @@
 import React, { useState } from "react";
+import { useForm } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
+import * as yup from "yup";
 import {
   Paper,
   Grid,
@@ -17,7 +20,9 @@ import { useMediaQuery } from "@mui/material";
 import { Link as MuiLink } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
 import { CircularProgress } from "@mui/material";
-import axiosInstance from "./config/axios-instance";
+import { useDispatch } from "react-redux";
+import { loginUser, resetLoginError } from "././redux/actions/authActions.js";
+import { useSelector } from "react-redux";
 
 import schoolLogo from "./Data/DonjuanTransparent.png";
 import clinicLogo from "./Data/DonjuanStock.png";
@@ -25,73 +30,40 @@ import clinicLogo from "./Data/DonjuanStock.png";
 const LoginPage = () => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
-  const [showWarning, setShowWarning] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [emailRequired, setEmailRequired] = useState(false);
-  const [passwordRequired, setPasswordRequired] = useState(false);
-  const [emailFormatValid, setEmailFormatValid] = useState(true);
   const [loading, setLoading] = useState(false);
+  const dispatch = useDispatch();
+  const errorMessage = useSelector((state) => state.auth.errorMessage);
+  const validation = yup.object().shape({
+    email: yup
+      .string()
+      .required("Email is required")
+      .email("Invalid email format"),
+    password: yup.string().required("Password is required"),
+  });
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm({
+    resolver: yupResolver(validation), // Use yupResolver with the schema
+  });
+  const isSmallScreen = useMediaQuery("(max-width:600px)");
 
-  const handleShowPasswordClick = () => {
+  const handleShowPasswordClick = (event) => {
+    event.preventDefault();
     setShowPassword((prevShowPassword) => !prevShowPassword);
   };
 
-  const emailRegex = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i;
-
-  const handleLogin = async () => {
-    // Reset previous validation messages
-    setEmailRequired(false);
-    setEmailFormatValid(true);
-    setPasswordRequired(false);
+  const onSubmit = (data) => {
     setLoading(true);
-    // Check if email and password are not empty
-    if (!email) {
-      setEmailRequired(true);
-    }
-    if (!password) {
-      setPasswordRequired(true);
-    }
-
-    // Validate email format
-    if (!emailRegex.test(email)) {
-      setEmailFormatValid(false);
-      return;
-    }
-
-    // If any validation message is displayed, don't proceed with login
-    if (emailRequired || passwordRequired) {
-      return;
-    }
-
-    try {
-      const response = await axiosInstance.post("/auth/login", {
-        email: email,
-        password: password,
-      });
-
-      if (response.data.token) {
-        const token = response.data.token;
-
-        localStorage.setItem("authToken", token);
-
-        navigate("/dashboard");
-      } else {
-        setShowWarning(true);
-      }
-    } catch (error) {
-      console.error("Error during login:", error);
-      setShowWarning(true);
-    } finally {
+    dispatch(loginUser(data.email, data.password, navigate)).finally(() => {
       setLoading(false);
-    }
+    });
   };
 
   const handleCloseWarning = () => {
-    setShowWarning(false);
+    dispatch(resetLoginError());
   };
-
-  const isSmallScreen = useMediaQuery("(max-width:600px)");
 
   return (
     <Grid container component="main" sx={{ height: "100vh" }}>
@@ -104,16 +76,12 @@ const LoginPage = () => {
         sx={{
           display: isSmallScreen ? "none" : "block",
           minHeight: "100vh",
+          backgroundImage: `url(${clinicLogo})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
         }}
-      >
-        <div className="flex justify-center items-center h-full">
-          <img
-            src={clinicLogo}
-            alt="Clinic Logo"
-            style={{ width: "100%", height: "100vh" }}
-          />
-        </div>
-      </Grid>
+      ></Grid>
 
       {/* Right-side Login Form */}
       <Grid
@@ -148,96 +116,88 @@ const LoginPage = () => {
             <div className="flex items-start">
               <h2 className="text-4xl font-bold">Login</h2>
             </div>
-            <TextField
-              label="Email"
-              fullWidth
-              margin="normal"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
-              error={emailRequired || !emailFormatValid}
-              helperText={
-                emailRequired
-                  ? "Email required"
-                  : !emailFormatValid
-                  ? "Invalid email format"
-                  : ""
-              }
-            />
-            <TextField
-              label="Password"
-              type={showPassword ? "text" : "password"}
-              fullWidth
-              margin="normal"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    {/* Toggle password visibility */}
-                    {showPassword ? (
-                      <VisibilityOff
+            <form onSubmit={handleSubmit(onSubmit)}>
+              <TextField
+                label="Email"
+                fullWidth
+                margin="normal"
+                {...register("email")}
+                autoComplete="email"
+                error={!!errors.email}
+                helperText={errors.email?.message}
+              />
+              <TextField
+                label="Password"
+                type={showPassword ? "text" : "password"}
+                fullWidth
+                margin="normal"
+                {...register("password")}
+                autoComplete="current-password"
+                error={!!errors.password}
+                helperText={errors.password?.message}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <button
+                        type="button"
                         onClick={handleShowPasswordClick}
-                        style={{ cursor: "pointer" }}
-                      />
-                    ) : (
-                      <Visibility
-                        onClick={handleShowPasswordClick}
-                        style={{ cursor: "pointer" }}
-                      />
-                    )}
-                  </InputAdornment>
-                ),
-              }}
-              error={passwordRequired}
-              helperText={passwordRequired ? "Password required" : ""}
-            />
-
-            <div className="flex justify-between w-full">
-              <a
-                href="#forgot-password"
-                className="text-gray-700 hover:underline"
-              >
-                Forgot password?
-              </a>
-              <MuiLink
-                component={RouterLink}
-                to="/register"
-                className="text-black hover:underline"
-              >
-                Sign up here
-              </MuiLink>
-            </div>
-            {loading ? (
-              <div className="flex justify-center">
-                <CircularProgress size={24} color="primary" />
-              </div>
-            ) : (
-              <div className="flex justify-center">
-                <Button
-                  variant="contained"
-                  style={{
-                    width: "150px",
-                    height: "50px",
-                    borderRadius: "10px",
-                    backgroundColor: "#020826",
-                  }}
-                  onClick={handleLogin}
+                        aria-label={
+                          showPassword ? "Hide Password" : "Show Password"
+                        }
+                        style={{
+                          cursor: "pointer",
+                          background: "none",
+                          border: "none",
+                        }}
+                      >
+                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                      </button>
+                    </InputAdornment>
+                  ),
+                }}
+              />
+              <div className="flex justify-between w-full">
+                <a
+                  href="#forgot-password"
+                  className="text-gray-700 hover:underline"
                 >
-                  Login
-                </Button>
+                  Forgot password?
+                </a>
+                <MuiLink
+                  component={RouterLink}
+                  to="/register"
+                  className="text-black hover:underline"
+                >
+                  Sign up here
+                </MuiLink>
               </div>
-            )}
+              {loading ? (
+                <div className="flex justify-center">
+                  <CircularProgress size={24} color="primary" />
+                </div>
+              ) : (
+                <div className="flex justify-center mt-4">
+                  <Button
+                    variant="contained"
+                    style={{
+                      width: "150px",
+                      height: "50px",
+                      borderRadius: "10px",
+                    }}
+                    type="submit"
+                  >
+                    Login
+                  </Button>
+                </div>
+              )}
+            </form>
           </div>
         </Grid>
       </Grid>
-      <Dialog open={showWarning} onClose={handleCloseWarning}>
-        <DialogTitle>Invalid Credentials</DialogTitle>
+      <Dialog open={!!errorMessage} onClose={handleCloseWarning}>
+        <DialogTitle>Error</DialogTitle>
         <DialogContent>
-          <DialogContentText>
-            The entered email or password is incorrect. Please try again.
-          </DialogContentText>
+          <DialogContentText>{errorMessage}</DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseWarning} autoFocus>

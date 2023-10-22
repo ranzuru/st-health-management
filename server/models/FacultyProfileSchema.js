@@ -18,9 +18,25 @@ const facultyProfileSchema = new mongoose.Schema(
     middleName: {
       type: String,
     },
+    nameExtension: {
+      type: String,
+      default: "",
+    },
     gender: {
       type: String,
       required: true,
+    },
+    birthDate: {
+      type: String,
+      required: true,
+    },
+    age: {
+      type: Number,
+      required: true,
+    },
+    email: {
+      type: String,
+      unique: true,
     },
     mobileNumber: {
       type: Number,
