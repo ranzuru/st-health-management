@@ -4,6 +4,11 @@ import IconButton from "@mui/material/IconButton";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import TextField from "@mui/material/TextField";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogContentText from "@mui/material/DialogContentText";
+import DialogTitle from "@mui/material/DialogTitle";
 import Button from "@mui/material/Button";
 import ReportIcon from "@mui/icons-material/Description";
 import MedicalCheckupForm from "../modal/MedicalStudentForm";
@@ -13,10 +18,23 @@ const MedicalCheckUpGrid = () => {
   const [medicalCheckups, setMedicalCheckups] = useState([]);
   const [searchValue, setSearchValue] = useState("");
   const [formOpen, setFormOpen] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [recordIdToDelete, setRecordIdToDelete] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedMedicalCheckup, setSelectedMedicalCheckup] = useState(null);
 
   const handleSearchChange = (event) => {
     setSearchValue(event.target.value);
+  };
+
+  const handleDialogOpen = (checkupId) => {
+    setRecordIdToDelete(checkupId);
+    setDialogOpen(true);
+  };
+
+  const handleDialogClose = () => {
+    setRecordIdToDelete(null);
+    setDialogOpen(false);
   };
 
   const formatYearFromDate = (dateString) => {
@@ -36,10 +54,25 @@ const MedicalCheckUpGrid = () => {
           id: checkup._id,
           dateOfExamination: checkup.dateOfExamination,
           lrn: checkup.studentProfile ? checkup.studentProfile.lrn : "N/A",
+          name:
+            checkup.studentProfile && checkup.studentProfile.middleName
+              ? `${checkup.studentProfile.lastName}, ${
+                  checkup.studentProfile.firstName
+                } ${checkup.studentProfile.middleName.charAt(0)}. ${
+                  checkup.studentProfile.nameExtension
+                }`.trim()
+              : "N/A",
           age: checkup.studentProfile ? checkup.studentProfile.age : "N/A",
           gender: checkup.studentProfile
             ? checkup.studentProfile.gender
             : "N/A",
+          birthDate: checkup.studentProfile
+            ? checkup.studentProfile.birthDate
+            : "N/A",
+          grade:
+            checkup.studentProfile && checkup.studentProfile.classProfile
+              ? checkup.studentProfile.classProfile.grade
+              : "N/A",
           section:
             checkup.studentProfile && checkup.studentProfile.classProfile
               ? checkup.studentProfile.classProfile.section
@@ -57,11 +90,39 @@ const MedicalCheckUpGrid = () => {
           weightKg: checkup.nutritionalStatus
             ? checkup.nutritionalStatus.weightKg
             : "N/A",
+          BMI: checkup.nutritionalStatus
+            ? checkup.nutritionalStatus.BMI
+            : "N/A",
           BMIClassification: checkup.nutritionalStatus
             ? checkup.nutritionalStatus.BMIClassification
             : "N/A",
+          heightForAge: checkup.nutritionalStatus
+            ? checkup.nutritionalStatus.heightForAge
+            : "N/A",
+          beneficiaryOfSBFP: checkup.nutritionalStatus
+            ? checkup.nutritionalStatus.beneficiaryOfSBFP
+            : "N/A",
           ironSupplementation: checkup.ironSupplementation,
           deworming: checkup.deworming,
+          pulseRate: checkup.pulseRate,
+          respiratoryRate: checkup.respiratoryRate,
+          visionScreeningLeft: checkup.visionScreeningLeft,
+          visionScreeningRight: checkup.visionScreeningRight,
+          auditoryScreeningLeft: checkup.auditoryScreeningLeft,
+          auditoryScreeningRight: checkup.auditoryScreeningRight,
+          scalpScreening: checkup.scalpScreening,
+          skinScreening: checkup.skinScreening,
+          eyesScreening: checkup.eyesScreening,
+          earScreening: checkup.earScreening,
+          noseScreening: checkup.noseScreening,
+          mouthScreening: checkup.mouthScreening,
+          neckScreening: checkup.neckScreening,
+          throatScreening: checkup.throatScreening,
+          lungScreening: checkup.lungScreening,
+          heartScreening: checkup.heartScreening,
+          abdomen: checkup.abdomen,
+          deformities: checkup.deformities,
+          menarche: checkup.menarche,
         };
       });
       setMedicalCheckups(updatedCheckups); // Assuming you've a state variable called 'setMedicalCheckups'
@@ -70,7 +131,7 @@ const MedicalCheckUpGrid = () => {
         "An error occurred while fetching medical checkups:",
         error
       );
-      setIsLoading(true);
+      setIsLoading(false);
     } finally {
       setIsLoading(false); // This ensures loading is set to false regardless of try or catch outcomes.
     }
@@ -120,10 +181,10 @@ const MedicalCheckUpGrid = () => {
       width: 150,
       renderCell: (params) => (
         <div>
-          <IconButton onClick={() => handleAction(params.row.id)}>
+          <IconButton onClick={() => handleEditRecord(params.row.id)}>
             <EditIcon />
           </IconButton>
-          <IconButton onClick={() => handleDelete(params.row.id)}>
+          <IconButton onClick={() => handleDialogOpen(params.row.id)}>
             <DeleteOutlineIcon />
           </IconButton>
         </div>
@@ -131,14 +192,35 @@ const MedicalCheckUpGrid = () => {
     },
   ];
 
-  const handleAction = (userId) => {
-    // Implement your action logic here
-    console.log(`Edit user with ID: ${userId}`);
+  const handleEditRecord = (checkupId) => {
+    const medicalToEdit = medicalCheckups.find(
+      (medicalCheckup) => medicalCheckup.id === checkupId
+    );
+    setSelectedMedicalCheckup(medicalToEdit);
+    setFormOpen(true);
   };
 
-  const handleDelete = (userId) => {
-    // Implement your delete logic here
-    console.log(`Delete user with ID: ${userId}`);
+  const updatedMedicalCheckup = (updatedCheckup) => {
+    setMedicalCheckups((prevCheckups) =>
+      prevCheckups.map((checkup) =>
+        checkup.id === updatedCheckup.id ? updatedCheckup : checkup
+      )
+    );
+  };
+
+  const handleDelete = async () => {
+    try {
+      await axiosInstance.delete(`medicalCheckup/delete/${recordIdToDelete}`);
+
+      // Update the state to filter out the deleted record
+      const updatedRecords = medicalCheckups.filter(
+        (checkup) => checkup.id !== recordIdToDelete
+      );
+      setMedicalCheckups(updatedRecords);
+    } catch (error) {
+      console.error("Error deleting the record:", error.message);
+    }
+    handleDialogClose();
   };
 
   const FilteredMedicalCheckups = medicalCheckups.filter(
@@ -231,15 +313,36 @@ const MedicalCheckUpGrid = () => {
         />
         <MedicalCheckupForm
           open={formOpen}
+          isEditing={!!selectedMedicalCheckup}
           addNewMedicalCheckup={addNewMedicalCheckup}
+          selectedMedicalCheckup={selectedMedicalCheckup}
+          onCheckupUpdate={updatedMedicalCheckup}
           onClose={() => {
+            setSelectedMedicalCheckup(null);
             handleModalClose();
           }}
           onCancel={() => {
+            setSelectedMedicalCheckup(null);
             handleModalClose();
           }}
         />
       </div>
+      <Dialog open={dialogOpen} onClose={handleDialogClose}>
+        <DialogTitle>Confirm Delete!</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to delete this record?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDialogClose} color="primary">
+            Cancel
+          </Button>
+          <Button onClick={handleDelete} color="primary">
+            Confirm
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 };

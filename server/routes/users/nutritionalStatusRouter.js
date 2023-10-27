@@ -6,7 +6,6 @@ const authenticateMiddleware = require("../../auth/authenticateMiddleware.js");
 
 // Create
 router.post("/create", authenticateMiddleware, async (req, res) => {
-  console.log("Data:", req.body);
   try {
     const { lrn, measurementType, ...nutritionalData } = req.body;
 
@@ -23,7 +22,6 @@ router.post("/create", authenticateMiddleware, async (req, res) => {
         error: "A record for this student and measurement type already exists.",
       });
     }
-    console.log(nutritionalData);
     const newRecord = new NutritionalStatus({
       ...nutritionalData,
       lrn: lrn,
@@ -41,7 +39,7 @@ router.post("/create", authenticateMiddleware, async (req, res) => {
       })
       .exec();
 
-    res.status(201).json({ newNutritionalStatus: populatedRecord });
+    res.status(201).json({ newRecord: populatedRecord });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -69,22 +67,45 @@ router.get("/fetch/:type", authenticateMiddleware, async (req, res) => {
 });
 
 // Update
-router.put("/update/:id", authenticateMiddleware, async (req, res) => {
-  try {
-    const updatedRecord = await NutritionalStatus.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true }
-    ).populate("studentProfile");
+router.put(
+  "/update/:lrn/:measurementType",
+  authenticateMiddleware,
+  async (req, res) => {
+    try {
+      const studentProfile = await StudentProfile.findOne({
+        lrn: req.params.lrn,
+      });
 
-    if (!updatedRecord)
-      return res.status(404).json({ error: "Record not found" });
+      if (!studentProfile) {
+        return res.status(404).json({ error: "StudentProfile not found" });
+      }
 
-    res.status(200).json(updatedRecord);
-  } catch (error) {
-    res.status(400).json({ error: error.message });
+      const existingRecord = await NutritionalStatus.findOne({
+        studentProfile: studentProfile._id,
+      });
+
+      if (!existingRecord) {
+        return res.status(404).json({ error: "Medical checkup not found" });
+      }
+
+      const updatedData = { ...existingRecord.toObject(), ...req.body };
+      const updatedRecord = await NutritionalStatus.findOneAndUpdate(
+        {
+          studentProfile: studentProfile._id,
+          measurementType: req.params.measurementType,
+        },
+        updatedData,
+        { new: true }
+      ).populate({
+        path: "studentProfile",
+        populate: { path: "classProfile" },
+      });
+      res.status(200).json(updatedRecord);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
   }
-});
+);
 
 // Delete
 router.delete("/delete/:id", authenticateMiddleware, async (req, res) => {

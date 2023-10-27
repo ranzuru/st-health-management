@@ -77,6 +77,8 @@ const MedicalCheckupForm = (props) => {
     initialData,
     addNewMedicalCheckup,
     selectedMedicalCheckup,
+    isEditing,
+    onCheckupUpdate,
   } = props;
   const [focusState, setFocusState] = useState({});
   const [snackbarOpen, setSnackbarOpen] = useState(false);
@@ -106,9 +108,13 @@ const MedicalCheckupForm = (props) => {
   const handleBlur = (field) => {
     setFocusState((prevFocusState) => ({ ...prevFocusState, [field]: false }));
   };
-
   const formatDate = (dateString) => {
+    if (!dateString) return ""; // handle null or undefined
+
     const date = new Date(dateString);
+
+    if (isNaN(date.getTime())) return ""; // handle invalid date
+
     return date.toISOString().split("T")[0];
   };
 
@@ -143,7 +149,6 @@ const MedicalCheckupForm = (props) => {
     deformities: yup.string(),
     ironSupplementation: yup.boolean(),
     deworming: yup.boolean(),
-    sbfpBeneficiary: yup.boolean(),
     menarche: yup.string(),
   });
 
@@ -180,11 +185,48 @@ const MedicalCheckupForm = (props) => {
       deformities: "",
       ironSupplementation: false,
       deworming: false,
-      sbfpBeneficiary: false,
       menarche: "",
     },
     resolver: yupResolver(validationSchema),
   });
+
+  const enrichMedicalCheckup = (newCheckup) => {
+    const { studentProfile, nutritionalStatus, ...rest } = newCheckup;
+
+    // Extracts details from studentProfile and nutritionalStatus
+    const lrn = studentProfile?.lrn;
+    const age = studentProfile?.age;
+    const gender = studentProfile?.gender;
+    const birthDate = studentProfile?.birthDate;
+
+    // For name, you can use a similar pattern as you did in your second function
+    const name =
+      studentProfile && studentProfile.middleName
+        ? `${studentProfile.lastName}, ${
+            studentProfile.firstName
+          } ${studentProfile.middleName.charAt(0)}. ${
+            studentProfile.nameExtension
+          }`.trim()
+        : "N/A";
+
+    // Combines everything
+    return {
+      ...rest,
+      id: newCheckup._id,
+      name,
+      lrn,
+      age,
+      birthDate,
+      gender,
+      grade: studentProfile?.classProfile?.grade,
+      section: studentProfile?.classProfile?.section,
+      academicYear: studentProfile?.classProfile?.academicYear,
+      heightCm: nutritionalStatus?.heightCm,
+      weightKg: nutritionalStatus?.weightKg,
+      BMIClassification: nutritionalStatus?.BMIClassification,
+      heightForAge: nutritionalStatus?.heightForAge,
+    };
+  };
 
   const handleCreateMedicalCheckup = async (data) => {
     try {
@@ -192,32 +234,14 @@ const MedicalCheckupForm = (props) => {
         ...data,
         lrn: selectedLRN, // include selectedLRN
       };
+
       const response = await axiosInstance.post(
         "/medicalCheckup/create",
         payload
       );
       if (response.data && response.data.newCheckup) {
-        let enrichedNewCheckup = {
-          ...response.data.newCheckup,
-          id: response.data.newCheckup._id,
-          dateOfExamination: response.data.newCheckup.dateOfExamination,
-          lrn: response.data.newCheckup.studentProfile?.lrn,
-          age: response.data.newCheckup.studentProfile?.age,
-          gender: response.data.newCheckup.studentProfile?.gender,
-          section:
-            response.data.newCheckup.studentProfile?.classProfile?.section,
-          academicYear:
-            response.data.newCheckup.studentProfile?.classProfile?.academicYear,
-          temperature: response.data.newCheckup.temperature,
-          bloodPressure: response.data.newCheckup.bloodPressure,
-          heartRate: response.data.newCheckup.heartRate,
-          heightCm: response.data.newCheckup.nutritionalStatus?.heightCm,
-          weightKg: response.data.newCheckup.nutritionalStatus?.weightKg,
-          BMIClassification:
-            response.data.newCheckup.nutritionalStatus?.BMIClassification,
-          ironSupplementation: response.data.newCheckup.ironSupplementation,
-          deworming: response.data.newCheckup.deworming,
-        };
+        let enrichedNewCheckup = enrichMedicalCheckup(response.data.newCheckup);
+
         if (typeof addNewMedicalCheckup === "function") {
           addNewMedicalCheckup(enrichedNewCheckup);
         }
@@ -237,48 +261,44 @@ const MedicalCheckupForm = (props) => {
   };
 
   const handleUpdateMedicalCheckup = async (data) => {
-    if (selectedMedicalCheckup) {
-      if (selectedMedicalCheckup._id) {
-        try {
-          const response = await axiosInstance.put(
-            `/medicalCheckup/updateMedicalCheckup/${selectedMedicalCheckup._id}`,
-            data
-          );
-          if (response.data.medicalCheckup) {
-            const updatedMedicalCheckup = {
-              ...response.data.medicalCheckup,
-            };
-            if (typeof props.onMedicalCheckupUpdated === "function") {
-              props.onMedicalCheckupUpdated(updatedMedicalCheckup);
-            }
-            showSnackbar("Successfully updated medical checkup", "success");
-            handleClose();
-          } else {
-            showSnackbar("Update operation failed", "error");
-          }
-        } catch (error) {
-          console.error("Error details:", error.response || error.request);
-          showSnackbar("An error occurred during updating", "error");
-        }
-      } else {
-        console.error("selectedMedicalCheckup._id is undefined");
-        showSnackbar(
-          "An error occurred, selectedMedicalCheckup._id is undefined",
-          "error"
-        );
-      }
-    } else {
-      console.error("selectedMedicalCheckup is undefined");
-      showSnackbar(
-        "An error occurred, selectedMedicalCheckup is undefined",
-        "error"
+    try {
+      const payload = {
+        ...data,
+        lrn: selectedMedicalCheckup.lrn,
+      };
+      const response = await axiosInstance.put(
+        `/medicalCheckup/update/${payload.lrn}`,
+        payload
       );
+
+      if (response.data && response.data._id) {
+        const enrichedUpdatedRecord = enrichMedicalCheckup(response.data);
+        if (onCheckupUpdate) {
+          onCheckupUpdate(enrichedUpdatedRecord);
+        }
+
+        showSnackbar("Successfully updated record", "success");
+        handleClose();
+      } else {
+        const errorMsg =
+          (response.data && response.data.error) || "Operation failed";
+        showSnackbar(errorMsg, "error");
+      }
+    } catch (error) {
+      if (error.response && error.response.data) {
+        console.error("Server responded with:", error.response.data);
+        const errorMsg =
+          error.response.data.error || "An error occurred during updating";
+        showSnackbar(errorMsg, "error");
+      } else {
+        showSnackbar("An error occurred during updating", "error");
+      }
     }
   };
 
   const handleSaveOrUpdate = async (data) => {
     try {
-      if (selectedMedicalCheckup && selectedMedicalCheckup._id) {
+      if (selectedMedicalCheckup && selectedMedicalCheckup.lrn) {
         await handleUpdateMedicalCheckup(data);
       } else {
         await handleCreateMedicalCheckup(data);
@@ -315,28 +335,64 @@ const MedicalCheckupForm = (props) => {
   };
 
   useEffect(() => {
-    if (selectedMedicalCheckup) {
-      // Batch set values to reduce re-renders
-      Object.keys(selectedMedicalCheckup).forEach((key) => {
-        setValue(key, selectedMedicalCheckup[key] || defaultValueFor(key));
+    if (selectedMedicalCheckup && selectedMedicalCheckup.lrn) {
+      const keys = [
+        "academicYear",
+        "lrn",
+        "name",
+        "grade",
+        "section",
+        "gender",
+        "birthDate",
+        "heightCm",
+        "weightKg",
+        "BMI",
+        "BMIClassification",
+        "heightForAge",
+        "beneficiaryOfSBFP",
+        "temperature",
+        "bloodPressure",
+        "heartRate",
+        "pulseRate",
+        "respiratoryRate",
+        "visionScreeningLeft",
+        "visionScreeningRight",
+        "auditoryScreeningLeft",
+        "auditoryScreeningRight",
+        "scalpScreening",
+        "skinScreening",
+        "eyesScreening",
+        "earScreening",
+        "noseScreening",
+        "mouthScreening",
+        "neckScreening",
+        "throatScreening",
+        "lungScreening",
+        "heartScreening",
+        "abdomen",
+        "deformities",
+        "menarche",
+      ];
+
+      const formattedDate = new Date(selectedMedicalCheckup.dateOfExamination)
+        .toISOString()
+        .split("T")[0];
+      setSelectedStudent(selectedMedicalCheckup);
+      setSelectedLRN(selectedMedicalCheckup.lrn);
+      console.log("Here:", selectedMedicalCheckup.lrn);
+      setValue("dateOfExamination", formattedDate);
+
+      keys.forEach((key) => {
+        setValue(key, selectedMedicalCheckup[key] || "");
       });
 
-      // If you want to reset the form when selectedMedicalCheckup changes
-      reset(selectedMedicalCheckup);
+      setValue(
+        "ironSupplementation",
+        !!selectedMedicalCheckup.ironSupplementation
+      );
+      setValue("deworming", !!selectedMedicalCheckup.deworming);
     }
-  }, [selectedMedicalCheckup, setValue, reset]);
-
-  // Add a function to determine default values based on field key
-  const defaultValueFor = (key) => {
-    switch (key) {
-      case "ironSupplementation":
-      case "deworming":
-      case "sbfpBeneficiary":
-        return false;
-      default:
-        return "";
-    }
-  };
+  }, [selectedMedicalCheckup, setValue]);
 
   const isOptionEqual = (option, value) => {
     if (!option || !value) return false;
@@ -447,6 +503,7 @@ const MedicalCheckupForm = (props) => {
                           inputValue={lrnInput}
                           loading={loading}
                           loadingText="Loading..."
+                          disabled={isEditing}
                           isOptionEqualToValue={isOptionEqual}
                           onInputChange={(_, newInputValue) => {
                             setLrnInput(newInputValue);
@@ -477,8 +534,10 @@ const MedicalCheckupForm = (props) => {
                           margin="normal"
                           {...field}
                           value={
-                            selectedStudent && selectedStudent.classProfile
-                              ? selectedStudent.classProfile.academicYear
+                            selectedStudent
+                              ? selectedStudent.classProfile
+                                ? selectedStudent.classProfile.academicYear
+                                : selectedStudent.academicYear
                               : ""
                           }
                           InputProps={{
@@ -518,7 +577,15 @@ const MedicalCheckupForm = (props) => {
                           {...field}
                           value={
                             selectedStudent
-                              ? `${selectedStudent.lastName}, ${selectedStudent.firstName} ${selectedStudent.middleName} ${selectedStudent.nameExtension}`
+                              ? selectedStudent.middleName &&
+                                selectedStudent.firstName &&
+                                selectedStudent.lastName
+                                ? `${selectedStudent.lastName}, ${
+                                    selectedStudent.firstName
+                                  } ${selectedStudent.middleName.charAt(0)}. ${
+                                    selectedStudent.nameExtension
+                                  }`.trim()
+                                : selectedStudent.name
                               : ""
                           }
                           InputProps={{
@@ -539,8 +606,10 @@ const MedicalCheckupForm = (props) => {
                           margin="normal"
                           {...field}
                           value={
-                            selectedStudent && selectedStudent.classProfile
-                              ? selectedStudent.classProfile.grade
+                            selectedStudent
+                              ? selectedStudent.classProfile
+                                ? selectedStudent.classProfile.grade
+                                : selectedStudent.grade
                               : ""
                           }
                           InputProps={{
@@ -561,8 +630,10 @@ const MedicalCheckupForm = (props) => {
                           margin="normal"
                           {...field}
                           value={
-                            selectedStudent && selectedStudent.classProfile
-                              ? selectedStudent.classProfile.section
+                            selectedStudent
+                              ? selectedStudent.classProfile
+                                ? selectedStudent.classProfile.section
+                                : selectedStudent.section
                               : ""
                           }
                           InputProps={{
@@ -625,8 +696,10 @@ const MedicalCheckupForm = (props) => {
                           margin="normal"
                           {...field}
                           value={
-                            selectedStudent && selectedStudent.nutritionalStatus
-                              ? selectedStudent.nutritionalStatus.heightCm
+                            selectedStudent
+                              ? selectedStudent.nutritionalStatus
+                                ? selectedStudent.nutritionalStatus.heightCm
+                                : selectedStudent.heightCm
                               : ""
                           }
                           InputProps={{
@@ -647,8 +720,10 @@ const MedicalCheckupForm = (props) => {
                           margin="normal"
                           {...field}
                           value={
-                            selectedStudent && selectedStudent.nutritionalStatus
-                              ? selectedStudent.nutritionalStatus.weightKg
+                            selectedStudent
+                              ? selectedStudent.nutritionalStatus
+                                ? selectedStudent.nutritionalStatus.weightKg
+                                : selectedStudent.weightKg
                               : ""
                           }
                           InputProps={{
@@ -669,8 +744,10 @@ const MedicalCheckupForm = (props) => {
                           margin="normal"
                           {...field}
                           value={
-                            selectedStudent && selectedStudent.nutritionalStatus
-                              ? selectedStudent.nutritionalStatus.BMI
+                            selectedStudent
+                              ? selectedStudent.nutritionalStatus
+                                ? selectedStudent.nutritionalStatus.BMI
+                                : selectedStudent.BMI
                               : ""
                           }
                           InputProps={{
@@ -691,9 +768,11 @@ const MedicalCheckupForm = (props) => {
                           margin="normal"
                           {...field}
                           value={
-                            selectedStudent && selectedStudent.nutritionalStatus
+                            selectedStudent
                               ? selectedStudent.nutritionalStatus
-                                  .BMIClassification
+                                ? selectedStudent.nutritionalStatus
+                                    .BMIClassification
+                                : selectedStudent.BMIClassification
                               : ""
                           }
                           InputProps={{
@@ -714,8 +793,10 @@ const MedicalCheckupForm = (props) => {
                           margin="normal"
                           {...field}
                           value={
-                            selectedStudent && selectedStudent.nutritionalStatus
-                              ? selectedStudent.nutritionalStatus.heightForAge
+                            selectedStudent
+                              ? selectedStudent.nutritionalStatus
+                                ? selectedStudent.nutritionalStatus.heightForAge
+                                : selectedStudent.heightForAge
                               : ""
                           }
                           InputProps={{
@@ -731,14 +812,18 @@ const MedicalCheckupForm = (props) => {
                       control={control}
                       render={({ field }) => (
                         <TextField
-                          label="Height For Age"
+                          label="SBFP Beneficiary"
                           fullWidth
                           margin="normal"
                           {...field}
                           value={
-                            selectedStudent && selectedStudent.nutritionalStatus
+                            selectedStudent
                               ? selectedStudent.nutritionalStatus
-                                  .beneficiaryOfSBFP
+                                ? selectedStudent.nutritionalStatus
+                                    .beneficiaryOfSBFP
+                                  ? "Yes"
+                                  : "No"
+                                : selectedStudent.beneficiaryOfSBFP
                                 ? "Yes"
                                 : "No"
                               : ""

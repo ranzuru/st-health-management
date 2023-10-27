@@ -110,7 +110,7 @@ exports.internalRegister = async (req, res) => {
       email,
       password: hashedPassword,
       gender,
-      role: role || "Admin", // You can set a default role for internal users if needed
+      role,
     });
 
     await newUser.save();

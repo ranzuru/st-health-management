@@ -25,6 +25,7 @@ const NutritionalStatusPreGrid = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [recordIdToDelete, setRecordIdToDelete] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedRecord, setSelectedRecord] = useState(null);
 
   const handleSearchChange = (event) => {
     setSearchValue(event.target.value);
@@ -67,6 +68,14 @@ const NutritionalStatusPreGrid = () => {
           id: record._id,
           dateMeasured: record.dateMeasured,
           lrn: record.studentProfile ? record.studentProfile.lrn : "N/A",
+          name:
+            record.studentProfile && record.studentProfile.middleName
+              ? `${record.studentProfile.lastName}, ${
+                  record.studentProfile.firstName
+                } ${record.studentProfile.middleName.charAt(0)}. ${
+                  record.studentProfile.nameExtension
+                }`.trim()
+              : "N/A",
           age: record.studentProfile ? record.studentProfile.age : "N/A",
           gender: record.studentProfile ? record.studentProfile.gender : "N/A",
           birthDate: record.studentProfile
@@ -103,8 +112,8 @@ const NutritionalStatusPreGrid = () => {
     fetchRecord("PRE");
   }, []);
 
-  const addNewNutritionalStatus = (newNutritionalStatus) => {
-    setPreRecords((prevCheckups) => [...prevCheckups, newNutritionalStatus]);
+  const addNewNutritionalStatus = (newRecord) => {
+    setPreRecords((prevCheckups) => [...prevCheckups, newRecord]);
   };
 
   const columns = [
@@ -156,7 +165,7 @@ const NutritionalStatusPreGrid = () => {
       width: 150,
       renderCell: (params) => (
         <div>
-          <IconButton onClick={() => handleAction(params.row.id)}>
+          <IconButton onClick={() => handleEditRecord(params.row.id)}>
             <EditIcon />
           </IconButton>
           <IconButton onClick={() => handleDialogOpen(params.row.id)}>
@@ -167,9 +176,22 @@ const NutritionalStatusPreGrid = () => {
     },
   ];
 
-  const handleAction = (userId) => {
-    // Implement your action logic here
-    console.log(`Edit user with ID: ${userId}`);
+  const handleEditRecord = (recordId) => {
+    const recordToEdit = preRecords.find(
+      (nutritionalStatus) => nutritionalStatus.id === recordId
+    );
+    setSelectedRecord(recordToEdit);
+    setFormOpen(true);
+  };
+
+  const updatedRecord = (updatedRecords) => {
+    setPreRecords((prevRecords) => {
+      const updated = prevRecords.map((record) =>
+        record.id === updatedRecords.id ? updatedRecords : record
+      );
+      console.log("Nutritional Record after:", updated);
+      return updated;
+    });
   };
 
   const handleDelete = async () => {
@@ -280,11 +302,16 @@ const NutritionalStatusPreGrid = () => {
         />
         <NutritionalStatusForm
           open={formOpen}
+          isEditing={!!selectedRecord}
+          onCheckUpdate={updatedRecord}
           addNewNutritionalStatus={addNewNutritionalStatus}
+          selectedRecord={selectedRecord}
           onClose={() => {
+            setSelectedRecord();
             handleModalClose();
           }}
           onCancel={() => {
+            setSelectedRecord();
             handleModalClose();
           }}
         />

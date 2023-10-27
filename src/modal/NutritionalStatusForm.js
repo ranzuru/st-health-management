@@ -33,8 +33,12 @@ const NutritionalStatusForm = (props) => {
     initialData,
     selectedRecord,
     addNewNutritionalStatus,
+    isEditing,
+    onCheckUpdate,
   } = props;
-  const [lrnInput, setLrnInput] = useState("");
+  const [lrnInput, setLrnInput] = useState(
+    selectedRecord ? selectedRecord.lrn : ""
+  );
   const [loading, setLoading] = useState(false);
   const [lrnOptions, setLrnOptions] = useState([]);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
@@ -137,17 +141,28 @@ const NutritionalStatusForm = (props) => {
     resolver: yupResolver(nutritionalStatusValidationSchema),
   });
 
-  const enrichNewRecord = (newNutritionalStatus) => {
-    const { studentProfile, classProfile, ...rest } = newNutritionalStatus;
+  const enrichNewRecord = (newRecord) => {
+    const { studentProfile } = newRecord;
+
+    const name =
+      studentProfile && studentProfile.middleName
+        ? `${studentProfile.lastName}, ${
+            studentProfile.firstName
+          } ${studentProfile.middleName.charAt(0)}. ${
+            studentProfile.nameExtension || ""
+          }`.trim()
+        : "N/A";
+
     return {
-      ...rest,
-      id: newNutritionalStatus._id,
+      ...newRecord,
+      id: newRecord._id,
       lrn: studentProfile?.lrn,
       gender: studentProfile?.gender,
       age: studentProfile?.age,
       birthDate: studentProfile?.birthDate,
       grade: studentProfile?.classProfile?.grade,
       section: studentProfile?.classProfile?.section,
+      name,
     };
   };
 
@@ -161,10 +176,8 @@ const NutritionalStatusForm = (props) => {
         "/nutritionalStatus/create",
         payload
       );
-      if (response.data && response.data.newNutritionalStatus) {
-        const enrichedNewRecord = enrichNewRecord(
-          response.data.newNutritionalStatus
-        );
+      if (response.data && response.data.newRecord) {
+        let enrichedNewRecord = enrichNewRecord(response.data.newRecord);
 
         if (typeof addNewNutritionalStatus === "function") {
           addNewNutritionalStatus(enrichedNewRecord);
@@ -190,8 +203,45 @@ const NutritionalStatusForm = (props) => {
     }
   };
 
-  const handleUpdateNutritionalStatus = () => {
-    console.log("Clicked");
+  const handleUpdateNutritionalStatus = async (data) => {
+    try {
+      const payload = {
+        ...data,
+        lrn: selectedRecord.lrn, // using selectedRecord's LRN here
+        measurementType: data.measurementType, // using the measurementType from the form data
+      };
+
+      // Incorporate LRN and measurementType in the URL
+      const response = await axiosInstance.put(
+        `/nutritionalStatus/update/${payload.lrn}/${payload.measurementType}`,
+        payload
+      );
+
+      if (response.data && response.data._id) {
+        const enrichedUpdatedRecord = enrichNewRecord(response.data);
+
+        if (onCheckUpdate) {
+          onCheckUpdate(enrichedUpdatedRecord);
+        }
+
+        showSnackbar("Successfully updated record", "success");
+        handleClose();
+      } else {
+        const errorMsg =
+          (response.data && response.data.error) || "Operation failed";
+        showSnackbar(errorMsg, "error");
+      }
+    } catch (error) {
+      console.error("Server responded with:", error.response.data);
+      if (error.response && error.response.data) {
+        console.error("Server responded with:", error.response.data);
+        const errorMsg =
+          error.response.data.error || "An error occurred during updating";
+        showSnackbar(errorMsg, "error");
+      } else {
+        showSnackbar("An error occurred during updating", "error");
+      }
+    }
   };
 
   const handleSaveOrUpdate = (data) => {
@@ -220,7 +270,9 @@ const NutritionalStatusForm = (props) => {
             `/studentProfile/search/${lrnInput}`
           );
           setLrnOptions(response.data);
-        } catch (error) {}
+        } catch (error) {
+          console.error("Error fetching LRN:", error);
+        }
         setLoading(false);
       }
     };
@@ -376,6 +428,31 @@ const NutritionalStatusForm = (props) => {
     }
   }, [BMIClassification, setValue]);
 
+  useEffect(() => {
+    if (selectedRecord) {
+      const formattedDate = new Date(selectedRecord.dateMeasured)
+        .toISOString()
+        .split("T")[0];
+      setSelectedStudent(selectedRecord);
+      setValue("lrn", selectedRecord.lrn || "");
+      setValue("dateMeasured", formattedDate);
+      setValue("name", selectedRecord.name || "");
+      setValue("gender", selectedRecord.gender || "");
+      setValue("age", selectedRecord.age || "");
+      setValue("birthDate", selectedRecord.birthDate || "");
+      setValue("grade", selectedRecord.grade || "");
+      setValue("section", selectedRecord.section || "");
+      setValue("heightCm", selectedRecord.heightCm || "");
+      setValue("weightKg", selectedRecord.weightKg || "");
+      setValue("BMI", selectedRecord.BMI || "");
+      setValue("BMIClassification", selectedRecord.BMIClassification || "");
+      setValue("heightForAge", selectedRecord.heightForAge || "");
+      setValue("beneficiaryOfSBFP", selectedRecord.beneficiaryOfSBFP || "");
+      setValue("measurementType", selectedRecord.measurementType || "");
+      setValue("remarks", selectedRecord.remarks || "");
+    }
+  }, [selectedRecord, setValue]);
+
   return (
     <>
       <Snackbar
@@ -438,6 +515,7 @@ const NutritionalStatusForm = (props) => {
                       inputValue={lrnInput}
                       loading={loading}
                       loadingText="Loading..."
+                      disabled={isEditing}
                       isOptionEqualToValue={(option, value) =>
                         option.lrn === value.lrn &&
                         option.lastName === value.lastName &&
@@ -486,11 +564,15 @@ const NutritionalStatusForm = (props) => {
                       {...field}
                       value={
                         selectedStudent
-                          ? `${selectedStudent.lastName}, ${
-                              selectedStudent.firstName
-                            } ${selectedStudent.middleName.charAt(0)}. ${
-                              selectedStudent.nameExtension
-                            }`
+                          ? selectedStudent.middleName &&
+                            selectedStudent.firstName &&
+                            selectedStudent.lastName
+                            ? `${selectedStudent.lastName}, ${
+                                selectedStudent.firstName
+                              } ${selectedStudent.middleName.charAt(0)}. ${
+                                selectedStudent.nameExtension
+                              }`.trim()
+                            : selectedStudent.name
                           : ""
                       }
                       InputProps={{
@@ -571,8 +653,10 @@ const NutritionalStatusForm = (props) => {
                       fullWidth
                       {...field}
                       value={
-                        selectedStudent && selectedStudent.classProfile
-                          ? selectedStudent.classProfile.grade
+                        selectedStudent
+                          ? selectedStudent.classProfile
+                            ? selectedStudent.classProfile.grade
+                            : selectedStudent.grade
                           : ""
                       }
                       InputProps={{
@@ -593,8 +677,10 @@ const NutritionalStatusForm = (props) => {
                       fullWidth
                       {...field}
                       value={
-                        selectedStudent && selectedStudent.classProfile
-                          ? selectedStudent.classProfile.section
+                        selectedStudent
+                          ? selectedStudent.classProfile
+                            ? selectedStudent.classProfile.section
+                            : selectedStudent.section
                           : ""
                       }
                       InputProps={{
@@ -800,7 +886,7 @@ const NutritionalStatusForm = (props) => {
               Cancel
             </Button>
             <Button type="submit" color="primary">
-              {selectedRecord ? "Save" : "Create"}
+              {selectedRecord ? "Update" : "Create"}
             </Button>
           </DialogActions>
         </form>

@@ -34,34 +34,58 @@ router.get("/fetch", authenticateMiddleware, async (req, res) => {
     const checkups = await FacultyCheckup.find()
       .populate("facultyProfile")
       .exec();
-    res.status(200).json(checkups);
+
+    // Use Promise.all to fetch all the ClassProfiles related to each facultyProfile
+    const checkupsWithClass = await Promise.all(
+      checkups.map(async (newCheckup) => {
+        const classProfile = await ClassProfile.findOne({
+          faculty: newCheckup.facultyProfile._id,
+        });
+        // Add grade and section to the returned checkup object
+        return {
+          ...newCheckup._doc,
+          grade: classProfile ? classProfile.grade : null,
+          section: classProfile ? classProfile.section : null,
+        };
+      })
+    );
+
+    res.status(200).json(checkupsWithClass);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
 // Update a faculty checkup by ID
-router.put("/update/:facultyId", authenticateMiddleware, async (req, res) => {
+router.put("/update/:employeeId", authenticateMiddleware, async (req, res) => {
   try {
-    const faculty = await FacultyProfile.findOne({
-      facultyId: req.params.facultyId,
+    const facultyProfile = await FacultyProfile.findOne({
+      employeeId: req.params.employeeId,
     });
 
-    if (!faculty)
+    if (!facultyProfile)
       return res.status(404).json({ error: "Faculty with that ID not found" });
 
-    const updatedCheckup = await FacultyCheckup.findOneAndUpdate(
-      { facultyId: faculty._id },
+    const updatedFacultyCheckup = await FacultyCheckup.findOneAndUpdate(
+      { facultyProfile: facultyProfile._id },
       req.body,
       { new: true }
     ).populate("facultyProfile");
 
-    if (!updatedCheckup)
+    if (!updatedFacultyCheckup)
       return res
         .status(404)
         .json({ error: "Checkup not found for this faculty" });
 
-    res.status(200).json(updatedCheckup);
+    // Now, get the classProfile data
+    const classProfile = await ClassProfile.findOne({
+      faculty: updatedFacultyCheckup.facultyProfile._id,
+    });
+
+    // Embed the classProfile within the facultyProfile
+    updatedFacultyCheckup.facultyProfile.classProfileData = classProfile;
+
+    res.status(200).json(updatedFacultyCheckup);
   } catch (error) {
     res.status(400).json({ error: error.message });
   }

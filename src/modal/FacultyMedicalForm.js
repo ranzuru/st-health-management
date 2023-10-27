@@ -58,6 +58,7 @@ const FacultyMedicalForm = (props) => {
     initialData,
     addNewMedicalCheckup,
     selectedMedicalCheckup,
+    onCheckupUpdate,
   } = props;
   const [focusState, setFocusState] = useState({});
   const [snackbarOpen, setSnackbarOpen] = useState(false);
@@ -168,6 +169,31 @@ const FacultyMedicalForm = (props) => {
     resolver: yupResolver(validationSchema),
   });
 
+  const enrichMedicalCheckup = (newCheckup, classProfileData) => {
+    const { facultyProfile, ...rest } = newCheckup;
+
+    const name =
+      facultyProfile && facultyProfile.middleName
+        ? `${facultyProfile.lastName}, ${
+            facultyProfile.firstName
+          } ${facultyProfile.middleName.charAt(0)}. ${
+            facultyProfile.nameExtension
+          }`.trim()
+        : "N/A";
+
+    return {
+      ...rest,
+      id: rest._id,
+      employeeId: facultyProfile?.employeeId,
+      name,
+      age: facultyProfile.age,
+      gender: facultyProfile.gender,
+      birthDate: facultyProfile?.birthDate,
+      section: classProfileData?.section,
+      grade: classProfileData?.section,
+    };
+  };
+
   const handleCreateMedicalCheckup = async (data) => {
     try {
       const payload = {
@@ -179,23 +205,8 @@ const FacultyMedicalForm = (props) => {
         payload
       );
       if (response.data && response.data.newCheckup) {
-        let enrichedNewCheckup = {
-          ...response.data.newCheckup,
-          id: response.data.newCheckup._id,
-          dateOfExamination: response.data.newCheckup.dateOfExamination,
-          employeeId: response.data.newCheckup.facultyProfile?.employeeId,
-          age: response.data.newCheckup.facultyProfile?.age,
-          gender: response.data.newCheckup.facultyProfile?.gender,
-          section:
-            response.data.newCheckup.facultyProfile?.classProfile?.section,
-          academicYear:
-            response.data.newCheckup.facultyProfile?.classProfile?.academicYear,
-          heightCm: response.data.newCheckup?.heightCm,
-          weightKg: response.data.newCheckup?.weightKg,
-          temperature: response.data.newCheckup.temperature,
-          bloodPressure: response.data.newCheckup.bloodPressure,
-          heartRate: response.data.newCheckup.heartRate,
-        };
+        let enrichedNewCheckup = enrichMedicalCheckup(response.data.newCheckup);
+
         if (typeof addNewMedicalCheckup === "function") {
           addNewMedicalCheckup(enrichedNewCheckup);
         }
@@ -215,48 +226,45 @@ const FacultyMedicalForm = (props) => {
   };
 
   const handleUpdateMedicalCheckup = async (data) => {
-    if (selectedMedicalCheckup) {
-      if (selectedMedicalCheckup._id) {
-        try {
-          const response = await axiosInstance.put(
-            `/medicalCheckup/updateMedicalCheckup/${selectedMedicalCheckup._id}`,
-            data
-          );
-          if (response.data.medicalCheckup) {
-            const updatedMedicalCheckup = {
-              ...response.data.medicalCheckup,
-            };
-            if (typeof props.onMedicalCheckupUpdated === "function") {
-              props.onMedicalCheckupUpdated(updatedMedicalCheckup);
-            }
-            showSnackbar("Successfully updated medical checkup", "success");
-            handleClose();
-          } else {
-            showSnackbar("Update operation failed", "error");
-          }
-        } catch (error) {
-          console.error("Error details:", error.response || error.request);
-          showSnackbar("An error occurred during updating", "error");
-        }
-      } else {
-        console.error("selectedMedicalCheckup._id is undefined");
-        showSnackbar(
-          "An error occurred, selectedMedicalCheckup._id is undefined",
-          "error"
-        );
-      }
-    } else {
-      console.error("selectedMedicalCheckup is undefined");
-      showSnackbar(
-        "An error occurred, selectedMedicalCheckup is undefined",
-        "error"
+    try {
+      const payload = {
+        ...data,
+        employeeId: selectedMedicalCheckup.employeeId,
+      };
+      const response = await axiosInstance.put(
+        `/facultyMedical/update/${payload.employeeId}`,
+        payload
       );
+
+      if (response.data && response.data._id) {
+        const enrichedUpdatedRecord = enrichMedicalCheckup(response.data);
+
+        if (onCheckupUpdate) {
+          onCheckupUpdate(enrichedUpdatedRecord);
+        }
+        console.log("Enriched Checkup Data:", enrichedUpdatedRecord);
+        showSnackbar("Successfully updated record", "success");
+        handleClose();
+      } else {
+        const errorMsg =
+          (response.data && response.data.error) || "Operation failed";
+        showSnackbar(errorMsg, "error");
+      }
+    } catch (error) {
+      console.error("Server responded with:", error?.response?.data);
+      if (error.response && error.response.data) {
+        const errorMsg =
+          error.response.data.error || "An error occurred during updating";
+        showSnackbar(errorMsg, "error");
+      } else {
+        showSnackbar("An error occurred during updating", "error");
+      }
     }
   };
 
   const handleSaveOrUpdate = async (data) => {
     try {
-      if (selectedMedicalCheckup && selectedMedicalCheckup._id) {
+      if (selectedMedicalCheckup && selectedMedicalCheckup.employeeId) {
         await handleUpdateMedicalCheckup(data);
       } else {
         await handleCreateMedicalCheckup(data);
@@ -294,15 +302,46 @@ const FacultyMedicalForm = (props) => {
 
   useEffect(() => {
     if (selectedMedicalCheckup) {
-      // Batch set values to reduce re-renders
-      Object.keys(selectedMedicalCheckup).forEach((key) => {
-        setValue(key, selectedMedicalCheckup[key]);
+      const keys = [
+        "employeeId",
+        "name",
+        "gender",
+        "birthDate",
+        "heightCm",
+        "weightKg",
+        "temperature",
+        "bloodPressure",
+        "heartRate",
+        "pulseRate",
+        "respiratoryRate",
+        "visionScreeningLeft",
+        "visionScreeningRight",
+        "auditoryScreeningLeft",
+        "auditoryScreeningRight",
+        "scalpScreening",
+        "skinScreening",
+        "eyesScreening",
+        "earScreening",
+        "noseScreening",
+        "mouthScreening",
+        "neckScreening",
+        "throatScreening",
+        "lungScreening",
+        "heartScreening",
+        "abdomen",
+        "deformities",
+      ];
+      keys.forEach((key) => {
+        setValue(key, selectedMedicalCheckup[key] || "");
       });
 
-      // If you want to reset the form when selectedMedicalCheckup changes
-      reset(selectedMedicalCheckup);
+      const formattedDate = new Date(selectedMedicalCheckup.dateOfExamination)
+        .toISOString()
+        .split("T")[0];
+      setSelectedFaculty(selectedMedicalCheckup);
+      setValue("dateOfExamination", formattedDate);
     }
-  }, [selectedMedicalCheckup, setValue, reset]);
+  }, [selectedMedicalCheckup, setValue]);
 
   return (
     <>
@@ -447,7 +486,15 @@ const FacultyMedicalForm = (props) => {
                           {...field}
                           value={
                             selectedFaculty
-                              ? `${selectedFaculty.lastName}, ${selectedFaculty.firstName} ${selectedFaculty.middleName} ${selectedFaculty.nameExtension}`
+                              ? selectedFaculty.middleName &&
+                                selectedFaculty.firstName &&
+                                selectedFaculty.lastName
+                                ? `${selectedFaculty.lastName}, ${
+                                    selectedFaculty.firstName
+                                  } ${selectedFaculty.middleName.charAt(0)}. ${
+                                    selectedFaculty.nameExtension
+                                  }`.trim()
+                                : selectedFaculty.name
                               : ""
                           }
                           InputProps={{

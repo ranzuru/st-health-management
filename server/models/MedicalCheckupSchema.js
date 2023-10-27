@@ -36,7 +36,6 @@ const medicalCheckupSchema = new mongoose.Schema(
     deformities: { type: String, default: null },
     ironSupplementation: { type: Boolean, default: false },
     deworming: { type: Boolean, default: false },
-    sbfpBeneficiary: { type: Boolean, default: false },
     menarche: { type: String, default: null },
   },
   { timestamps: true }

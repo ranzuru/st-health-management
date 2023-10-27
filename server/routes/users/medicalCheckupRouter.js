@@ -62,30 +62,37 @@ router.get("/fetch", authenticateMiddleware, async (req, res) => {
 // Update a medical checkup by ID
 router.put("/update/:lrn", authenticateMiddleware, async (req, res) => {
   try {
-    const student = await StudentProfile.findOne({ lrn: req.params.lrn });
+    const studentProfile = await StudentProfile.findOne({
+      lrn: req.params.lrn,
+    });
 
-    if (!student)
-      return res.status(404).json({ error: "Student with that LRN not found" });
+    if (!studentProfile) {
+      return res.status(404).json({ error: "StudentProfile not found" });
+    }
 
-    const updatedCheckup = await MedicalCheckup.findOneAndUpdate(
-      { lrn: student._id },
-      req.body,
+    const existingCheckup = await MedicalCheckup.findOne({
+      studentProfile: studentProfile._id,
+    });
+
+    if (!existingCheckup) {
+      return res.status(404).json({ error: "Medical checkup not found" });
+    }
+
+    // This merges the request body with the existing checkup, only updating the provided fields.
+    const updatedData = { ...existingCheckup.toObject(), ...req.body };
+
+    const updatedMedicalCheckup = await MedicalCheckup.findOneAndUpdate(
+      {
+        studentProfile: studentProfile._id,
+      },
+      updatedData,
       { new: true }
-    ).populate("studentProfile");
+    ).populate([
+      { path: "studentProfile", populate: { path: "classProfile" } },
+      "nutritionalStatus",
+    ]);
 
-    if (!updatedCheckup) {
-      return res
-        .status(404)
-        .json({ error: "Checkup not found for this student" });
-    }
-
-    if (String(updatedCheckup.studentProfile.lrn) !== req.params.lrn) {
-      return res
-        .status(403)
-        .json({ error: "LRN mismatch, you cannot update this record" });
-    }
-
-    res.status(200).json(updatedCheckup);
+    res.status(200).json(updatedMedicalCheckup);
   } catch (error) {
     res.status(400).json({ error: error.message });
   }

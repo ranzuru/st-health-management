@@ -126,10 +126,10 @@ router.put(
   authenticateMiddleware,
   async (req, res) => {
     try {
-      const { grade, section, room, academicYear, faculty } = req.body; // change employeeId to faculty
+      const { grade, section, room, academicYear, faculty } = req.body;
       const facultyProfile = await FacultyProfile.findOne({
         employeeId: faculty,
-      }); // change employeeId to faculty
+      });
 
       if (!facultyProfile) {
         return res.status(404).json({ error: "FacultyProfile not found" });

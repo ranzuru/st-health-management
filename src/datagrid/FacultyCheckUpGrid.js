@@ -4,6 +4,11 @@ import IconButton from "@mui/material/IconButton";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import TextField from "@mui/material/TextField";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogContentText from "@mui/material/DialogContentText";
+import DialogTitle from "@mui/material/DialogTitle";
 import Button from "@mui/material/Button";
 import ReportIcon from "@mui/icons-material/Description";
 import FacultyMedicalForm from "../modal/FacultyMedicalForm";
@@ -14,9 +19,22 @@ const FacultyCheckUpGrid = () => {
   const [searchValue, setSearchValue] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [recordIdToDelete, setRecordIdToDelete] = useState(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedMedicalCheckup, setSelectedMedicalCheckup] = useState(null);
 
   const handleSearchChange = (event) => {
     setSearchValue(event.target.value);
+  };
+
+  const handleDialogOpen = (checkupId) => {
+    setRecordIdToDelete(checkupId);
+    setDialogOpen(true);
+  };
+
+  const handleDialogClose = () => {
+    setRecordIdToDelete(null);
+    setDialogOpen(false);
   };
 
   const formatYearFromDate = (dateString) => {
@@ -38,7 +56,20 @@ const FacultyCheckUpGrid = () => {
           employeeId: checkup.facultyProfile
             ? checkup.facultyProfile.employeeId
             : "N/A",
+          name:
+            checkup.facultyProfile && checkup.facultyProfile.middleName
+              ? `${checkup.facultyProfile.lastName}, ${
+                  checkup.facultyProfile.firstName
+                } ${checkup.facultyProfile.middleName.charAt(0)}. ${
+                  checkup.facultyProfile.nameExtension
+                }`.trim()
+              : "N/A",
+          birthDate: checkup.facultyProfile
+            ? checkup.facultyProfile.birthDate
+            : "N/A",
           age: checkup.facultyProfile ? checkup.facultyProfile.age : "N/A",
+          grade: checkup.grade ? checkup.grade : "N/A",
+          section: checkup.section ? checkup.section : "N/A",
           gender: checkup.facultyProfile
             ? checkup.facultyProfile.gender
             : "N/A",
@@ -47,6 +78,24 @@ const FacultyCheckUpGrid = () => {
           temperature: checkup.temperature,
           bloodPressure: checkup.bloodPressure,
           heartRate: checkup.heartRate,
+          pulseRate: checkup.pulseRate,
+          respiratoryRate: checkup.respiratoryRate,
+          visionScreeningLeft: checkup.visionScreeningLeft,
+          visionScreeningRight: checkup.visionScreeningRight,
+          auditoryScreeningLeft: checkup.auditoryScreeningLeft,
+          auditoryScreeningRight: checkup.auditoryScreeningRight,
+          scalpScreening: checkup.scalpScreening,
+          skinScreening: checkup.skinScreening,
+          eyesScreening: checkup.eyesScreening,
+          earScreening: checkup.earScreening,
+          noseScreening: checkup.noseScreening,
+          mouthScreening: checkup.mouthScreening,
+          neckScreening: checkup.neckScreening,
+          throatScreening: checkup.throatScreening,
+          lungScreening: checkup.lungScreening,
+          heartScreening: checkup.heartScreening,
+          abdomen: checkup.abdomen,
+          deformities: checkup.deformities,
         };
       });
       setMedicalCheckups(updatedCheckups);
@@ -91,10 +140,10 @@ const FacultyCheckUpGrid = () => {
       width: 150,
       renderCell: (params) => (
         <div>
-          <IconButton onClick={() => handleAction(params.row.id)}>
+          <IconButton onClick={() => handleEditRecord(params.row.id)}>
             <EditIcon />
           </IconButton>
-          <IconButton onClick={() => handleDelete(params.row.id)}>
+          <IconButton onClick={() => handleDialogOpen(params.row.id)}>
             <DeleteOutlineIcon />
           </IconButton>
         </div>
@@ -102,14 +151,35 @@ const FacultyCheckUpGrid = () => {
     },
   ];
 
-  const handleAction = (userId) => {
-    // Implement your action logic here
-    console.log(`Edit user with ID: ${userId}`);
+  const handleEditRecord = (checkupId) => {
+    const medicalToEdit = medicalCheckups.find(
+      (medicalCheckup) => medicalCheckup.id === checkupId
+    );
+    setSelectedMedicalCheckup(medicalToEdit);
+    setFormOpen(true);
   };
 
-  const handleDelete = (userId) => {
-    // Implement your delete logic here
-    console.log(`Delete user with ID: ${userId}`);
+  const updatedMedicalCheckup = (updatedCheckup) => {
+    setMedicalCheckups((prevCheckups) =>
+      prevCheckups.map((checkup) =>
+        checkup.id === updatedCheckup.id ? updatedCheckup : checkup
+      )
+    );
+  };
+
+  const handleDelete = async () => {
+    try {
+      await axiosInstance.delete(`facultyMedical/delete/${recordIdToDelete}`);
+
+      // Update the state to filter out the deleted record
+      const updatedRecords = medicalCheckups.filter(
+        (checkup) => checkup.id !== recordIdToDelete
+      );
+      setMedicalCheckups(updatedRecords);
+    } catch (error) {
+      console.error("Error deleting the record:", error.message);
+    }
+    handleDialogClose();
   };
 
   const FilteredMedicalCheckups = medicalCheckups.filter(
@@ -200,14 +270,34 @@ const FacultyCheckUpGrid = () => {
         <FacultyMedicalForm
           open={formOpen}
           addNewMedicalCheckup={addNewMedicalCheckup}
+          selectedMedicalCheckup={selectedMedicalCheckup}
+          onCheckupUpdate={updatedMedicalCheckup}
           onClose={() => {
+            setSelectedMedicalCheckup(null);
             handleModalClose();
           }}
           onCancel={() => {
+            setSelectedMedicalCheckup(null);
             handleModalClose();
           }}
         />
       </div>
+      <Dialog open={dialogOpen} onClose={handleDialogClose}>
+        <DialogTitle>Confirm Delete!</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to delete this record?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDialogClose} color="primary">
+            Cancel
+          </Button>
+          <Button onClick={handleDelete} color="primary">
+            Confirm
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 };

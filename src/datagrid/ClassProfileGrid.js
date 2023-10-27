@@ -62,7 +62,7 @@ const ClassProfileGrid = () => {
   const onClassProfileUpdated = (updatedClassProfile) => {
     const facultyName = updatedClassProfile.faculty
       ? `${updatedClassProfile.faculty.firstName} ${updatedClassProfile.faculty.lastName}`
-      : ""; // Fallback to an empty string if no faculty info
+      : "";
 
     const updatedClassProfiles = classProfiles.map((classProfile) =>
       classProfile._id === updatedClassProfile._id
