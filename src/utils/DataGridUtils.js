@@ -1,73 +1,44 @@
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 
-// Export data to XLSX
-export const exportToXLSX = (data, headers, filename) => {
-  if (!data || !data.length) {
-    return;
-  }
-  const worksheet = XLSX.utils.json_to_sheet(data, { header: headers });
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
-  XLSX.writeFile(workbook, filename);
-};
+export const exportToExcel = async (data, headers, filenamePrefix) => {
+  // Create a new Excel workbook and worksheet
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet("Sheet1");
 
-// Import data from XLSX
-export const importFromXLSX = (file, callback) => {
-  if (!file) {
-    return;
-  }
-  const reader = new FileReader();
-  reader.onload = (event) => {
-    const data = event.target.result;
-    const workbook = XLSX.read(data, { type: "binary" });
-    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-    const parsedData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-    const headers = parsedData[0];
-    const jsonData = parsedData.slice(1).map((row) => {
-      const obj = {};
-      headers.forEach((header, index) => {
-        obj[header] = row[index];
-      });
-      return obj;
+  // Define columns with headers and key (for mapping)
+  const columns = headers.map((header) => ({ header, key: header }));
+
+  // Set the columns in the worksheet
+  worksheet.columns = columns;
+
+  // Add rows to the worksheet
+  data.forEach((record) => {
+    const rowData = {};
+    headers.forEach((header) => {
+      rowData[header] = record[header];
     });
-    if (validateData(jsonData)) {
-      callback(jsonData);
-    } else {
-      console.error("Data validation failed.");
-      // Optionally inform the user here
-    }
-  };
-  reader.onerror = () => {
-    console.error("Could not read file");
-  };
-  reader.readAsBinaryString(file);
-};
+    worksheet.addRow(rowData);
+  });
 
-// Data validation (modify as per your schema)
-const validateData = (data) => {
-  for (const row of data) {
-    // Ensure all fields exist in the row
-    if (
-      !row.lrn ||
-      !row.name ||
-      !row.age ||
-      !row.gender ||
-      !row.grade ||
-      !row.section ||
-      !row.address ||
-      !row.dateOfOnset ||
-      !row.dateOfAdmission ||
-      !row.hospitalAdmission ||
-      !row.dateOfDischarge
-    ) {
-      console.error("Missing required fields in row:", row);
-      return false;
-    }
+  // Auto-fit columns based on content
+  worksheet.columns.forEach((column) => {
+    let maxColumnLength = 0;
+    column.eachCell({ includeEmpty: true }, (cell) => {
+      const columnLength = cell.value ? cell.value.toString().length : 0;
+      if (columnLength > maxColumnLength) {
+        maxColumnLength = columnLength;
+      }
+    });
+    column.width = maxColumnLength + 2; // Add some padding
+  });
 
-    if (typeof row.age !== "number" || row.age < 5 || row.age > 100) {
-      console.error("Invalid age in row:", row);
-      return false;
-    }
-  }
-  return true;
+  // Generate a blob and create a download link
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `${filenamePrefix}_export_${Date.now()}.xlsx`;
+  link.click();
 };

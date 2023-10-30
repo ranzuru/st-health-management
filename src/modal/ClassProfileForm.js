@@ -125,7 +125,8 @@ const ClassProfileForm = (props) => {
         if (response.data) {
           // Filter faculty profiles to include only advisers
           const advisers = response.data.filter(
-            (faculty) => faculty.role === "Adviser"
+            (faculty) =>
+              faculty.role === "Adviser" && faculty.status === "Active"
           );
           // Map advisers to options for the dropdown
           const options = advisers.map((adviser) => ({

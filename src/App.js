@@ -31,6 +31,7 @@ import ImmunizationAnalytics from "./navbar/ImmunizationAnalytics";
 import MedicalCheckUpAnalytics from "./navbar/MedicalCheckUpAnalytics";
 import ClinicVisitorsAnalytics from "./navbar/ClinicVisitorsAnalytics";
 import FeedingProgramAnalytics from "./navbar/FeedingProgramAnalytics";
+import AcademicYear from "./navbar/AcademicYear";
 import Logs from "./navbar/Logs";
 import Settings from "./navbar/Settings";
 import Sidebar from "./components/Sidebar";
@@ -90,6 +91,7 @@ function AppLayout() {
             <Route path="/students-profile" element={<StudentsProfile />} />
             <Route path="/faculty-profile" element={<FacultyProfile />} />
             <Route path="/class-profile" element={<ClassProfile />} />
+            <Route path="/academicYear-profile" element={<AcademicYear />} />
             <Route path="/clinic-programs" element={<ClinicPrograms />} />
             <Route path="/dengue-monitoring" element={<DengueMonitoring />} />
             <Route path="/immunization" element={<Immunization />} />

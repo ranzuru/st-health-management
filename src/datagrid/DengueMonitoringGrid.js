@@ -4,6 +4,8 @@ import IconButton from "@mui/material/IconButton";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import TextField from "@mui/material/TextField";
+import Snackbar from "@mui/material/Snackbar";
+import Alert from "@mui/material/Alert";
 import Button from "@mui/material/Button";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
@@ -24,6 +26,20 @@ const DengueMonitoringGrid = () => {
   const [recordIdToDelete, setRecordIdToDelete] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedRecord, setSelectedRecord] = useState(null);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarData, setSnackbarData] = useState({
+    message: "",
+    severity: "success",
+  });
+
+  const showSnackbar = (message, severity) => {
+    setSnackbarData({ message, severity });
+    setSnackbarOpen(true);
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbarOpen(false);
+  };
 
   const handleSearchChange = (event) => {
     setSearchValue(event.target.value);
@@ -107,6 +123,57 @@ const DengueMonitoringGrid = () => {
 
   const addNewDengueRecord = (newDengueRecord) => {
     setDengueRecords((prevRecords) => [...prevRecords, newDengueRecord]);
+  };
+
+  const handleImport = async (event) => {
+    const file = event.target.files[0];
+    const formData = new FormData();
+    formData.append("file", file);
+
+    if (file.size > 5 * 1024 * 1024) {
+      showSnackbar("File size exceeds 5MB", "error");
+      return;
+    }
+
+    try {
+      const response = await axiosInstance.post(
+        "dengueMonitoring/import-excel",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      if (response.status === 207) {
+        const issues = response.data.errors;
+        showSnackbar(
+          `Partial Import Done. Issues: ${issues.join(", ")}`,
+          "warning"
+        );
+      } else {
+        showSnackbar("Data imported successfully!", "success");
+      }
+
+      fetchDengueRecords();
+    } catch (error) {
+      if (error.response && error.response.status === 207) {
+        // Partial success; some records have issues
+        const issues = error.response.data.errors;
+        showSnackbar(
+          `Partial Import Done. Issues: ${issues.join(", ")}`,
+          "warning"
+        );
+      } else if (error.response?.data?.errors) {
+        // Total failure but we have validation errors to show
+        const errors = error.response.data.errors;
+        showSnackbar(`Import failed. Issues: ${errors.join(", ")}`, "error");
+      } else {
+        // Unknown error
+        showSnackbar("An error occurred during importing", "error");
+      }
+    }
   };
 
   const handleEditRecord = (recordId) => {
@@ -209,6 +276,22 @@ const DengueMonitoringGrid = () => {
         searchValue.toLowerCase()
       )
   );
+  const exportHeaders = columns
+    .filter((col) => col.field !== "action") // Excluding the 'action' column
+    .map((col) => col.headerName);
+  const exportData = FilteredDengueRecords.map((record) => ({
+    LRN: record.lrn,
+    Name: record.name,
+    Age: record.age,
+    Gender: record.gender,
+    "Grade Level": record.grade,
+    Section: record.section,
+    Address: record.address,
+    "Date of Onset": formatYearFromDate(record.dateOfOnset),
+    "Date of Admission": formatYearFromDate(record.dateOfAdmission),
+    "Hospital Admission": record.hospitalAdmission,
+    "Date of Discharge": formatYearFromDate(record.dateOfDischarge),
+  }));
 
   const handleModalOpen = () => {
     setFormOpen(true);
@@ -218,93 +301,115 @@ const DengueMonitoringGrid = () => {
     setFormOpen(false);
   };
   return (
-    <div className="flex flex-col h-full">
-      <div className="w-full max-w-screen-xl mx-auto px-8">
-        <div className="mb-4 flex justify-between items-center">
-          <div>
-            <Button variant="contained" color="secondary">
-              <ReportIcon /> Generate Report
-            </Button>
-          </div>
-          <div className="flex items-center">
-            <div className="ml-2">
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={handleModalOpen}
-              >
-                Add Patients
+    <>
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{
+          vertical: "top",
+          horizontal: "center",
+        }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbarData.severity}>
+          {snackbarData.message}
+        </Alert>
+      </Snackbar>
+      <div className="flex flex-col h-full">
+        <div className="w-full max-w-screen-xl mx-auto px-8">
+          <div className="mb-4 flex justify-between items-center">
+            <div>
+              <Button variant="contained" color="secondary">
+                <ReportIcon /> Generate Report
               </Button>
             </div>
-            <div className="ml-2">
-              <TextField
-                label="Search"
-                variant="outlined"
-                size="small"
-                value={searchValue}
-                onChange={handleSearchChange}
-              />
+            <div className="flex items-center">
+              <div className="ml-2">
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={handleModalOpen}
+                >
+                  Add Patients
+                </Button>
+              </div>
+              <div className="ml-2">
+                <TextField
+                  label="Search"
+                  variant="outlined"
+                  size="small"
+                  value={searchValue}
+                  onChange={handleSearchChange}
+                />
+              </div>
             </div>
           </div>
-        </div>
-        <DataGrid
-          rows={FilteredDengueRecords}
-          columns={columns}
-          getRowId={(row) => row.id}
-          slots={{
-            toolbar: CustomGridToolbar,
-          }}
-          initialState={{
-            pagination: {
-              paginationModel: {
-                pageSize: 10,
+          <DataGrid
+            rows={FilteredDengueRecords}
+            columns={columns}
+            getRowId={(row) => row.id}
+            slots={{
+              toolbar: () => (
+                <CustomGridToolbar
+                  data={exportData}
+                  headers={exportHeaders}
+                  filenamePrefix="dengue_monitoring"
+                  handleImport={handleImport}
+                />
+              ),
+            }}
+            initialState={{
+              pagination: {
+                paginationModel: {
+                  pageSize: 10,
+                },
               },
-            },
-          }}
-          sx={{
-            "& .MuiDataGrid-row:nth-of-type(odd)": {
-              backgroundColor: "#f3f4f6",
-            },
-          }}
-          pageSizeOptions={[10]}
-          checkboxSelection
-          disableRowSelectionOnClick
-          loading={isLoading}
-          style={{ height: 650 }}
-        />
-        <DengueForm
-          open={formOpen}
-          isEditing={!!selectedRecord}
-          addNewDengueRecord={addNewDengueRecord}
-          selectedRecord={selectedRecord}
-          onCheckupUpdate={updatedMedicalCheckup}
-          onClose={() => {
-            setSelectedRecord(null);
-            handleModalClose();
-          }}
-          onCancel={() => {
-            setSelectedRecord(null);
-            handleModalClose();
-          }}
-        />
+            }}
+            sx={{
+              "& .MuiDataGrid-row:nth-of-type(odd)": {
+                backgroundColor: "#f3f4f6",
+              },
+            }}
+            pageSizeOptions={[10]}
+            checkboxSelection
+            disableRowSelectionOnClick
+            loading={isLoading}
+            style={{ height: 650 }}
+          />
+          <DengueForm
+            open={formOpen}
+            isEditing={!!selectedRecord}
+            addNewDengueRecord={addNewDengueRecord}
+            selectedRecord={selectedRecord}
+            onCheckupUpdate={updatedMedicalCheckup}
+            onClose={() => {
+              setSelectedRecord(null);
+              handleModalClose();
+            }}
+            onCancel={() => {
+              setSelectedRecord(null);
+              handleModalClose();
+            }}
+          />
+        </div>
+        <Dialog open={dialogOpen} onClose={handleDialogClose}>
+          <DialogTitle>Confirm Delete!</DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              Are you sure you want to delete this record?
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleDialogClose} color="primary">
+              Cancel
+            </Button>
+            <Button onClick={handleDelete} color="primary">
+              Confirm
+            </Button>
+          </DialogActions>
+        </Dialog>
       </div>
-      <Dialog open={dialogOpen} onClose={handleDialogClose}>
-        <DialogTitle>Confirm Delete!</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Are you sure you want to delete this record?
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleDialogClose} color="primary">
-            Cancel
-          </Button>
-          <Button onClick={handleDelete} color="primary">
-            Confirm
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </div>
+    </>
   );
 };
 

@@ -7,31 +7,14 @@ import {
 } from "@mui/x-data-grid";
 import FileUploadRoundedIcon from "@mui/icons-material/FileUploadRounded";
 import GetAppRoundedIcon from "@mui/icons-material/GetAppRounded";
-import { exportToXLSX, importFromXLSX } from "./DataGridUtils";
 
-function CustomGridToolbar({ gridApiRef, filename }) {
+import { exportToExcel } from "./DataGridUtils";
+
+function CustomGridToolbar({ data, headers, filenamePrefix, handleImport }) {
   const handleExport = () => {
-    if (!gridApiRef.current) return; // Add this line
-
-    const rows = gridApiRef.current.getRows();
-    const columns = gridApiRef.current
-      .getVisibleColumns()
-      .map((col) => col.field);
-
-    exportToXLSX(rows, columns, `${filename}.xlsx`);
+    exportToExcel(data, headers, filenamePrefix);
   };
 
-  const handleImport = (event) => {
-    const file = event.target.files[0];
-    if (
-      file.type ===
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    ) {
-      importFromXLSX(file, (importedData) => {
-        console.log("Imported XLSX Data:", importedData);
-      });
-    }
-  };
   return (
     <GridToolbarContainer>
       <GridToolbarColumnsButton />
@@ -41,7 +24,7 @@ function CustomGridToolbar({ gridApiRef, filename }) {
         <label
           style={{ cursor: "pointer", display: "flex", alignItems: "center" }}
         >
-          <input type="file" hidden onChange={handleImport} />
+          <input type="file" hidden onChange={handleImport} accept=".xlsx" />
           <IconButton
             component="span"
             style={{

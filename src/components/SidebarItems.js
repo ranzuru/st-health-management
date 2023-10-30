@@ -39,6 +39,7 @@ export const sidebarItems = [
       { to: "/app/students-profile", primary: "Student Profile" },
       { to: "/app/faculty-profile", primary: "Faculty Profile" },
       { to: "/app/class-profile", primary: "Class Profile" },
+      { to: "/app/academicYear-profile", primary: "Academic Year" },
     ],
   },
   {

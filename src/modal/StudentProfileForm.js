@@ -251,7 +251,9 @@ const StudentProfileForm = (props) => {
   };
 
   const selectedGrade = watch("grade", "");
-  const gradeOptions = Array.from(new Set(classProfiles.map((cp) => cp.grade)));
+  let gradeOptions = Array.from(
+    new Set(classProfiles.map((cp) => cp.grade))
+  ).sort((a, b) => parseInt(a.split(" ")[1]) - parseInt(b.split(" ")[1]));
   const sectionOptions = classProfiles
     .filter((cp) => cp.grade === selectedGrade)
     .map((cp) => cp.section);
@@ -470,7 +472,11 @@ const StudentProfileForm = (props) => {
                   render={({ field }) => (
                     <FormControl required fullWidth margin="normal">
                       <InputLabel id="grade-label">Grade Level</InputLabel>
-                      <Select labelId="grade-label" label="Grade" {...field}>
+                      <Select
+                        labelId="grade-label"
+                        label="Grade Level"
+                        {...field}
+                      >
                         {gradeOptions.map((grade, index) => (
                           <MenuItem key={index} value={grade}>
                             {grade}

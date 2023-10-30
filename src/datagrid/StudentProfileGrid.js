@@ -16,11 +16,14 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
 
+import CustomGridToolbar from "../utils/CustomGridToolbar.js";
+
 const StudentsProfileGrid = () => {
   const [students, setStudents] = useState([]);
   const [searchValue, setSearchValue] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [studentIdToDelete, setStudentIdToDelete] = useState(null);
   const [selectedStudent, setSelectedStudent] = useState(null);
 
@@ -47,12 +50,13 @@ const StudentsProfileGrid = () => {
   };
 
   const fetchStudents = async () => {
+    setIsLoading(true);
     try {
       const response = await axiosInstance.get("studentProfile/fetchStudent");
       const updatedStudents = response.data.map((student) => {
         return {
           ...student,
-          id: student._id, // Assuming _id is the unique identifier for students
+          id: student._id,
           name: `${student.lastName}, ${student.firstName} ${student.nameExtension}`,
           grade: student.classProfile ? student.classProfile.grade : "N/A",
           section: student.classProfile ? student.classProfile.section : "N/A",
@@ -61,6 +65,9 @@ const StudentsProfileGrid = () => {
       setStudents(updatedStudents);
     } catch (error) {
       console.error("An error occurred while fetching students:", error);
+      setIsLoading(false);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -224,6 +231,9 @@ const StudentsProfileGrid = () => {
           rows={filteredStudents}
           columns={columns}
           getRowId={(row) => row.lrn}
+          slots={{
+            toolbar: CustomGridToolbar,
+          }}
           initialState={{
             pagination: {
               paginationModel: {
@@ -234,6 +244,8 @@ const StudentsProfileGrid = () => {
           pageSizeOptions={[10]}
           checkboxSelection
           disableRowSelectionOnClick
+          loading={isLoading}
+          style={{ height: 650 }}
         />
         <StudentProfileForm
           open={formOpen}

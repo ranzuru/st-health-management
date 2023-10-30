@@ -4,6 +4,33 @@ const ClassProfile = require("../../models/ClassProfileSchema");
 const router = express.Router();
 const authenticateMiddleware = require("../../auth/authenticateMiddleware.js");
 
+const multer = require("multer");
+const ExcelJS = require("exceljs");
+
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
+const Joi = require("joi");
+
+const validationSchema = Joi.object({
+  lrn: Joi.string(),
+  lastName: Joi.string(),
+  firstName: Joi.string(),
+  middleName: Joi.string(),
+  nameExtension: Joi.string(),
+  gender: Joi.string(),
+  birthDate: Joi.string(),
+  age: Joi.number().integer(),
+  grade: Joi.string(),
+  section: Joi.string(),
+  is4p: Joi.boolean(),
+  parentName1: Joi.string(),
+  parentContact1: Joi.number().integer(),
+  parentName2: Joi.string().allow("", null),
+  parentContact2: Joi.number().integer().allow(null),
+  address: Joi.string(),
+  status: Joi.string(),
+});
+
 // Create a new student profile
 router.post("/createStudent", authenticateMiddleware, async (req, res) => {
   try {
@@ -138,4 +165,91 @@ router.delete(
   }
 );
 
+router.post(
+  "/import-students",
+  authenticateMiddleware,
+  upload.single("file"),
+  async (req, res) => {
+    if (!req.file || !req.file.buffer) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    const fileBuffer = req.file.buffer;
+    const workbook = new ExcelJS.Workbook();
+
+    const studentProfiles = [];
+    const errors = [];
+    const invalidGradesOrSections = [];
+
+    try {
+      await workbook.xlsx.load(fileBuffer);
+      const worksheet = workbook.getWorksheet(1);
+
+      if (!workbook || !worksheet) {
+        return res.status(400).json({ message: "Invalid Excel file format" });
+      }
+
+      for (const row of worksheet.getRows(2, worksheet.rowCount - 1)) {
+        const rowData = {};
+        const headers = Object.keys(validationSchema.describe().keys);
+
+        headers.forEach((header, colIndex) => {
+          const cellValue = row.getCell(colIndex + 1).text;
+          rowData[header] = cellValue;
+        });
+        console.log(rowData);
+        const { error } = validationSchema.validate(rowData);
+        if (error) {
+          errors.push(
+            `Validation error for LRN ${rowData["LRN"] || "undefined"}: ${
+              error.details[0].message
+            }`
+          );
+          continue;
+        }
+
+        const classProfile = await ClassProfile.findOne({
+          grade: rowData.grade,
+          section: rowData.section,
+        });
+
+        if (!classProfile) {
+          errors.push(
+            `Invalid grade or section found: ${rowData.grade}, ${rowData.section}`
+          );
+          invalidGradesOrSections.push(`${rowData.grade}, ${rowData.section}`);
+          continue;
+        }
+
+        const newStudent = new StudentProfile({
+          ...rowData,
+          classProfile: classProfile._id,
+        });
+
+        studentProfiles.push(newStudent);
+      }
+
+      if (errors.length > 0 && studentProfiles.length > 0) {
+        await StudentProfile.insertMany(studentProfiles);
+        return res.status(207).json({
+          message: "Partial data import",
+          errors,
+          invalidGradesOrSections,
+        });
+      } else if (errors.length > 0) {
+        return res.status(400).json({
+          message: "Data import failed",
+          errors,
+          invalidGradesOrSections,
+        });
+      } else {
+        await StudentProfile.insertMany(studentProfiles);
+        return res.status(201).json({ message: "Data imported successfully" });
+      }
+    } catch (error) {
+      console.error("Error while importing Excel:", error.message);
+      res.status(500).json({ message: "Failed to import data" });
+    }
+  }
+);
 module.exports = router;
