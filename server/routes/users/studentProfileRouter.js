@@ -1,62 +1,47 @@
 const express = require("express");
 const StudentProfile = require("../../models/StudentProfileSchema");
-const ClassProfile = require("../../models/ClassProfileSchema");
 const router = express.Router();
 const authenticateMiddleware = require("../../auth/authenticateMiddleware.js");
+const validateStudent = require("../../middleware/validateStudent");
+const exportStudentProfile = require("../../custom/exportStudentProfile.js");
+const importStudents = require("../../custom/importStudentProfile.js");
 
 const multer = require("multer");
-const ExcelJS = require("exceljs");
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
-const Joi = require("joi");
-
-const validationSchema = Joi.object({
-  lrn: Joi.string(),
-  lastName: Joi.string(),
-  firstName: Joi.string(),
-  middleName: Joi.string(),
-  nameExtension: Joi.string(),
-  gender: Joi.string(),
-  birthDate: Joi.string(),
-  age: Joi.number().integer(),
-  grade: Joi.string(),
-  section: Joi.string(),
-  is4p: Joi.boolean(),
-  parentName1: Joi.string(),
-  parentContact1: Joi.number().integer(),
-  parentName2: Joi.string().allow("", null),
-  parentContact2: Joi.number().integer().allow(null),
-  address: Joi.string(),
-  status: Joi.string(),
-});
 
 // Create a new student profile
-router.post("/createStudent", authenticateMiddleware, async (req, res) => {
-  try {
-    const { grade, section, ...studentData } = req.body;
-    const classProfile = await ClassProfile.findOne({ grade, section });
-    if (!classProfile)
-      return res.status(400).json({ error: "Invalid grade or section" });
+router.post(
+  "/create",
+  authenticateMiddleware,
+  validateStudent,
+  async (req, res) => {
+    try {
+      const studentInfo = req.body;
 
-    const newStudent = new StudentProfile({
-      ...studentData,
-      classProfile: classProfile._id, // Using the _id of the found class profile
-    });
+      const newStudent = new StudentProfile({
+        ...studentInfo,
+      });
 
-    await newStudent.save();
-    res.status(201).json({ newStudent });
-  } catch (error) {
-    res.status(400).json({ error: error.message });
+      await newStudent.save();
+      res.status(201).json({ newStudent });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
   }
-});
+);
 
 // Get all student profiles
-router.get("/fetchStudent", authenticateMiddleware, async (req, res) => {
+router.get("/fetch/:status", authenticateMiddleware, async (req, res) => {
+  const { status } = req.params;
+
+  if (!["Enrolled", "Archived", "Inactive"].includes(status)) {
+    return res.status(400).json({ error: "Invalid student status." });
+  }
+
   try {
-    const students = await StudentProfile.find({})
-      .populate("classProfile")
-      .exec();
+    const students = await StudentProfile.find({ status: status });
     res.status(200).json(students);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -82,174 +67,195 @@ router.post("/checkLRNUnique", authenticateMiddleware, async (req, res) => {
   }
 });
 
-// Get a student profile by LRN
-router.get("/:lrn", authenticateMiddleware, async (req, res) => {
-  try {
-    const student = await StudentProfile.findOne({
-      lrn: req.params.lrn,
-    }).populate("classProfile");
-    if (!student) return res.status(404).json({ error: "Student not found" });
-    res.status(200).json(student);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-router.get("/search/:partialLrn", authenticateMiddleware, async (req, res) => {
-  try {
-    const partialLrn = req.params.partialLrn;
-    const students = await StudentProfile.find({
-      lrn: new RegExp(partialLrn, "i"),
-      status: "Enrolled",
-    })
-      .populate("classProfile", "grade section academicYear -_id") // Populating grade and section from ClassProfile
-      .select(
-        "lrn lastName firstName middleName nameExtension gender age birthDate classProfile -_id"
-      );
-
-    if (!students || students.length === 0)
-      return res.status(404).json({ error: "No matches found" });
-
-    res.status(200).json(students);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
 // Update a student profile
-router.put("/updateStudent/:lrn", authenticateMiddleware, async (req, res) => {
-  const { grade, section, ...updateData } = req.body;
-  let classProfileId;
-
-  if (grade && section) {
-    const classProfile = await ClassProfile.findOne({ grade, section });
-    if (!classProfile) {
-      return res.status(400).json({ error: "Invalid grade or section" });
-    }
-    classProfileId = classProfile._id;
-  }
-
+router.put("/update/:lrn", authenticateMiddleware, async (req, res) => {
   try {
-    const updatedFields = {
-      ...updateData,
-      ...(classProfileId && { classProfile: classProfileId }),
-    };
-    const student = await StudentProfile.findOneAndUpdate(
+    const updateData = req.body;
+
+    const updatedStudent = await StudentProfile.findOneAndUpdate(
       { lrn: req.params.lrn },
-      updatedFields,
+      updateData,
       { new: true }
-    ).populate("classProfile");
+    );
 
-    if (!student) return res.status(404).json({ error: "Student not found" });
+    if (!updatedStudent)
+      return res.status(404).json({ error: "Student not found" });
 
-    res.status(200).json({ student, classProfile: student.classProfile });
+    res.status(200).json({ updatedStudent });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
 });
 
 // Delete a student profile
-router.delete(
-  "/deleteStudent/:lrn",
+router.put("/deleteStudent/:lrn", authenticateMiddleware, async (req, res) => {
+  try {
+    const studentLrn = req.params.lrn;
+    const student = await StudentProfile.findOne({ lrn: studentLrn });
+
+    if (!student) {
+      return res.status(404).json({ error: "Student not found" });
+    }
+
+    // Check if the student is already inactive
+    if (student.status === "Inactive") {
+      return res.status(400).json({ error: "Student already inactive" });
+    }
+
+    student.status = "Inactive";
+    await student.save();
+    res.status(200).json({ message: "Student marked as Inactive", student });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.put("/archiveStudent/:lrn", authenticateMiddleware, async (req, res) => {
+  try {
+    const studentLrn = req.params.lrn;
+    const student = await StudentProfile.findOne({ lrn: studentLrn });
+
+    if (!student) {
+      return res.status(404).json({ error: "Student not found" });
+    }
+
+    // Check if the student is already archived
+    if (student.status === "Archived") {
+      return res.status(400).json({ error: "Student already archived" });
+    }
+
+    student.status = "Archived";
+    await student.save();
+    res.status(200).json({ message: "Student archived successfully", student });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.put(
+  "/reinstateStudent/:lrn",
   authenticateMiddleware,
   async (req, res) => {
     try {
-      const student = await StudentProfile.findOneAndDelete({
-        lrn: req.params.lrn,
-      });
-      if (!student) return res.status(404).json({ error: "Student not found" });
-      res.status(200).json({ message: "Student deleted" });
+      const studentLrn = req.params.lrn;
+      const student = await StudentProfile.findOne({ lrn: studentLrn });
+
+      if (!student) {
+        return res.status(404).json({ error: "Student not found" });
+      }
+
+      // Check if the student is already active
+      if (student.status === "Enrolled") {
+        return res.status(400).json({ error: "Student is already active" });
+      }
+
+      student.status = "Enrolled";
+      await student.save();
+      res
+        .status(200)
+        .json({ message: "Student reinstated successfully", student });
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
   }
 );
 
+router.delete(
+  "/hardDeleteStudent/:lrn",
+  authenticateMiddleware,
+  async (req, res) => {
+    try {
+      const studentLrn = req.params.lrn;
+
+      const deleteResult = await StudentProfile.deleteOne({ lrn: studentLrn });
+
+      if (deleteResult.deletedCount === 0) {
+        return res
+          .status(404)
+          .json({ error: "Student not found or already deleted" });
+      }
+
+      res.status(200).json({ message: "Student deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+router.get("/export/:status?", authenticateMiddleware, async (req, res) => {
+  const { status } = req.params;
+
+  try {
+    const buffer = await exportStudentProfile(status);
+
+    // Set headers for download
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=student_profiles${status ? "_" + status : ""}.xlsx`
+    );
+
+    res.send(buffer);
+  } catch (error) {
+    console.error("Export failed", error);
+    res.status(500).send(`Error exporting student profiles: ${error.message}`);
+  }
+});
+
 router.post(
   "/import-students",
   authenticateMiddleware,
   upload.single("file"),
   async (req, res) => {
-    if (!req.file || !req.file.buffer) {
+    if (!req.file) {
       return res.status(400).json({ message: "No file uploaded" });
     }
 
-    const fileBuffer = req.file.buffer;
-    const workbook = new ExcelJS.Workbook();
-
-    const studentProfiles = [];
-    const errors = [];
-    const invalidGradesOrSections = [];
-
     try {
-      await workbook.xlsx.load(fileBuffer);
-      const worksheet = workbook.getWorksheet(1);
+      const { studentProfiles, errors } = await importStudents(req.file.buffer);
 
-      if (!workbook || !worksheet) {
-        return res.status(400).json({ message: "Invalid Excel file format" });
-      }
+      if (errors.length > 0) {
+        const validationErrors = errors
+          .filter((error) => !error.errors[0].startsWith("Duplicate LRN"))
+          .map((error) => ({
+            lrn: error.lrn,
+            message: error.errors.join(", "),
+          }));
 
-      for (const row of worksheet.getRows(2, worksheet.rowCount - 1)) {
-        const rowData = {};
-        const headers = Object.keys(validationSchema.describe().keys);
+        const duplicateErrors = errors.filter((error) =>
+          error.errors[0].startsWith("Duplicate LRN")
+        );
 
-        headers.forEach((header, colIndex) => {
-          const cellValue = row.getCell(colIndex + 1).text;
-          rowData[header] = cellValue;
-        });
-        console.log(rowData);
-        const { error } = validationSchema.validate(rowData);
-        if (error) {
-          errors.push(
-            `Validation error for LRN ${rowData["LRN"] || "undefined"}: ${
-              error.details[0].message
-            }`
-          );
-          continue;
+        if (validationErrors.length > 0) {
+          return res.status(400).json({
+            message: "Validation errors encountered during import",
+            details: validationErrors,
+          });
         }
 
-        const classProfile = await ClassProfile.findOne({
-          grade: rowData.grade,
-          section: rowData.section,
-        });
-
-        if (!classProfile) {
-          errors.push(
-            `Invalid grade or section found: ${rowData.grade}, ${rowData.section}`
-          );
-          invalidGradesOrSections.push(`${rowData.grade}, ${rowData.section}`);
-          continue;
+        if (duplicateErrors.length > 0) {
+          return res.status(409).json({
+            message: "Duplicate LRN errors encountered during import",
+            details: duplicateErrors,
+          });
         }
-
-        const newStudent = new StudentProfile({
-          ...rowData,
-          classProfile: classProfile._id,
-        });
-
-        studentProfiles.push(newStudent);
       }
 
-      if (errors.length > 0 && studentProfiles.length > 0) {
-        await StudentProfile.insertMany(studentProfiles);
-        return res.status(207).json({
-          message: "Partial data import",
-          errors,
-          invalidGradesOrSections,
-        });
-      } else if (errors.length > 0) {
-        return res.status(400).json({
-          message: "Data import failed",
-          errors,
-          invalidGradesOrSections,
-        });
-      } else {
-        await StudentProfile.insertMany(studentProfiles);
-        return res.status(201).json({ message: "Data imported successfully" });
-      }
+      return res.status(201).json({
+        message: "Data imported successfully",
+        importedCount: studentProfiles.length,
+      });
     } catch (error) {
-      console.error("Error while importing Excel:", error.message);
-      res.status(500).json({ message: "Failed to import data" });
+      console.log("Server error during import:", error); // Log 7
+      return res.status(500).json({
+        message: "Server error during import",
+        error: error.message,
+      });
     }
   }
 );
+
 module.exports = router;

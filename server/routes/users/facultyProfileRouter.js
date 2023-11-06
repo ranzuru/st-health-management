@@ -1,6 +1,8 @@
 const express = require("express");
 const router = express.Router();
+const FacultyCheckup = require("../../models/FacultyCheckupSchema");
 const FacultyProfile = require("../../models/FacultyProfileSchema");
+const ClassProfile = require("../../models/ClassProfileSchema");
 const authenticateMiddleware = require("../../auth/authenticateMiddleware.js");
 
 // Create a new faculty profile
@@ -49,27 +51,20 @@ router.post(
 );
 
 // Get a list of all faculty profiles
-router.get(
-  "/fetchFacultyProfiles",
-  authenticateMiddleware,
-  async (req, res) => {
-    try {
-      let facultyProfiles = await FacultyProfile.find();
+router.get("/fetch/:status", authenticateMiddleware, async (req, res) => {
+  const { status } = req.params;
 
-      // Combine first name and last name
-      facultyProfiles = facultyProfiles.map((profile) => {
-        return {
-          ...profile._doc,
-          name: `${profile.firstName} ${profile.lastName}`,
-        };
-      });
-
-      res.status(200).json(facultyProfiles);
-    } catch (error) {
-      res.status(500).json({ error: error.message });
-    }
+  if (!["Active", "Archived", "Inactive"].includes(status)) {
+    return res.status(400).json({ error: "Invalid faculty status." });
   }
-);
+
+  try {
+    const faculty = await FacultyProfile.find({ status: status });
+    res.status(200).json(faculty);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // Get a single faculty profile by employeeId
 router.get(
@@ -117,17 +112,127 @@ router.put(
   authenticateMiddleware,
   async (req, res) => {
     try {
-      const updatedProfile = await FacultyProfile.findOneAndUpdate(
-        { employeeId: req.params.employeeId },
-        { status: "Inactive" },
-        { new: true }
-      );
+      // Search for FacultyProfile using the employeeId
+      const facultyProfile = await FacultyProfile.findOne({
+        employeeId: req.params.employeeId,
+      });
 
-      if (!updatedProfile) {
+      // If not found, return an error
+      if (!facultyProfile) {
         return res.status(404).json({ message: "Faculty profile not found" });
       }
 
-      res.status(200).json({ message: "Faculty profile deactivated" });
+      // Extract the ObjectId from the returned document
+      const objectId = facultyProfile._id;
+
+      // Check if faculty is assigned to any ClassProfile
+      const classAssigned = await ClassProfile.findOne({ faculty: objectId });
+
+      if (classAssigned) {
+        return res.status(400).json({
+          message:
+            "Please re-assign the teacher in classProfile before deactivating the faculty profile.",
+        });
+      }
+
+      // Update the status of the faculty profile
+      facultyProfile.status = "Inactive";
+      await facultyProfile.save();
+
+      await FacultyCheckup.updateMany(
+        { facultyProfile: objectId },
+        { status: "Inactive" }
+      );
+
+      res
+        .status(200)
+        .json({ message: "Faculty profile and related checkups deactivated" });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+router.put(
+  "/archiveFaculty/:employeeId",
+  authenticateMiddleware,
+  async (req, res) => {
+    try {
+      const employeeId = req.params.employeeId;
+
+      // Find the faculty profile by employeeId
+      const faculty = await FacultyProfile.findOne({ employeeId });
+
+      if (!faculty) {
+        return res.status(404).json({ error: "Faculty not found" });
+      }
+
+      // Check if the faculty is already archived
+      if (faculty.status === "Archived") {
+        return res.status(400).json({ error: "Faculty already archived" });
+      }
+
+      // Archive the faculty profile
+      faculty.status = "Archived";
+      await faculty.save();
+
+      res
+        .status(200)
+        .json({ message: "Faculty archived successfully", faculty });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+router.put(
+  "/reinstateFaculty/:employeeId",
+  authenticateMiddleware,
+  async (req, res) => {
+    try {
+      const employeeId = req.params.employeeId;
+
+      // Find the faculty profile by employeeId
+      const faculty = await FacultyProfile.findOne({ employeeId });
+
+      if (!faculty) {
+        return res.status(404).json({ error: "Faculty not found" });
+      }
+
+      // Check if the faculty is already active
+      if (faculty.status === "Active") {
+        return res.status(400).json({ error: "Faculty is already active" });
+      }
+
+      // Reinstate the faculty profile
+      faculty.status = "Active";
+      await faculty.save();
+
+      res
+        .status(200)
+        .json({ message: "Faculty reinstated successfully", faculty });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+router.delete(
+  "/hardDeleteFaculty/:employeeId",
+  authenticateMiddleware,
+  async (req, res) => {
+    try {
+      const employeeId = req.params.employeeId;
+
+      const deleteResult = await FacultyProfile.deleteOne({ employeeId });
+
+      if (deleteResult.deletedCount === 0) {
+        return res
+          .status(404)
+          .json({ error: "Faculty not found or already deleted" });
+      }
+
+      res.status(200).json({ message: "Faculty deleted successfully" });
     } catch (error) {
       res.status(500).json({ error: error.message });
     }

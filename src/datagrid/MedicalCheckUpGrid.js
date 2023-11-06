@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { DataGrid } from "@mui/x-data-grid";
 import IconButton from "@mui/material/IconButton";
 import EditIcon from "@mui/icons-material/Edit";
@@ -21,7 +21,7 @@ const MedicalCheckUpGrid = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [recordIdToDelete, setRecordIdToDelete] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedMedicalCheckup, setSelectedMedicalCheckup] = useState(null);
+  const [selectedRecord, setSelectedRecord] = useState(null);
 
   const handleSearchChange = (event) => {
     setSearchValue(event.target.value);
@@ -45,87 +45,79 @@ const MedicalCheckUpGrid = () => {
     return `${year}-${month}-${day}`;
   };
 
-  const fetchMedicalCheckups = async () => {
+  const transformRecord = (checkup = {}) => {
+    let {
+      classEnrollment: {
+        student = {},
+        academicYear = {},
+        classProfile = {},
+      } = {},
+      nutritionalStatus = {},
+    } = checkup;
+
+    if (!nutritionalStatus) {
+      nutritionalStatus = {};
+    }
+
+    const name =
+      student.firstName || student.lastName
+        ? `${student.lastName || ""}, ${student.firstName || ""}${
+            student.middleName ? ` ${student.middleName.charAt(0)}.` : ""
+          } ${student.nameExtension || ""}`.trim()
+        : "N/A";
+
+    return {
+      id: checkup._id,
+      lrn: student.lrn || "N/A",
+      name,
+      age: student.age || "N/A",
+      gender: student.gender || "N/A",
+      birthDate: student.birthDate || "N/A",
+      address: student.address || "N/A",
+      grade: classProfile.grade || "N/A",
+      section: classProfile.section || "N/A",
+      schoolYear: academicYear.schoolYear || "N/A",
+      heightCm: nutritionalStatus.heightCm || "N/A",
+      weightKg: nutritionalStatus.weightKg || "N/A",
+      BMI: nutritionalStatus.BMI || "N/A",
+      BMIClassification: nutritionalStatus.BMIClassification || "N/A",
+      heightForAge: nutritionalStatus.heightForAge || "N/A",
+      beneficiaryOfSBFP: nutritionalStatus.beneficiaryOfSBFP || "N/A",
+      ironSupplementation: checkup.ironSupplementation,
+      dateOfExamination: checkup.dateOfExamination,
+      deworming: checkup.deworming,
+      pulseRate: checkup.pulseRate,
+      respiratoryRate: checkup.respiratoryRate,
+      visionScreeningLeft: checkup.visionScreeningLeft,
+      visionScreeningRight: checkup.visionScreeningRight,
+      auditoryScreeningLeft: checkup.auditoryScreeningLeft,
+      auditoryScreeningRight: checkup.auditoryScreeningRight,
+      scalpScreening: checkup.scalpScreening,
+      skinScreening: checkup.skinScreening,
+      eyesScreening: checkup.eyesScreening,
+      earScreening: checkup.earScreening,
+      noseScreening: checkup.noseScreening,
+      mouthScreening: checkup.mouthScreening,
+      neckScreening: checkup.neckScreening,
+      throatScreening: checkup.throatScreening,
+      lungScreening: checkup.lungScreening,
+      heartScreening: checkup.heartScreening,
+      abdomen: checkup.abdomen,
+      deformities: checkup.deformities,
+      menarche: checkup.menarche,
+      temperature: checkup.temperature,
+      bloodPressure: checkup.bloodPressure,
+      heartRate: checkup.heartRate,
+      remarks: checkup.remarks,
+    };
+  };
+
+  const fetchMedicalCheckups = useCallback(async () => {
     setIsLoading(true);
     try {
       const response = await axiosInstance.get("medicalCheckup/fetch");
-      const updatedCheckups = response.data.map((checkup) => {
-        return {
-          id: checkup._id,
-          dateOfExamination: checkup.dateOfExamination,
-          lrn: checkup.studentProfile ? checkup.studentProfile.lrn : "N/A",
-          name:
-            checkup.studentProfile && checkup.studentProfile.middleName
-              ? `${checkup.studentProfile.lastName}, ${
-                  checkup.studentProfile.firstName
-                } ${checkup.studentProfile.middleName.charAt(0)}. ${
-                  checkup.studentProfile.nameExtension
-                }`.trim()
-              : "N/A",
-          age: checkup.studentProfile ? checkup.studentProfile.age : "N/A",
-          gender: checkup.studentProfile
-            ? checkup.studentProfile.gender
-            : "N/A",
-          birthDate: checkup.studentProfile
-            ? checkup.studentProfile.birthDate
-            : "N/A",
-          grade:
-            checkup.studentProfile && checkup.studentProfile.classProfile
-              ? checkup.studentProfile.classProfile.grade
-              : "N/A",
-          section:
-            checkup.studentProfile && checkup.studentProfile.classProfile
-              ? checkup.studentProfile.classProfile.section
-              : "N/A",
-          academicYear:
-            checkup.studentProfile && checkup.studentProfile.classProfile
-              ? checkup.studentProfile.classProfile.academicYear
-              : "N/A",
-          temperature: checkup.temperature,
-          bloodPressure: checkup.bloodPressure,
-          heartRate: checkup.heartRate,
-          heightCm: checkup.nutritionalStatus
-            ? checkup.nutritionalStatus.heightCm
-            : "N/A",
-          weightKg: checkup.nutritionalStatus
-            ? checkup.nutritionalStatus.weightKg
-            : "N/A",
-          BMI: checkup.nutritionalStatus
-            ? checkup.nutritionalStatus.BMI
-            : "N/A",
-          BMIClassification: checkup.nutritionalStatus
-            ? checkup.nutritionalStatus.BMIClassification
-            : "N/A",
-          heightForAge: checkup.nutritionalStatus
-            ? checkup.nutritionalStatus.heightForAge
-            : "N/A",
-          beneficiaryOfSBFP: checkup.nutritionalStatus
-            ? checkup.nutritionalStatus.beneficiaryOfSBFP
-            : "N/A",
-          ironSupplementation: checkup.ironSupplementation,
-          deworming: checkup.deworming,
-          pulseRate: checkup.pulseRate,
-          respiratoryRate: checkup.respiratoryRate,
-          visionScreeningLeft: checkup.visionScreeningLeft,
-          visionScreeningRight: checkup.visionScreeningRight,
-          auditoryScreeningLeft: checkup.auditoryScreeningLeft,
-          auditoryScreeningRight: checkup.auditoryScreeningRight,
-          scalpScreening: checkup.scalpScreening,
-          skinScreening: checkup.skinScreening,
-          eyesScreening: checkup.eyesScreening,
-          earScreening: checkup.earScreening,
-          noseScreening: checkup.noseScreening,
-          mouthScreening: checkup.mouthScreening,
-          neckScreening: checkup.neckScreening,
-          throatScreening: checkup.throatScreening,
-          lungScreening: checkup.lungScreening,
-          heartScreening: checkup.heartScreening,
-          abdomen: checkup.abdomen,
-          deformities: checkup.deformities,
-          menarche: checkup.menarche,
-        };
-      });
-      setMedicalCheckups(updatedCheckups); // Assuming you've a state variable called 'setMedicalCheckups'
+      const updatedCheckups = response.data.map(transformRecord);
+      setMedicalCheckups(updatedCheckups);
     } catch (error) {
       console.error(
         "An error occurred while fetching medical checkups:",
@@ -135,11 +127,11 @@ const MedicalCheckUpGrid = () => {
     } finally {
       setIsLoading(false); // This ensures loading is set to false regardless of try or catch outcomes.
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchMedicalCheckups();
-  }, []);
+  }, [fetchMedicalCheckups]);
 
   const addNewMedicalCheckup = (newCheckup) => {
     setMedicalCheckups((prevCheckups) => [...prevCheckups, newCheckup]);
@@ -156,13 +148,13 @@ const MedicalCheckUpGrid = () => {
     { field: "age", headerName: "Age", width: 100 },
     { field: "gender", headerName: "Gender", width: 100 },
     { field: "section", headerName: "Section", width: 100 },
-    { field: "academicYear", headerName: "Academic Year", width: 100 },
+    { field: "schoolYear", headerName: "S.Y", width: 100 },
     { field: "temperature", headerName: "Temp (°C)", width: 100 },
     { field: "bloodPressure", headerName: "BP mmHg", width: 100 },
     { field: "heartRate", headerName: "Heart Rate", width: 100 },
     { field: "heightCm", headerName: "Height (cm)", width: 100 },
     { field: "weightKg", headerName: "Weight (kg)", width: 100 },
-    { field: "BMIClassification", headerName: "BMI", width: 100 },
+    { field: "BMIClassification", headerName: "Classification", width: 100 },
     {
       field: "ironSupplementation",
       headerName: "Iron Supp.",
@@ -196,7 +188,7 @@ const MedicalCheckUpGrid = () => {
     const medicalToEdit = medicalCheckups.find(
       (medicalCheckup) => medicalCheckup.id === checkupId
     );
-    setSelectedMedicalCheckup(medicalToEdit);
+    setSelectedRecord(medicalToEdit);
     setFormOpen(true);
   };
 
@@ -223,32 +215,11 @@ const MedicalCheckUpGrid = () => {
     handleDialogClose();
   };
 
-  const FilteredMedicalCheckups = medicalCheckups.filter(
-    (checkup) =>
-      (checkup.dateOfExamination?.toString() || "").includes(searchValue) ||
-      (checkup.lrn?.toLowerCase() || "").includes(searchValue.toLowerCase()) ||
-      (checkup.age?.toString() || "").includes(searchValue) ||
-      (checkup.gender?.toLowerCase() || "").includes(
-        searchValue.toLowerCase()
-      ) ||
-      (checkup.section?.toLowerCase() || "").includes(
-        searchValue.toLowerCase()
-      ) ||
-      (checkup.academicYear?.toLowerCase() || "").includes(
-        searchValue.toLowerCase()
-      ) ||
-      (checkup.temperature?.toString() || "").includes(searchValue) ||
-      (checkup.bloodPressure?.toLowerCase() || "").includes(
-        searchValue.toLowerCase()
-      ) ||
-      (checkup.heartRate?.toString() || "").includes(searchValue) ||
-      (checkup.heightCm?.toString() || "").includes(searchValue) ||
-      (checkup.weightKg?.toString() || "").includes(searchValue) ||
-      (checkup.BMIClassification?.toLowerCase() || "").includes(
-        searchValue.toLowerCase()
-      ) ||
-      (checkup.ironSupplementation?.toString() || "").includes(searchValue) ||
-      (checkup.deworming?.toString() || "").includes(searchValue)
+  const FilteredMedicalCheckups = medicalCheckups.filter((checkup) =>
+    Object.keys(checkup).some((key) => {
+      const value = checkup[key]?.toString().toLowerCase();
+      return value?.includes(searchValue.toLowerCase());
+    })
   );
 
   const handleModalOpen = () => {
@@ -313,16 +284,16 @@ const MedicalCheckUpGrid = () => {
         />
         <MedicalCheckupForm
           open={formOpen}
-          isEditing={!!selectedMedicalCheckup}
+          isEditing={!!selectedRecord}
           addNewMedicalCheckup={addNewMedicalCheckup}
-          selectedMedicalCheckup={selectedMedicalCheckup}
+          selectedRecord={selectedRecord}
           onCheckupUpdate={updatedMedicalCheckup}
           onClose={() => {
-            setSelectedMedicalCheckup(null);
+            setSelectedRecord(null);
             handleModalClose();
           }}
           onCancel={() => {
-            setSelectedMedicalCheckup(null);
+            setSelectedRecord(null);
             handleModalClose();
           }}
         />

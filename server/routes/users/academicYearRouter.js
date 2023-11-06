@@ -15,18 +15,18 @@ const handleError = (error, res) => {
 // Create a new AcademicYear
 router.post("/create", authenticateMiddleware, async (req, res) => {
   try {
-    const { yearFrom, yearTo, ...academicYear } = req.body;
+    const { schoolYear, ...academicYearData } = req.body;
+    const [startYear, endYear] = schoolYear.split("-").map(Number);
 
-    if (yearFrom > yearTo) {
+    if (startYear >= endYear) {
       return res
         .status(400)
-        .json({ error: "YearFrom should be less than YearTo" });
+        .json({ error: "Start year should be less than end year" });
     }
 
     const newAcademicYear = new AcademicYear({
-      yearFrom,
-      yearTo,
-      ...academicYear,
+      schoolYear,
+      ...academicYearData,
     });
 
     await newAcademicYear.save();
@@ -61,13 +61,19 @@ router.get("/fetch/:id", authenticateMiddleware, async (req, res) => {
 // Update an AcademicYear by ID
 router.put("/update/:id", authenticateMiddleware, async (req, res) => {
   try {
-    const { yearFrom, yearTo, monthFrom, monthTo, status } = req.body;
+    const { schoolYear, monthFrom, monthTo, status } = req.body;
+    const [startYear, endYear] = schoolYear.split("-").map(Number);
+
+    if (startYear >= endYear) {
+      return res
+        .status(400)
+        .json({ error: "Start year should be less than end year" });
+    }
 
     const academicYear = await AcademicYear.findByIdAndUpdate(
       req.params.id,
       {
-        yearFrom,
-        yearTo,
+        schoolYear,
         monthFrom,
         monthTo,
         status,

@@ -2,24 +2,43 @@ const express = require("express");
 const FacultyCheckup = require("../../models/FacultyCheckupSchema");
 const FacultyProfile = require("../../models/FacultyProfileSchema");
 const ClassProfile = require("../../models/ClassProfileSchema");
+const AcademicYear = require("../../models/AcademicYearSchema.js");
 const router = express.Router();
 const authenticateMiddleware = require("../../auth/authenticateMiddleware.js");
 
 // Create a new faculty checkup
 router.post("/create", authenticateMiddleware, async (req, res) => {
   try {
-    const { employeeId, ...medicalData } = req.body;
+    const { employeeId, schoolYear, ...medicalData } = req.body;
+
     const faculty = await FacultyProfile.findOne({ employeeId });
     if (!faculty) return res.status(400).json({ error: "Invalid Faculty ID" });
+
+    const academic = await AcademicYear.findOne({ schoolYear });
+    if (!academic)
+      return res.status(400).json({ error: "Invalid School Year" });
+
+    const existingCheckup = await FacultyCheckup.findOne({
+      facultyProfile: faculty._id,
+      academicYear: academic._id,
+    });
+
+    if (existingCheckup) {
+      return res.status(400).json({
+        error: "Checkup for the given Faculty and Academic Year already exists",
+      });
+    }
 
     const newCheckup = new FacultyCheckup({
       ...medicalData,
       facultyProfile: faculty._id,
+      academicYear: academic._id,
     });
     await newCheckup.save();
 
     const populatedCheckup = await FacultyCheckup.findById(newCheckup._id)
       .populate("facultyProfile")
+      .populate("academicYear")
       .exec();
 
     res.status(201).json({ newCheckup: populatedCheckup });
@@ -33,6 +52,7 @@ router.get("/fetch", authenticateMiddleware, async (req, res) => {
   try {
     const checkups = await FacultyCheckup.find()
       .populate("facultyProfile")
+      .populate("academicYear")
       .exec();
 
     // Use Promise.all to fetch all the ClassProfiles related to each facultyProfile
@@ -63,27 +83,43 @@ router.put("/update/:employeeId", authenticateMiddleware, async (req, res) => {
       employeeId: req.params.employeeId,
     });
 
-    if (!facultyProfile)
-      return res.status(404).json({ error: "Faculty with that ID not found" });
+    if (!facultyProfile) {
+      return res.status(404).json({ error: "FacultyProfile not found" });
+    }
 
-    const updatedFacultyCheckup = await FacultyCheckup.findOneAndUpdate(
-      { facultyProfile: facultyProfile._id },
-      req.body,
-      { new: true }
-    ).populate("facultyProfile");
-
-    if (!updatedFacultyCheckup)
-      return res
-        .status(404)
-        .json({ error: "Checkup not found for this faculty" });
-
-    // Now, get the classProfile data
-    const classProfile = await ClassProfile.findOne({
-      faculty: updatedFacultyCheckup.facultyProfile._id,
+    const academicYearRecord = await AcademicYear.findOne({
+      schoolYear: req.body.schoolYear,
     });
 
-    // Embed the classProfile within the facultyProfile
-    updatedFacultyCheckup.facultyProfile.classProfileData = classProfile;
+    if (!academicYearRecord) {
+      return res
+        .status(404)
+        .json({ error: "Specified academic year not found" });
+    }
+
+    const existingFacultyCheckup = await FacultyCheckup.findOne({
+      facultyProfile: facultyProfile._id,
+      academicYear: academicYearRecord._id,
+    });
+
+    if (!existingFacultyCheckup) {
+      return res
+        .status(404)
+        .json({ error: "Faculty checkup not found for this academic year" });
+    }
+
+    const updatedData = { ...existingFacultyCheckup.toObject(), ...req.body };
+
+    const updatedFacultyCheckup = await FacultyCheckup.findOneAndUpdate(
+      {
+        facultyProfile: facultyProfile._id,
+        academicYear: academicYearRecord._id,
+      },
+      updatedData,
+      { new: true }
+    )
+      .populate("facultyProfile")
+      .populate("academicYear");
 
     res.status(200).json(updatedFacultyCheckup);
   } catch (error) {

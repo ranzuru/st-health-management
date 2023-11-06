@@ -16,7 +16,6 @@ import FacultyProfile from "./navbar/FacultyProfile";
 import ClassProfile from "./navbar/ClassProfile";
 import ClinicPrograms from "./navbar/ClinicPrograms";
 import DengueMonitoring from "./navbar/DengueMonitoring";
-import Immunization from "./navbar/Immunization";
 import MedicalCheckup from "./navbar/MedicalCheckup";
 import FacultyCheckup from "./navbar/FacultyCheckup";
 import DewormingMonitoring from "./navbar/DewormingMonitoring";
@@ -32,6 +31,7 @@ import MedicalCheckUpAnalytics from "./navbar/MedicalCheckUpAnalytics";
 import ClinicVisitorsAnalytics from "./navbar/ClinicVisitorsAnalytics";
 import FeedingProgramAnalytics from "./navbar/FeedingProgramAnalytics";
 import AcademicYear from "./navbar/AcademicYear";
+import ClassEnrollment from "./navbar/ClassEnrollment";
 import Logs from "./navbar/Logs";
 import Settings from "./navbar/Settings";
 import Sidebar from "./components/Sidebar";
@@ -92,9 +92,9 @@ function AppLayout() {
             <Route path="/faculty-profile" element={<FacultyProfile />} />
             <Route path="/class-profile" element={<ClassProfile />} />
             <Route path="/academicYear-profile" element={<AcademicYear />} />
+            <Route path="/class-enrollment" element={<ClassEnrollment />} />
             <Route path="/clinic-programs" element={<ClinicPrograms />} />
             <Route path="/dengue-monitoring" element={<DengueMonitoring />} />
-            <Route path="/immunization" element={<Immunization />} />
             <Route path="/medical-checkup" element={<MedicalCheckup />} />
             <Route path="/faculty-checkup" element={<FacultyCheckup />} />
             <Route

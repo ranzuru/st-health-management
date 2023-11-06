@@ -8,13 +8,7 @@ import {
 import FileUploadRoundedIcon from "@mui/icons-material/FileUploadRounded";
 import GetAppRoundedIcon from "@mui/icons-material/GetAppRounded";
 
-import { exportToExcel } from "./DataGridUtils";
-
-function CustomGridToolbar({ data, headers, filenamePrefix, handleImport }) {
-  const handleExport = () => {
-    exportToExcel(data, headers, filenamePrefix);
-  };
-
+function CustomGridToolbar({ onExport, handleImport }) {
   return (
     <GridToolbarContainer>
       <GridToolbarColumnsButton />
@@ -43,7 +37,7 @@ function CustomGridToolbar({ data, headers, filenamePrefix, handleImport }) {
       </Tooltip>
       <Tooltip title="Export">
         <IconButton
-          onClick={handleExport}
+          onClick={onExport}
           style={{ alignItems: "center", display: "flex" }}
         >
           <GetAppRoundedIcon color="primary" />

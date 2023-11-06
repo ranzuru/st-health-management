@@ -13,10 +13,14 @@ import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
 import Grid from "@mui/material/Grid";
 import Autocomplete from "@mui/material/Autocomplete";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 // Yup imports
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useForm, Controller } from "react-hook-form";
+import { parseISO } from "date-fns";
 
 const DengueForm = (props) => {
   const {
@@ -47,13 +51,12 @@ const DengueForm = (props) => {
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return ""; // handle null or undefined
-
     const date = new Date(dateString);
-
-    if (isNaN(date.getTime())) return ""; // handle invalid date
-
-    return date.toISOString().split("T")[0];
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
   };
 
   const validationSchema = yup.object().shape({
@@ -95,30 +98,34 @@ const DengueForm = (props) => {
   } = useForm({
     defaultValues: initialData || {
       lrn: "",
-      dateOfOnset: "",
-      dateOfAdmission: "",
+      dateOfOnset: undefined,
+      dateOfAdmission: undefined,
       hospitalAdmission: "",
-      dateOfDischarge: "",
+      dateOfDischarge: undefined,
     },
     resolver: yupResolver(validationSchema),
   });
 
   const enrichStudentInfo = (newDengueRecord) => {
-    const { studentProfile, ...rest } = newDengueRecord;
+    const {
+      classEnrollment: { student, academicYear, classProfile } = {},
+      ...rest
+    } = newDengueRecord;
 
-    const lrn = studentProfile?.lrn;
-    const age = studentProfile?.age;
-    const gender = studentProfile?.gender;
-    const address = studentProfile?.address;
-    const birthDate = studentProfile?.birthDate;
+    const lrn = student?.lrn;
+    const age = student?.age;
+    const gender = student?.gender;
+    const address = student?.address;
+    const birthDate = student?.birthDate;
     const name =
-      studentProfile && studentProfile.middleName
-        ? `${studentProfile.lastName}, ${
-            studentProfile.firstName
-          } ${studentProfile.middleName.charAt(0)}. ${
-            studentProfile.nameExtension
-          }`.trim()
+      student && (student.firstName || student.lastName)
+        ? `${student.lastName || ""}, ${student.firstName || ""}${
+            student.middleName ? ` ${student.middleName.charAt(0)}.` : ""
+          } ${student.nameExtension || ""}`.trim()
         : "N/A";
+    const schoolYear = academicYear?.schoolYear;
+    const grade = classProfile?.grade;
+    const section = classProfile?.section;
 
     return {
       ...rest,
@@ -129,9 +136,9 @@ const DengueForm = (props) => {
       gender,
       address,
       birthDate,
-      grade: studentProfile?.classProfile?.grade,
-      section: studentProfile?.classProfile?.section,
-      academicYear: studentProfile?.classProfile?.academicYear,
+      grade,
+      section,
+      schoolYear,
     };
   };
 
@@ -226,7 +233,12 @@ const DengueForm = (props) => {
             `/dengueMonitoring/search/${lrnInput}`
           );
           setLrnOptions(response.data);
-        } catch (error) {}
+        } catch (error) {
+          showSnackbar(
+            "No student with the provided LRN found in the system.",
+            "error"
+          );
+        }
         setLoading(false);
       }
     };
@@ -251,8 +263,8 @@ const DengueForm = (props) => {
         "gender",
         "grade",
         "section",
-        "birthDate",
         "hospitalAdmission",
+        "birthDate",
         "address",
       ];
       keys.forEach((key) => {
@@ -262,12 +274,10 @@ const DengueForm = (props) => {
 
       const dateFields = ["dateOfOnset", "dateOfAdmission", "dateOfDischarge"];
       dateFields.forEach((dateField) => {
-        const dateObject = new Date(selectedRecord[dateField]);
-        const timezoneOffset = dateObject.getTimezoneOffset() * 60000; // in ms
-        const localISOTime = new Date(dateObject - timezoneOffset)
-          .toISOString()
-          .split("T")[0];
-        setValue(dateField, localISOTime);
+        const parsedDate = selectedRecord[dateField]
+          ? parseISO(selectedRecord[dateField])
+          : null;
+        setValue(dateField, parsedDate);
       });
     }
   }, [selectedRecord, setValue]);
@@ -278,6 +288,8 @@ const DengueForm = (props) => {
     const isClassProfileEqual =
       option.classProfile?.grade === value.classProfile?.grade &&
       option.classProfile?.section === value.classProfile?.section;
+    const isAcademicYear =
+      option.academicYear?.schoolYear === value.academicYear?.schoolYear;
 
     return (
       option.lrn === value.lrn &&
@@ -289,7 +301,30 @@ const DengueForm = (props) => {
       option.address === value.address &&
       option.gender === value.gender &&
       option.birthDate === value.birthDate &&
-      isClassProfileEqual
+      isClassProfileEqual &&
+      isAcademicYear
+    );
+  };
+
+  const ReadOnlyTextField = ({ control, name, label, value }) => {
+    return (
+      <Controller
+        name={name}
+        control={control}
+        render={({ field }) => (
+          <TextField
+            label={label}
+            fullWidth
+            margin="normal"
+            multiline={name === "address"}
+            {...field}
+            value={value || ""}
+            InputProps={{
+              readOnly: true,
+            }}
+          />
+        )}
+      />
     );
   };
 
@@ -360,162 +395,106 @@ const DengueForm = (props) => {
                 />
               </Grid>
               <Grid item xs={12} sm={6} md={3}>
-                <Controller
-                  name="name"
+                <ReadOnlyTextField
                   control={control}
-                  render={({ field }) => (
-                    <TextField
-                      label="Name"
-                      fullWidth
-                      margin="normal"
-                      {...field}
-                      value={
-                        selectedStudent
-                          ? selectedStudent.middleName &&
-                            selectedStudent.firstName &&
-                            selectedStudent.lastName
-                            ? `${selectedStudent.lastName}, ${
-                                selectedStudent.firstName
-                              } ${selectedStudent.middleName.charAt(0)}. ${
-                                selectedStudent.nameExtension
-                              }`.trim()
-                            : selectedStudent.name
-                          : ""
-                      }
-                      InputProps={{
-                        readOnly: true,
-                      }}
-                    />
-                  )}
+                  name="name"
+                  label="Name"
+                  value={
+                    selectedStudent
+                      ? selectedStudent.firstName && selectedStudent.lastName
+                        ? `${selectedStudent.lastName}, ${
+                            selectedStudent.firstName
+                          }${
+                            selectedStudent.middleName
+                              ? ` ${selectedStudent.middleName.charAt(0)}.`
+                              : ""
+                          } ${selectedStudent.nameExtension || ""}`.trim()
+                        : selectedStudent.name || ""
+                      : ""
+                  }
+                />
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <ReadOnlyTextField
+                  control={control}
+                  name="schoolYear"
+                  label="School Year"
+                  value={
+                    selectedStudent
+                      ? selectedStudent.academicYear
+                        ? selectedStudent.academicYear.schoolYear
+                        : selectedStudent.schoolYear
+                      : ""
+                  }
                 />
               </Grid>
             </Grid>
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6} md={2}>
-                <Controller
+                <ReadOnlyTextField
+                  control={control}
                   name="grade"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      label="Grade Level"
-                      fullWidth
-                      margin="normal"
-                      {...field}
-                      value={
-                        selectedStudent
-                          ? selectedStudent.classProfile
-                            ? selectedStudent.classProfile.grade
-                            : selectedStudent.grade
-                          : ""
-                      }
-                      InputProps={{
-                        readOnly: true,
-                      }}
-                    />
-                  )}
+                  label="Grade"
+                  value={
+                    selectedStudent
+                      ? selectedStudent.classProfile
+                        ? selectedStudent.classProfile.grade
+                        : selectedStudent.grade
+                      : ""
+                  }
                 />
               </Grid>
               <Grid item xs={12} sm={6} md={2}>
-                <Controller
+                <ReadOnlyTextField
+                  control={control}
                   name="section"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      label="Section"
-                      fullWidth
-                      margin="normal"
-                      {...field}
-                      value={
-                        selectedStudent
-                          ? selectedStudent.classProfile
-                            ? selectedStudent.classProfile.section
-                            : selectedStudent.section
-                          : ""
-                      }
-                      InputProps={{
-                        readOnly: true,
-                      }}
-                    />
-                  )}
+                  label="Sender"
+                  value={
+                    selectedStudent
+                      ? selectedStudent.classProfile
+                        ? selectedStudent.classProfile.section
+                        : selectedStudent.section
+                      : ""
+                  }
                 />
               </Grid>
               <Grid item xs={12} sm={6} md={2}>
-                <Controller
+                <ReadOnlyTextField
+                  control={control}
                   name="gender"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      label="Gender"
-                      fullWidth
-                      margin="normal"
-                      {...field}
-                      value={selectedStudent ? selectedStudent.gender : ""}
-                      InputProps={{
-                        readOnly: true,
-                      }}
-                    />
-                  )}
+                  label="Gender"
+                  value={selectedStudent ? selectedStudent.gender : ""}
                 />
               </Grid>
               <Grid item xs={12} sm={6} md={2}>
-                <Controller
+                <ReadOnlyTextField
+                  control={control}
                   name="age"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      label="Age"
-                      fullWidth
-                      margin="normal"
-                      {...field}
-                      value={selectedStudent ? selectedStudent.age : ""}
-                      InputProps={{
-                        readOnly: true,
-                      }}
-                    />
-                  )}
+                  label="Age"
+                  value={selectedStudent ? selectedStudent.age : ""}
                 />
               </Grid>
-              <Grid item xs={12} sm={6} md={2}>
-                <Controller
-                  name="birthDate"
+              <Grid item xs={12} sm={6} md={3}>
+                <ReadOnlyTextField
                   control={control}
-                  render={({ field }) => (
-                    <TextField
-                      label="Birthday"
-                      fullWidth
-                      margin="normal"
-                      {...field}
-                      value={
-                        selectedStudent
-                          ? formatDate(selectedStudent.birthDate)
-                          : ""
-                      }
-                      InputProps={{
-                        readOnly: true,
-                      }}
-                    />
-                  )}
+                  name="birthDate"
+                  label="Birthday"
+                  value={
+                    selectedStudent ? formatDate(selectedStudent.birthDate) : ""
+                  }
+                  InputProps={{
+                    readOnly: true,
+                  }}
                 />
               </Grid>
             </Grid>
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6} md={4}>
-                <Controller
-                  name="address"
+                <ReadOnlyTextField
                   control={control}
-                  render={({ field }) => (
-                    <TextField
-                      label="Address"
-                      fullWidth
-                      margin="normal"
-                      multiline
-                      {...field}
-                      value={selectedStudent ? selectedStudent.address : ""}
-                      InputProps={{
-                        readOnly: true,
-                      }}
-                    />
-                  )}
+                  name="address"
+                  label="Address"
+                  value={selectedStudent ? selectedStudent.address : ""}
                 />
               </Grid>
               <Grid item xs={12} sm={6} md={3}>
@@ -535,65 +514,73 @@ const DengueForm = (props) => {
                 />
               </Grid>
             </Grid>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6} md={2.5}>
-                <Controller
-                  name="dateOfOnset"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      label="Date of Onset"
-                      margin="normal"
-                      type="date"
-                      {...field}
-                      InputLabelProps={{
-                        shrink: true,
-                      }}
-                      error={!!errors.dateOfOnset}
-                      helperText={errors.dateOfOnset?.message}
-                    />
-                  )}
-                />
+            <LocalizationProvider dateAdapter={AdapterDateFns}>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6} md={2.5}>
+                  <Controller
+                    name="dateOfOnset"
+                    control={control}
+                    render={({ field, fieldState: { error } }) => (
+                      <DatePicker
+                        {...field}
+                        label="Date On Set"
+                        maxDate={new Date()}
+                        slotProps={{
+                          textField: {
+                            fullWidth: true,
+                            sx: { marginTop: "15px" },
+                            error: !!error,
+                            helperText: error?.message,
+                          },
+                        }}
+                      />
+                    )}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Controller
+                    name="dateOfAdmission"
+                    control={control}
+                    render={({ field, fieldState: { error } }) => (
+                      <DatePicker
+                        {...field}
+                        label="Date of Admission"
+                        maxDate={new Date()}
+                        slotProps={{
+                          textField: {
+                            fullWidth: true,
+                            sx: { marginTop: "15px" },
+                            error: !!error,
+                            helperText: error?.message,
+                          },
+                        }}
+                      />
+                    )}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Controller
+                    name="dateOfDischarge"
+                    control={control}
+                    render={({ field, fieldState: { error } }) => (
+                      <DatePicker
+                        {...field}
+                        label="Date of Discharge"
+                        maxDate={new Date()}
+                        slotProps={{
+                          textField: {
+                            fullWidth: true,
+                            sx: { marginTop: "15px" },
+                            error: !!error,
+                            helperText: error?.message,
+                          },
+                        }}
+                      />
+                    )}
+                  />
+                </Grid>
               </Grid>
-              <Grid item xs={12} sm={6} md={2.5}>
-                <Controller
-                  name="dateOfAdmission"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      label="Date of Admission"
-                      margin="normal"
-                      type="date"
-                      {...field}
-                      InputLabelProps={{
-                        shrink: true,
-                      }}
-                      error={!!errors.dateOfAdmission}
-                      helperText={errors.dateOfAdmission?.message}
-                    />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6} md={2}>
-                <Controller
-                  name="dateOfDischarge"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      label="Date of Discharge"
-                      margin="normal"
-                      type="date"
-                      {...field}
-                      InputLabelProps={{
-                        shrink: true,
-                      }}
-                      error={!!errors.dateOfDischarge}
-                      helperText={errors.dateOfDischarge?.message}
-                    />
-                  )}
-                />
-              </Grid>
-            </Grid>
+            </LocalizationProvider>
           </DialogContent>
           <DialogActions>
             <Button onClick={handleClose} color="primary">

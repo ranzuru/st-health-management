@@ -2,13 +2,10 @@ const mongoose = require("mongoose");
 
 const academicYearSchema = new mongoose.Schema(
   {
-    yearFrom: {
-      type: Number,
+    schoolYear: {
+      type: String, // Updated datatype
       required: true,
-    },
-    yearTo: {
-      type: Number,
-      required: true,
+      match: /^\d{4}-\d{4}$/, // Regular expression to ensure valid format
     },
     monthFrom: {
       type: String,
@@ -26,6 +23,6 @@ const academicYearSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-academicYearSchema.index({ yearFrom: 1, yearTo: 1 }, { unique: true });
+academicYearSchema.index({ schoolYear: 1 }, { unique: true }); // Updated the index
 
 module.exports = mongoose.model("AcademicYear", academicYearSchema);

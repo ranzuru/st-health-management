@@ -12,6 +12,7 @@ import DialogTitle from "@mui/material/DialogTitle";
 
 import AcademicYearForm from "../modal/AcademicYearForm";
 import axiosInstance from "../config/axios-instance";
+import StatusCell from "../components/StatusCell.js";
 
 const AcademicYearGrid = () => {
   const [formOpen, setFormOpen] = useState(false);
@@ -31,12 +32,28 @@ const AcademicYearGrid = () => {
     setDialogOpen(false);
   };
 
+  const academicYearStatusColor = {
+    Active: {
+      bgColor: "#DFF0D8",
+      textColor: "#4CAF50",
+      borderColor: "#4CAF50",
+    },
+    Completed: {
+      bgColor: "#D9EDF7",
+      textColor: "#2196F3",
+      borderColor: "#2196F3",
+    },
+    Planned: {
+      bgColor: "#EBDEF0",
+      textColor: "#8E44AD",
+      borderColor: "#8E44AD",
+    },
+  };
+
   const mapRecord = (record) => {
     return {
       id: record._id,
-      yearFrom: record.yearFrom,
-      yearTo: record.yearTo,
-      academicYear: `${record.yearFrom}-${record.yearTo}` || "N/A",
+      schoolYear: record.schoolYear || "N/A",
       monthFrom: record.monthFrom || "N/A",
       monthTo: record.monthTo || "N/A",
       status: record.status || "N/A",
@@ -86,64 +103,19 @@ const AcademicYearGrid = () => {
   };
 
   const columns = [
-    { field: "academicYear", headerName: "Academic Year", width: 125 },
+    { field: "schoolYear", headerName: "School Year", width: 125 },
     { field: "monthFrom", headerName: "Month From", width: 100 },
     { field: "monthTo", headerName: "Month To", width: 100 },
     {
       field: "status",
       headerName: "Status",
       width: 100,
-      renderCell: (params) => {
-        let bgColor;
-        let textColor;
-        let borderColor;
-        switch (params.value) {
-          case "Active":
-            bgColor = "#DFF0D8";
-            textColor = "#4CAF50";
-            borderColor = "#4CAF50";
-            break;
-          case "Completed":
-            bgColor = "#D9EDF7";
-            textColor = "#2196F3";
-            borderColor = "#2196F3";
-            break;
-          case "Planned":
-            bgColor = "#FEEBC8";
-            textColor = "#FF9800";
-            borderColor = "#FF9800";
-            break;
-          default:
-            bgColor = "#E0E0E0";
-            textColor = "#333333";
-            borderColor = "transparent";
-        }
-
-        return (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                padding: "1px 8px",
-                borderRadius: 8,
-                backgroundColor: bgColor,
-                color: textColor,
-                fontSize: "12px",
-                border: `1px solid ${borderColor}`,
-              }}
-            >
-              {params.value}
-            </div>
-          </div>
-        );
-      },
+      renderCell: (params) => (
+        <StatusCell
+          value={params.value}
+          colorMapping={academicYearStatusColor}
+        />
+      ),
     },
     {
       field: "action",
@@ -183,8 +155,6 @@ const AcademicYearGrid = () => {
   const handleModalClose = () => {
     setFormOpen(false);
   };
-
-  console.log("Data going into DataGrid:", academicYearRecords);
 
   return (
     <div className="flex flex-col h-full">

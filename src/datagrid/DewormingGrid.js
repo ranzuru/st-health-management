@@ -1,24 +1,89 @@
 import React, { useState, useEffect } from "react";
 import { DataGrid } from "@mui/x-data-grid";
-import IconButton from "@mui/material/IconButton";
-import EditIcon from "@mui/icons-material/Edit";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import Button from "@mui/material/Button";
 import ReportIcon from "@mui/icons-material/Description";
 import axiosInstance from "../config/axios-instance";
 
+const DEFAULT_GRADES = [
+  {
+    _id: "Grade 1",
+    enrolled4Ps: 0,
+    enrolledNon4Ps: 0,
+    dewormed4Ps: 0,
+    dewormedNon4Ps: 0,
+  },
+  {
+    _id: "Grade 2",
+    enrolled4Ps: 0,
+    enrolledNon4Ps: 0,
+    dewormed4Ps: 0,
+    dewormedNon4Ps: 0,
+  },
+  {
+    _id: "Grade 3",
+    enrolled4Ps: 0,
+    enrolledNon4Ps: 0,
+    dewormed4Ps: 0,
+    dewormedNon4Ps: 0,
+  },
+  {
+    _id: "Grade 4",
+    enrolled4Ps: 0,
+    enrolledNon4Ps: 0,
+    dewormed4Ps: 0,
+    dewormedNon4Ps: 0,
+  },
+  {
+    _id: "Grade 5",
+    enrolled4Ps: 0,
+    enrolledNon4Ps: 0,
+    dewormed4Ps: 0,
+    dewormedNon4Ps: 0,
+  },
+  {
+    _id: "Grade 6",
+    enrolled4Ps: 0,
+    enrolledNon4Ps: 0,
+    dewormed4Ps: 0,
+    dewormedNon4Ps: 0,
+  },
+];
+
 const DewormingGrid = () => {
   const [aggregateData, setAggregateData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchAggregateData = async () => {
+      setIsLoading(true);
       try {
         const response = await axiosInstance.get(
-          "dewormingReport/dewormingReportCount"
+          "dewormingReport/dewormingData"
         );
-        setAggregateData(response.data);
+
+        const dataStructure = DEFAULT_GRADES.reduce((acc, gradeObj) => {
+          acc[gradeObj._id] = { ...gradeObj };
+          return acc;
+        }, {});
+
+        response.data.forEach((item) => {
+          const key = item.grade;
+
+          // Determine if it's 4Ps or Non-4Ps
+          const type = item.is4P ? "4Ps" : "Non4Ps";
+
+          // Update the enrolled and dewormed counts based on the type
+          dataStructure[key][`enrolled${type}`] += item.totalEnrolled;
+          dataStructure[key][`dewormed${type}`] += item.totalDewormed;
+        });
+
+        const aggregatedData = Object.values(dataStructure);
+        setAggregateData(aggregatedData);
       } catch (error) {
         console.error("Error fetching aggregate data:", error);
+        setIsLoading(false);
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -27,50 +92,78 @@ const DewormingGrid = () => {
 
   const aggregateColumns = [
     { field: "_id", headerName: "Grade Level", width: 150 },
-    { field: "male4P", headerName: "Male 4P's", width: 150 },
-    { field: "female4P", headerName: "Female 4P's", width: 150 },
-    { field: "maleNon4P", headerName: "Male Non-4P's", width: 150 },
-    { field: "femaleNon4P", headerName: "Female Non-4P's", width: 150 },
     {
-      field: "total",
-      headerName: "Total",
-      width: 150,
-      valueGetter: (params) =>
-        params.row.male4P +
-        params.row.female4P +
-        params.row.maleNon4P +
-        params.row.femaleNon4P,
+      field: "enrolled4Ps",
+      headerName: "No. of Enrolled Children (4Ps)",
+      align: "center",
+      headerAlign: "center",
+      width: 210,
     },
     {
-      field: "action",
-      headerName: "Action",
+      field: "enrolledNon4Ps",
+      headerName: "No. of Enrolled Children (non-4Ps)",
+      align: "center",
+      headerAlign: "center",
+      width: 250,
+    },
+    {
+      field: "totalEnrolled",
+      headerName: "Total Enrolled",
+      align: "center",
+      headerAlign: "center",
       width: 150,
-      renderCell: (params) => (
-        <div>
-          <IconButton onClick={() => handleAction(params.row._id)}>
-            <EditIcon />
-          </IconButton>
-          <IconButton onClick={() => handleDelete(params.row._id)}>
-            <DeleteOutlineIcon />
-          </IconButton>
-        </div>
-      ),
+      valueGetter: (params) =>
+        params.row.enrolled4Ps + params.row.enrolledNon4Ps,
+    },
+    {
+      field: "dewormed4Ps",
+      headerName: "No. of Children Dewormed (4Ps)",
+      align: "center",
+      headerAlign: "center",
+      width: 250,
+    },
+    {
+      field: "dewormedNon4Ps",
+      headerName: "No. of Children Dewormed (non-4Ps)",
+      align: "center",
+      headerAlign: "center",
+      width: 280,
+    },
+    {
+      field: "totalDewormed",
+      headerName: "Total Dewormed",
+      align: "center",
+      headerAlign: "center",
+      width: 150,
+      valueGetter: (params) =>
+        params.row.dewormed4Ps + params.row.dewormedNon4Ps,
+    },
+    {
+      field: "percentage",
+      headerName: "%",
+      align: "center",
+      headerAlign: "center",
+      width: 90,
+      valueGetter: (params) => {
+        const totalDewormed =
+          params.row.dewormed4Ps + params.row.dewormedNon4Ps;
+        const totalEnrolled =
+          params.row.enrolled4Ps + params.row.enrolledNon4Ps;
+
+        if (!totalEnrolled || totalEnrolled === 0) {
+          return "0%";
+        }
+
+        const percentage = (totalDewormed / totalEnrolled) * 100;
+
+        return `${Math.round(percentage * 100) / 100}%`;
+      },
     },
   ];
 
-  const handleAction = (userId) => {
-    // Implement your action logic here
-    console.log(`Edit user with ID: ${userId}`);
-  };
-
-  const handleDelete = (userId) => {
-    // Implement your delete logic here
-    console.log(`Delete user with ID: ${userId}`);
-  };
-
   return (
     <div className="flex flex-col h-full">
-      <div className="w-full max-w-screen-xl mx-auto px-4">
+      <div className="w-full max-w-screen-xl mx-auto px-8">
         <div className="mb-4 flex justify-between items-center">
           <div>
             <Button variant="contained" color="secondary">
@@ -90,10 +183,15 @@ const DewormingGrid = () => {
               },
             },
           }}
+          sx={{
+            "& .MuiDataGrid-row:nth-of-type(odd)": {
+              backgroundColor: "#f3f4f6",
+            },
+          }}
+          loading={isLoading}
           pageSizeOptions={[10]}
-          checkboxSelection
           disableRowSelectionOnClick
-          style={{ height: 500 }}
+          style={{ height: 440 }}
         />
       </div>
     </div>

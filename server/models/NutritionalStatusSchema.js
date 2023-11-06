@@ -6,9 +6,9 @@ const nutritionalStatusSchema = new mongoose.Schema(
       type: Date,
       required: true,
     },
-    studentProfile: {
+    classEnrollment: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "StudentProfile",
+      ref: "ClassEnrollment",
       required: true,
     },
     weightKg: {
@@ -48,7 +48,7 @@ const nutritionalStatusSchema = new mongoose.Schema(
 );
 
 nutritionalStatusSchema.index(
-  { studentProfile: 1, measurementType: 1 },
+  { classEnrollment: 1, measurementType: 1 },
   { unique: true }
 );
 const NutritionalStatus = mongoose.model(

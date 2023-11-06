@@ -95,7 +95,6 @@ const ClassProfileForm = (props) => {
       ),
     section: yup.string().required("Section is required"),
     room: yup.string().required("Room is required"),
-    academicYear: yup.string().required("Academic Year is required"),
     faculty: yup.string().required("Faculty is required"),
   });
 
@@ -110,7 +109,6 @@ const ClassProfileForm = (props) => {
       grade: "",
       section: "",
       room: "",
-      academicYear: "",
       faculty: "", // Set the default faculty as empty
     },
     resolver: yupResolver(validationSchema),
@@ -225,9 +223,6 @@ const ClassProfileForm = (props) => {
     }
   };
 
-  const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 27 }, (_, i) => currentYear + i);
-
   const handleClose = () => {
     reset();
     onClose();
@@ -242,7 +237,6 @@ const ClassProfileForm = (props) => {
       setValue("grade", selectedClassProfile.grade || "");
       setValue("section", selectedClassProfile.section || "");
       setValue("room", selectedClassProfile.room || "");
-      setValue("academicYear", selectedClassProfile.academicYear || "");
       setValue("faculty", selectedFacultyId || "");
     }
   }, [selectedClassProfile, setValue, facultyOptions]);
@@ -318,38 +312,6 @@ const ClassProfileForm = (props) => {
                     field.onChange(e);
                   }}
                 />
-              )}
-            />
-            <Controller
-              name="academicYear"
-              control={control}
-              render={({ field }) => (
-                <FormControl
-                  fullWidth
-                  margin="normal"
-                  required
-                  error={!!errors.academicYear}
-                  className="rounded-md shadow-md"
-                >
-                  <InputLabel id="academicYear-label">Academic Year</InputLabel>
-                  <Select
-                    labelId="academicYear-label"
-                    label="Academic Year"
-                    {...field}
-                    MenuProps={MenuProps}
-                  >
-                    {years.map((year, index) => (
-                      <MenuItem key={index} value={`${year}-${year + 1}`}>
-                        {`${year}-${year + 1}`}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  {errors.academicYear && (
-                    <FormHelperText>
-                      {errors.academicYear.message}
-                    </FormHelperText>
-                  )}
-                </FormControl>
               )}
             />
             <Controller

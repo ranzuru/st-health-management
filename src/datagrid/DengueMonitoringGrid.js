@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { DataGrid } from "@mui/x-data-grid";
 import IconButton from "@mui/material/IconButton";
 import EditIcon from "@mui/icons-material/Edit";
@@ -15,6 +15,11 @@ import DialogTitle from "@mui/material/DialogTitle";
 import ReportIcon from "@mui/icons-material/Description";
 import axiosInstance from "../config/axios-instance";
 import DengueForm from "../modal/DengueForm";
+import { Tabs, Tab } from "@mui/material";
+import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
+import DengueInfoDialog from "../constants/dengueInfoDialog.js";
+import { ReinstateDengueMonitoring } from "../components/Actions/ReinstateDengue.js";
+import { useSelector } from "react-redux";
 // custom gridToolBar imports
 import CustomGridToolbar from "../utils/CustomGridToolbar";
 
@@ -26,7 +31,11 @@ const DengueMonitoringGrid = () => {
   const [recordIdToDelete, setRecordIdToDelete] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedRecord, setSelectedRecord] = useState(null);
+  const [currentType, setCurrentType] = useState("Active");
+  const [isInfoDialogOpen, setInfoDialogOpen] = useState(false);
+  const [selectedRecordInfo, setSelectedRecordInfo] = useState(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const role = useSelector((state) => state.auth.role);
   const [snackbarData, setSnackbarData] = useState({
     message: "",
     severity: "success",
@@ -63,66 +72,73 @@ const DengueMonitoringGrid = () => {
     return `${year}-${month}-${day}`;
   };
 
-  const fetchDengueRecords = async () => {
+  const mapDengueRecord = (record) => {
+    const { classEnrollment = {} } = record;
+    const {
+      student = {},
+      academicYear = {},
+      classProfile = {},
+    } = classEnrollment;
+    const {
+      firstName = "N/A",
+      lastName = "N/A",
+      middleName = "",
+      nameExtension = "",
+      lrn = "N/A",
+      age = "N/A",
+      gender = "N/A",
+      birthDate = "N/A",
+      address = "N/A",
+    } = student;
+
+    const name = `${lastName}, ${firstName}${
+      middleName ? ` ${middleName.charAt(0)}.` : ""
+    } ${nameExtension}`.trim();
+
+    return {
+      id: record._id,
+      lrn,
+      name,
+      age,
+      gender,
+      birthDate,
+      address,
+      grade: classProfile.grade || "N/A",
+      section: classProfile.section || "N/A",
+      schoolYear: academicYear.schoolYear || "N/A",
+      dateOfOnset: record.dateOfOnset,
+      dateOfAdmission: record.dateOfAdmission,
+      hospitalAdmission: record.hospitalAdmission,
+      dateOfDischarge: record.dateOfDischarge,
+      status: record.status,
+    };
+  };
+
+  const fetchDengueRecords = useCallback(async (status = "Active") => {
     setIsLoading(true);
     try {
-      const response = await axiosInstance.get("dengueMonitoring/fetch");
-      const updatedRecords = response.data.map((record) => {
-        return {
-          id: record._id,
-          lrn: record.studentProfile ? record.studentProfile.lrn : "N/A",
-          name:
-            record.studentProfile && record.studentProfile.middleName
-              ? `${record.studentProfile.lastName}, ${
-                  record.studentProfile.firstName
-                } ${record.studentProfile.middleName.charAt(0)}. ${
-                  record.studentProfile.nameExtension
-                }`.trim()
-              : "N/A",
-          age: record.studentProfile ? record.studentProfile.age : "N/A",
-          gender: record.studentProfile ? record.studentProfile.gender : "N/A",
-          birthDate: record.studentProfile
-            ? record.studentProfile.birthDate
-            : "N/A",
-          address: record.studentProfile
-            ? record.studentProfile.address
-            : "N/A",
-          grade:
-            record.studentProfile && record.studentProfile.classProfile
-              ? record.studentProfile.classProfile.grade
-              : "N/A",
-          section:
-            record.studentProfile && record.studentProfile.classProfile
-              ? record.studentProfile.classProfile.section
-              : "N/A",
-          academicYear:
-            record.studentProfile && record.studentProfile.classProfile
-              ? record.studentProfile.classProfile.academicYear
-              : "N/A",
-          dateOfOnset: record.dateOfOnset,
-          dateOfAdmission: record.dateOfAdmission,
-          hospitalAdmission: record.hospitalAdmission,
-          dateOfDischarge: record.dateOfDischarge,
-        };
-      });
+      const response = await axiosInstance.get(
+        `dengueMonitoring/fetch/${status}`
+      );
+      const updatedRecords = response.data.map(mapDengueRecord);
       setDengueRecords(updatedRecords);
     } catch (error) {
-      console.error(
-        "An error occurred while fetching medical checkups:",
-        error
-      );
-      setIsLoading(false);
+      console.error("An error occurred while fetching dengue records:", error);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchDengueRecords();
-  }, []);
+    fetchDengueRecords(currentType);
+  }, [fetchDengueRecords, currentType]);
 
   const addNewDengueRecord = (newDengueRecord) => {
     setDengueRecords((prevRecords) => [...prevRecords, newDengueRecord]);
+  };
+
+  const refreshRecord = () => {
+    fetchDengueRecords(currentType);
   };
 
   const handleImport = async (event) => {
@@ -159,7 +175,6 @@ const DengueMonitoringGrid = () => {
       fetchDengueRecords();
     } catch (error) {
       if (error.response && error.response.status === 207) {
-        // Partial success; some records have issues
         const issues = error.response.data.errors;
         showSnackbar(
           `Partial Import Done. Issues: ${issues.join(", ")}`,
@@ -194,14 +209,14 @@ const DengueMonitoringGrid = () => {
 
   const handleDelete = async () => {
     try {
-      await axiosInstance.delete(`dengueMonitoring/delete/${recordIdToDelete}`);
+      await axiosInstance.put(`dengueMonitoring/delete/${recordIdToDelete}`);
 
       const updatedRecords = dengueRecords.filter(
         (record) => record.id !== recordIdToDelete
       );
       setDengueRecords(updatedRecords);
     } catch (error) {
-      console.error("Error deleting the record:", error.message);
+      console.error("Error marking the record as inactive:", error.message);
     }
     handleDialogClose();
   };
@@ -241,57 +256,98 @@ const DengueMonitoringGrid = () => {
       field: "action",
       headerName: "Action",
       width: 150,
-      renderCell: (params) => (
-        <div>
-          <IconButton onClick={() => handleEditRecord(params.row.id)}>
-            <EditIcon />
-          </IconButton>
-          <IconButton onClick={() => handleDialogOpen(params.row.id)}>
-            <DeleteOutlineIcon />
-          </IconButton>
-        </div>
-      ),
+      renderCell: (params) => {
+        const { id } = params.row;
+
+        if (currentType === "Active") {
+          return (
+            <div>
+              <IconButton onClick={() => handleEditRecord(id)}>
+                <EditIcon />
+              </IconButton>
+              {role === "Admin" && (
+                <IconButton onClick={() => handleInfoDialogOpen(id)}>
+                  <VisibilityOutlinedIcon />
+                </IconButton>
+              )}
+              <IconButton onClick={() => handleDialogOpen(id)}>
+                <DeleteOutlineIcon />
+              </IconButton>
+            </div>
+          );
+        }
+
+        if (currentType === "Inactive") {
+          return (
+            <div>
+              <IconButton onClick={() => handleInfoDialogOpen(id)}>
+                <VisibilityOutlinedIcon />
+              </IconButton>
+              <ReinstateDengueMonitoring
+                recordId={id}
+                onSuccess={refreshRecord}
+              />
+            </div>
+          );
+        }
+
+        if (currentType === "Archived") {
+          return (
+            <div>
+              <IconButton onClick={() => handleInfoDialogOpen(id)}>
+                <VisibilityOutlinedIcon />
+              </IconButton>
+            </div>
+          );
+        }
+        return null;
+      },
     },
   ];
 
-  const FilteredDengueRecords = dengueRecords.filter(
-    (record) =>
-      (record.dateOfOnset?.toString() || "").includes(searchValue) ||
-      (record.dateOfAdmission?.toString() || "").includes(searchValue) ||
-      (record.dateOfDischarge?.toString() || "").includes(searchValue) ||
-      (record.lrn?.toLowerCase() || "").includes(searchValue.toLowerCase()) ||
-      (record.name?.toLowerCase() || "").includes(searchValue.toLowerCase()) ||
-      (record.age?.toString() || "").includes(searchValue) ||
-      (record.gender?.toLowerCase() || "").includes(
-        searchValue.toLowerCase()
-      ) ||
-      (record.grade?.toLowerCase() || "").includes(searchValue.toLowerCase()) ||
-      (record.section?.toLowerCase() || "").includes(
-        searchValue.toLowerCase()
-      ) ||
-      (record.address?.toLowerCase() || "").includes(
-        searchValue.toLowerCase()
-      ) ||
-      (record.hospitalAdmission?.toLowerCase() || "").includes(
-        searchValue.toLowerCase()
-      )
+  const handleInfoDialogOpen = (id) => {
+    const recordInfo = dengueRecords.find(
+      (dengueRecord) => dengueRecord.id === id
+    );
+    setSelectedRecordInfo(recordInfo);
+    setInfoDialogOpen(true);
+  };
+
+  const handleInfoDialogClose = () => {
+    setSelectedRecordInfo(null);
+    setInfoDialogOpen(false);
+  };
+
+  const FilteredDengueRecords = dengueRecords.filter((record) =>
+    Object.keys(record).some((key) => {
+      const value = record[key]?.toString().toLowerCase();
+      return value?.includes(searchValue.toLowerCase());
+    })
   );
-  const exportHeaders = columns
-    .filter((col) => col.field !== "action") // Excluding the 'action' column
-    .map((col) => col.headerName);
-  const exportData = FilteredDengueRecords.map((record) => ({
-    LRN: record.lrn,
-    Name: record.name,
-    Age: record.age,
-    Gender: record.gender,
-    "Grade Level": record.grade,
-    Section: record.section,
-    Address: record.address,
-    "Date of Onset": formatYearFromDate(record.dateOfOnset),
-    "Date of Admission": formatYearFromDate(record.dateOfAdmission),
-    "Hospital Admission": record.hospitalAdmission,
-    "Date of Discharge": formatYearFromDate(record.dateOfDischarge),
-  }));
+
+  const handleExport = async () => {
+    try {
+      const response = await axiosInstance.get(
+        `dengueMonitoring/export/${currentType}`,
+        { responseType: "blob" } // Make sure to set the responseType to 'blob'
+      );
+      // Create a new Blob object with the correct MIME type for an Excel file
+      const blob = new Blob([response.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      const safeFileName = currentType.replace(/[^a-z0-9-_]/gi, "_");
+      link.setAttribute("download", `dengueMonitoring_${safeFileName}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error("Error during export:", error);
+    }
+  };
 
   const handleModalOpen = () => {
     setFormOpen(true);
@@ -315,6 +371,13 @@ const DengueMonitoringGrid = () => {
           {snackbarData.message}
         </Alert>
       </Snackbar>
+      <DengueInfoDialog
+        open={isInfoDialogOpen}
+        onClose={handleInfoDialogClose}
+        record={selectedRecordInfo}
+        refreshRecord={refreshRecord}
+        currentType={currentType}
+      />
       <div className="flex flex-col h-full">
         <div className="w-full max-w-screen-xl mx-auto px-8">
           <div className="mb-4 flex justify-between items-center">
@@ -344,6 +407,15 @@ const DengueMonitoringGrid = () => {
               </div>
             </div>
           </div>
+          <Tabs
+            value={currentType}
+            onChange={(_, newValue) => setCurrentType(newValue)}
+            indicatorColor="primary"
+            textColor="primary"
+          >
+            <Tab label="Active" value="Active" />
+            {role === "Admin" && <Tab label="Inactive" value="Inactive" />}
+          </Tabs>
           <DataGrid
             rows={FilteredDengueRecords}
             columns={columns}
@@ -351,9 +423,7 @@ const DengueMonitoringGrid = () => {
             slots={{
               toolbar: () => (
                 <CustomGridToolbar
-                  data={exportData}
-                  headers={exportHeaders}
-                  filenamePrefix="dengue_monitoring"
+                  onExport={handleExport}
                   handleImport={handleImport}
                 />
               ),

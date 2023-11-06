@@ -1,16 +1,16 @@
 import React from "react";
-import ImmunizationGrid from "../datagrid/ImmunizationGrid";
+import ClassEnrollmentGrid from "../datagrid/ClassEnrollmentGrid.js";
 import Header from "../components/Header.js";
 import Footer from "../components/Footer.js";
 
-const Immunization = () => {
+const ClassEnrollment = () => {
   return (
     <div className="flex flex-col">
       <div className="flex-grow overflow-hidden">
-        <Header title="Immunization Program" />
+        <Header title="Student Information" />
         <div className="flex flex-col items-center justify-center h-full p-4">
           <div className="flex items-center justify-center w-full">
-            <ImmunizationGrid />
+            <ClassEnrollmentGrid />
           </div>
         </div>
         <Footer />
@@ -19,4 +19,4 @@ const Immunization = () => {
   );
 };
 
-export default Immunization;
+export default ClassEnrollment;

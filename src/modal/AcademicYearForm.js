@@ -70,8 +70,7 @@ const AcademicYearForm = (props) => {
     },
   ];
 
-  const yearOptions = Array.from({ length: 82 }, (_, index) => 2018 + index);
-  const yearOptionsForYearTo = [...yearOptions, 2100];
+  const yearOptions = Array.from({ length: 30 }, (_, index) => 2020 + index);
 
   const monthOptions = [
     { value: "January", label: "January" },
@@ -89,8 +88,7 @@ const AcademicYearForm = (props) => {
   ];
 
   const validationSchema = yup.object().shape({
-    yearFrom: yup.number().required("Year From is required"),
-    yearTo: yup.number().required("Year To is required"),
+    schoolYear: yup.string().required("School Year is required"),
     monthFrom: yup.string().required("Month From is required"),
     monthTo: yup.string().required("Month To is required"),
     status: yup.string().required("Status is required"),
@@ -104,8 +102,7 @@ const AcademicYearForm = (props) => {
     formState: { errors },
   } = useForm({
     defaultValues: initialData || {
-      yearFrom: "",
-      yearTo: "",
+      schoolYear: "",
       monthFrom: "",
       monthTo: "",
       status: "Active",
@@ -186,7 +183,7 @@ const AcademicYearForm = (props) => {
 
   useEffect(() => {
     if (selectedAcademicYear) {
-      const keys = ["yearFrom", "yearTo", "monthFrom", "monthTo", "status"];
+      const keys = ["schoolYear", "monthFrom", "monthTo", "status"];
       keys.forEach((key) => setValue(key, selectedAcademicYear[key] || ""));
     }
   }, [selectedAcademicYear, setValue]);
@@ -216,32 +213,25 @@ const AcademicYearForm = (props) => {
             <Grid container spacing={2}>
               <Grid item xs={6}>
                 <Controller
-                  name="yearFrom"
+                  name="schoolYear"
                   control={control}
                   render={({ field }) => (
                     <FormControl
                       required
                       margin="normal"
                       fullWidth
-                      error={!!errors.yearFrom}
+                      error={!!errors.schoolYear}
                     >
-                      <InputLabel id="yearFrom-label">Year From</InputLabel>
+                      <InputLabel id="schoolYear-label">School Year</InputLabel>
                       <Select
-                        labelId="yearFrom-label"
-                        label="Year From"
+                        labelId="schoolYear-label"
+                        label="School Year"
                         MenuProps={MenuProps}
                         {...field}
-                        onChange={(e) => {
-                          field.onChange(e); // default behavior
-                          const nextYear = (
-                            parseInt(e.target.value) + 1
-                          ).toString();
-                          setValue("yearTo", nextYear); // setting the value of yearTo based on yearFrom
-                        }}
                       >
                         {yearOptions.map((year) => (
-                          <MenuItem key={year} value={year}>
-                            {year}
+                          <MenuItem key={year} value={`${year}-${year + 1}`}>
+                            {`${year}-${year + 1}`}
                           </MenuItem>
                         ))}
                       </Select>
@@ -249,38 +239,6 @@ const AcademicYearForm = (props) => {
                         <FormHelperText>
                           {errors.yearFrom.message}
                         </FormHelperText>
-                      )}
-                    </FormControl>
-                  )}
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <Controller
-                  name="yearTo"
-                  control={control}
-                  defaultValue="active"
-                  render={({ field }) => (
-                    <FormControl
-                      margin="normal"
-                      required
-                      fullWidth
-                      error={!!errors.yearTo}
-                    >
-                      <InputLabel id="yearTo-label">Year To</InputLabel>
-                      <Select
-                        labelId="yearTo-label"
-                        label="Year To"
-                        MenuProps={MenuProps}
-                        {...field}
-                      >
-                        {yearOptionsForYearTo.map((year) => (
-                          <MenuItem key={year} value={year}>
-                            {year}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                      {errors.yearTo && (
-                        <FormHelperText>{errors.yearTo.message}</FormHelperText>
                       )}
                     </FormControl>
                   )}

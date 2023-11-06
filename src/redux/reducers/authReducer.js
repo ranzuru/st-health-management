@@ -10,11 +10,12 @@ const initialState = {
 const authReducer = (state = initialState, action) => {
   switch (action.type) {
     case "SET_USER":
+      const { user, role } = action.payload;
       return {
         ...state,
         isAuthenticated: true,
-        user: action.payload,
-        role: action.payload.role,
+        user,
+        role,
       };
     case "REMOVE_USER":
       return {

@@ -9,6 +9,7 @@ import {
   ReceiptLongOutlined,
   SettingsOutlined,
   ExitToAppOutlined,
+  PersonAddOutlined,
 } from "@mui/icons-material";
 import SpaOutlinedIcon from "@mui/icons-material/SpaOutlined";
 
@@ -43,13 +44,19 @@ export const sidebarItems = [
     ],
   },
   {
+    type: "link",
+    to: "/app/class-enrollment",
+    primary: "Enroll",
+    icon: PersonAddOutlined,
+    roles: ["Admin", "School Nurse", "District Nurse"], // who can see this?
+  },
+  {
     type: "submenu",
     primary: "Clinic Programs",
     icon: SpaOutlinedIcon,
     roles: ["Admin", "School Nurse"],
     submenuLinks: [
       { to: "/app/dengue-monitoring", primary: "Dengue Monitoring" },
-      { to: "/app/immunization", primary: "Immunization" },
       { to: "/app/medical-checkup", primary: "Medical Checkup" },
       { to: "/app/faculty-checkup", primary: "Faculty Checkup" },
       { to: "/app/deworming-monitoring", primary: "Deworming Monitoring" },

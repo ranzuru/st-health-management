@@ -12,12 +12,14 @@ import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
+import StatusCell from "../components/StatusCell.js";
 
 const ClassProfileGrid = () => {
   const [searchValue, setSearchValue] = useState("");
   const [classProfiles, setClassProfiles] = useState([]);
   const [formOpen, setFormOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [classProfileIdToDelete, setClassProfileIdToDelete] = useState(null);
   const [selectedClassProfile, setSelectedClassProfile] = useState(null);
 
@@ -35,7 +37,21 @@ const ClassProfileGrid = () => {
     setDialogOpen(false);
   };
 
+  const classProfileStatusColor = {
+    Active: {
+      bgColor: "#DFF0D8",
+      textColor: "#4CAF50",
+      borderColor: "#4CAF50",
+    },
+    Inactive: {
+      bgColor: "#F5B7B1",
+      textColor: "#E74C3C",
+      borderColor: "#E74C3C",
+    },
+  };
+
   const fetchClassProfiles = async () => {
+    setIsLoading(true);
     try {
       const response = await axiosInstance.get(
         "classProfile/fetchClassProfile"
@@ -49,7 +65,10 @@ const ClassProfileGrid = () => {
       });
       setClassProfiles(updatedClassProfiles);
     } catch (error) {
+      setIsLoading(false);
       console.error("Error:", error.message, "Data:", error.data);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -93,27 +112,18 @@ const ClassProfileGrid = () => {
 
   const columns = [
     { field: "grade", headerName: "Grade Level", width: 100 },
-    { field: "section", headerName: "Section", width: 150 },
+    { field: "section", headerName: "Section", width: 100 },
     { field: "room", headerName: "Room", width: 100 },
-    { field: "academicYear", headerName: "School Year", width: 150 },
-    { field: "faculty", headerName: "Adviser", width: 150 },
+    { field: "faculty", headerName: "Adviser", width: 200 },
     {
       field: "status",
       headerName: "Status",
       width: 100,
       renderCell: (params) => (
-        <div style={{ display: "flex", alignItems: "center" }}>
-          <div
-            style={{
-              width: 10,
-              height: 10,
-              borderRadius: "50%",
-              backgroundColor: params.value === "Active" ? "green" : "red",
-              marginRight: 5,
-            }}
-          />
-          {params.value}
-        </div>
+        <StatusCell
+          value={params.value}
+          colorMapping={classProfileStatusColor}
+        />
       ),
     },
     {
@@ -185,10 +195,6 @@ const ClassProfileGrid = () => {
         (classProfile.room ? classProfile.room.toLowerCase() : "").includes(
           searchValue.toLowerCase()
         ) ||
-        (classProfile.academicYear
-          ? classProfile.academicYear.toLowerCase()
-          : ""
-        ).includes(searchValue.toLowerCase()) ||
         (classProfile.status ? classProfile.status.toLowerCase() : "").includes(
           searchValue.toLowerCase()
         ) ||
@@ -227,9 +233,16 @@ const ClassProfileGrid = () => {
               },
             },
           }}
+          sx={{
+            "& .MuiDataGrid-row:nth-of-type(odd)": {
+              backgroundColor: "#f3f4f6",
+            },
+          }}
           pageSizeOptions={[10]}
           checkboxSelection
           disableRowSelectionOnClick
+          loading={isLoading}
+          style={{ height: 650 }}
         />
         <ClassProfileForm
           isEditing={!!selectedClassProfile}

@@ -17,7 +17,6 @@ const studentProfileSchema = new mongoose.Schema(
     },
     middleName: {
       type: String,
-      required: true,
     },
     nameExtension: {
       type: String,
@@ -28,16 +27,11 @@ const studentProfileSchema = new mongoose.Schema(
       required: true,
     },
     birthDate: {
-      type: String,
+      type: Date,
       required: true,
     },
     age: {
       type: Number,
-      required: true,
-    },
-    classProfile: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "ClassProfile", // Reference to the 'ClassProfile' model
       required: true,
     },
     is4p: {
@@ -66,27 +60,15 @@ const studentProfileSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      required: true,
-      enum: [
-        "Enrolled",
-        "Pending",
-        "Graduated",
-        "Transferred",
-        "Inactive",
-        "Dropped",
-      ],
-      // Enrolled: Currently attending classes.
-      // Pending: Application submitted but not yet processed.
-      // Graduated: Completed the final academic year.
-      // Transferred: Moved to a different school.
-      // Inactive: Temporarily not attending for some reason (could be medical, family, etc.)
-      // Dropped: Left the school without completing the academic year.
+      enum: ["Enrolled", "Archived", "Inactive"],
+      default: "Enrolled",
     },
   },
   { timestamps: true }
 );
 
-// Create a model for calendar events using the schema
+studentProfileSchema.index({ lrn: 1 });
+
 const StudentProfileSchema = mongoose.model(
   "StudentProfile",
   studentProfileSchema

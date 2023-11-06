@@ -19,6 +19,10 @@ import Alert from "@mui/material/Alert";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import axiosInstance from "../config/axios-instance";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import { parseISO } from "date-fns";
 
 const StudentProfileForm = (props) => {
   const {
@@ -28,13 +32,13 @@ const StudentProfileForm = (props) => {
     addNewStudent,
     selectedStudent,
     isEditing,
+    onUpdate,
   } = props;
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarData, setSnackbarData] = useState({
     message: "",
     severity: "success",
   });
-  const [classProfiles, setClassProfiles] = useState([]);
 
   const showSnackbar = (message, severity) => {
     setSnackbarData({ message, severity });
@@ -45,6 +49,11 @@ const StudentProfileForm = (props) => {
     setSnackbarOpen(false);
   };
 
+  const minDate = new Date(
+    new Date().setFullYear(new Date().getFullYear() - 100)
+  );
+  const maxDate = new Date();
+
   const validationSchema = yup.object().shape({
     lrn: yup
       .string()
@@ -52,7 +61,6 @@ const StudentProfileForm = (props) => {
       .test("check-unique", "LRN already exists", async (value) => {
         if (!value) return true; // Skip validation if value is empty
 
-        // Skip unique check if editing and the LRN hasn't changed.
         if (isEditing && selectedStudent && selectedStudent.lrn === value) {
           return true;
         }
@@ -76,47 +84,15 @@ const StudentProfileForm = (props) => {
       .string()
       .required("First Name is required")
       .matches(/^[A-Za-z\s]+$/, "Only letters are allowed"),
-    middleName: yup
-      .string()
-      .required("Middle Name is required")
-      .matches(/^[A-Za-z\s]+$/, "Only letters are allowed"),
+    middleName: yup.string(),
     nameExtension: yup.string(),
     gender: yup.string().required("Gender is required"),
     birthDate: yup
-      .string()
-      .test(
-        "is-date-in-past",
-        "Birth date cannot be in the future",
-        function (birthDateString) {
-          const birthDate = new Date(birthDateString);
-          const today = new Date();
-          return birthDate <= today;
-        }
-      )
-      .required("Birth Date is required"),
-    age: yup
-      .number()
-      .min(4, "Age must be at least 4")
-      .required("Age is required")
-      .test(
-        "age-birthDate-consistency",
-        "Age and Birth Date must be consistent",
-        function (age) {
-          const birthDateString = this.parent.birthDate; // Now it's a string
-          if (!birthDateString || !age) {
-            return true;
-          }
-
-          const birthDate = new Date(birthDateString); // Convert it to a Date object here
-          const birthYear = birthDate.getFullYear();
-          const currentYear = new Date().getFullYear();
-          const ageDifference = Math.abs(currentYear - birthYear - age);
-
-          return ageDifference <= 1;
-        }
-      ),
-    grade: yup.string().required("Grade Level is required"),
-    section: yup.string().required("Section is required"),
+      .date()
+      .required("Birth Date is required")
+      .min(minDate, "You can't be more than 100 years old")
+      .max(maxDate, "You can't be born in the future"),
+    age: yup.number(),
     is4p: yup.boolean().required("is4p is required"),
     parentName1: yup
       .string()
@@ -146,14 +122,12 @@ const StudentProfileForm = (props) => {
       }),
 
     address: yup.string().required("Address is required"),
-    status: yup.string().required("Status is required"),
   });
 
   const {
     handleSubmit,
     control,
     reset,
-    watch,
     setValue,
     formState: { errors },
   } = useForm({
@@ -164,9 +138,7 @@ const StudentProfileForm = (props) => {
       middleName: "",
       nameExtension: "",
       gender: "",
-      birthDate: "",
-      grade: "",
-      section: "",
+      birthDate: null,
       age: "",
       is4p: "",
       parentName1: "",
@@ -174,23 +146,21 @@ const StudentProfileForm = (props) => {
       parentName2: "",
       parentContact2: "",
       address: "",
-      status: "",
     },
     resolver: yupResolver(validationSchema),
   });
 
   const handleCreateStudent = async (data) => {
     try {
-      const response = await axiosInstance.post(
-        "/studentProfile/createStudent",
-        data
-      );
+      const response = await axiosInstance.post("/studentProfile/create", data);
       if (response.data && response.data.newStudent) {
+        const { lastName, firstName, middleName, nameExtension } = data;
+        const formattedName = `${lastName}, ${firstName} ${
+          middleName ? middleName.charAt(0) + ". " : ""
+        }${nameExtension}`.trim();
         let enrichedNewStudent = {
           ...response.data.newStudent,
-          name: `${data.lastName}, ${data.firstName} `,
-          grade: data.grade,
-          section: data.section,
+          name: formattedName,
         };
         if (typeof addNewStudent === "function") {
           addNewStudent(enrichedNewStudent);
@@ -201,30 +171,34 @@ const StudentProfileForm = (props) => {
         showSnackbar("Operation failed", "error");
       }
     } catch (error) {
-      console.log("Server responded with", error.response.data);
-      console.error("An error occurred during adding student profile:", error);
       if (error.response && error.response.data) {
-        console.error("Server responded with:", error.response.data);
+        showSnackbar(error.response.data.error, "error");
+      } else {
+        showSnackbar("An error occurred during adding", "error");
       }
-      showSnackbar("An error occurred during adding", "error");
     }
   };
 
   const handleUpdateStudent = async (data) => {
-    // Check if selectedStudent is not undefined or null
     if (selectedStudent) {
-      // Check if selectedStudent.lrn is not undefined or null
       if (selectedStudent.lrn) {
         try {
           const response = await axiosInstance.put(
-            `/studentProfile/updateStudent/${selectedStudent.lrn}`,
+            `/studentProfile/update/${selectedStudent.lrn}`,
             data
           );
-          if (response.data.student) {
-            if (typeof props.onStudentUpdated === "function") {
-              props.onStudentUpdated(response.data);
+          if (response.data && response.data.updatedStudent) {
+            const { lastName, firstName, middleName, nameExtension } = data;
+            const formattedName = `${lastName}, ${firstName} ${
+              middleName ? middleName.charAt(0) + ". " : ""
+            }${nameExtension}`.trim();
+            let enrichedUpdatedStudent = {
+              ...response.data.updatedStudent,
+              name: formattedName,
+            };
+            if (onUpdate) {
+              onUpdate(enrichedUpdatedStudent);
             }
-
             showSnackbar("Successfully updated student profile", "success");
             handleClose();
           } else {
@@ -250,35 +224,6 @@ const StudentProfileForm = (props) => {
     }
   };
 
-  const selectedGrade = watch("grade", "");
-  let gradeOptions = Array.from(
-    new Set(classProfiles.map((cp) => cp.grade))
-  ).sort((a, b) => parseInt(a.split(" ")[1]) - parseInt(b.split(" ")[1]));
-  const sectionOptions = classProfiles
-    .filter((cp) => cp.grade === selectedGrade)
-    .map((cp) => cp.section);
-
-  const fetchClassProfiles = async () => {
-    try {
-      const response = await axiosInstance.get(
-        "classProfile/fetchClassProfile"
-      );
-      const updatedClassProfiles = response.data.map((classProfile) => {
-        return {
-          ...classProfile,
-        };
-      });
-      setClassProfiles(updatedClassProfiles);
-    } catch (error) {
-      console.error("Error:", error.message, "Data:", error.data);
-    }
-  };
-
-  // Fetch ClassProfiles when the component mounts
-  useEffect(() => {
-    fetchClassProfiles();
-  }, []);
-
   const handleSaveOrUpdate = (data) => {
     if (selectedStudent && selectedStudent.lrn) {
       handleUpdateStudent(data);
@@ -300,17 +245,17 @@ const StudentProfileForm = (props) => {
       setValue("middleName", selectedStudent.middleName || "");
       setValue("nameExtension", selectedStudent.nameExtension || "");
       setValue("gender", selectedStudent.gender || "");
-      setValue("birthDate", selectedStudent.birthDate || null);
+      const parsedBirthDate = selectedStudent.birthDate
+        ? parseISO(selectedStudent.birthDate)
+        : null;
+      setValue("birthDate", parsedBirthDate);
       setValue("age", selectedStudent.age || "");
       setValue("is4p", selectedStudent.is4p || false);
-      setValue("grade", selectedStudent.grade || "");
-      setValue("section", selectedStudent.section || "");
       setValue("parentName1", selectedStudent.parentName1 || "");
       setValue("parentContact1", selectedStudent.parentContact1 || "");
       setValue("parentName2", selectedStudent.parentName2 || "");
       setValue("parentContact2", selectedStudent.parentContact2 || "");
       setValue("address", selectedStudent.address || "");
-      setValue("status", selectedStudent.status || "");
     }
   }, [selectedStudent, setValue]);
 
@@ -424,10 +369,6 @@ const StudentProfileForm = (props) => {
                       fullWidth
                       margin="normal"
                       {...field}
-                      required
-                      error={!!errors.middleName}
-                      helperText={errors.middleName?.message}
-                      onBlur={field.onBlur}
                       onChange={(e) => {
                         e.target.value = e.target.value.replace(
                           /(?:^|\s)\S/g,
@@ -467,63 +408,6 @@ const StudentProfileForm = (props) => {
             <Grid container spacing={3}>
               <Grid item xs={12} sm={6}>
                 <Controller
-                  name="grade"
-                  control={control}
-                  render={({ field }) => (
-                    <FormControl required fullWidth margin="normal">
-                      <InputLabel id="grade-label">Grade Level</InputLabel>
-                      <Select
-                        labelId="grade-label"
-                        label="Grade Level"
-                        {...field}
-                      >
-                        {gradeOptions.map((grade, index) => (
-                          <MenuItem key={index} value={grade}>
-                            {grade}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                      <FormHelperText error={!!errors.grade}>
-                        {errors.grade?.message}
-                      </FormHelperText>
-                    </FormControl>
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <Controller
-                  name="section"
-                  control={control}
-                  render={({ field }) => (
-                    <FormControl required fullWidth margin="normal">
-                      <InputLabel id="section-label">Section</InputLabel>
-                      <Select
-                        labelId="section-label"
-                        label="Section"
-                        {...field}
-                        value={
-                          sectionOptions.includes(field.value)
-                            ? field.value
-                            : ""
-                        }
-                      >
-                        {sectionOptions.map((section, index) => (
-                          <MenuItem key={index} value={section}>
-                            {section}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                      <FormHelperText error={!!errors.section}>
-                        {errors.section?.message}
-                      </FormHelperText>
-                    </FormControl>
-                  )}
-                />
-              </Grid>
-            </Grid>
-            <Grid container spacing={3}>
-              <Grid item xs={12} sm={6}>
-                <Controller
                   name="gender"
                   control={control}
                   render={({ field }) => (
@@ -540,28 +424,43 @@ const StudentProfileForm = (props) => {
                   )}
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
-                <Controller
-                  name="birthDate"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      label="Birth Date"
-                      type="date"
-                      fullWidth
-                      margin="normal"
-                      {...field}
-                      required
-                      InputLabelProps={{
-                        shrink: true,
-                      }}
-                      error={!!errors.birthDate}
-                      helperText={errors.birthDate?.message}
-                      onBlur={field.onBlur}
-                    />
-                  )}
-                />
-              </Grid>
+              <LocalizationProvider dateAdapter={AdapterDateFns}>
+                <Grid item xs={12} sm={6}>
+                  <Controller
+                    name="birthDate"
+                    control={control}
+                    render={({ field }) => (
+                      <DatePicker
+                        {...field}
+                        label="Birthday"
+                        required
+                        fullWidth
+                        sx={{ marginTop: "15px" }}
+                        error={!!errors.birthDate}
+                        helperText={errors.birthDate?.message}
+                        onChange={(date) => {
+                          // Set the birthDate value
+                          field.onChange(date);
+
+                          // Calculate the age
+                          const today = new Date();
+                          let age = today.getFullYear() - date.getFullYear();
+                          const m = today.getMonth() - date.getMonth();
+                          if (
+                            m < 0 ||
+                            (m === 0 && today.getDate() < date.getDate())
+                          ) {
+                            age--;
+                          }
+
+                          // Set the age value in the form
+                          setValue("age", age.toString());
+                        }}
+                      />
+                    )}
+                  />
+                </Grid>
+              </LocalizationProvider>
             </Grid>
             <Grid container spacing={3}>
               <Grid item xs={12} sm={6}>
@@ -737,6 +636,7 @@ const StudentProfileForm = (props) => {
                   error={!!errors.address}
                   helperText={errors.address?.message}
                   onBlur={field.onBlur}
+                  multiline
                   onChange={(e) => {
                     e.target.value = e.target.value.replace(
                       /(?:^|\s)\S/g,
@@ -749,26 +649,6 @@ const StudentProfileForm = (props) => {
                 />
               )}
             />
-            <Controller
-              name="status"
-              control={control}
-              render={({ field }) => (
-                <FormControl required fullWidth margin="normal">
-                  <InputLabel id="status-label">Status</InputLabel>
-                  <Select labelId="status-label" label="Status" {...field}>
-                    <MenuItem value="Enrolled">Enrolled</MenuItem>
-                    <MenuItem value="Pending">Pending</MenuItem>
-                    <MenuItem value="Graduated">Graduated</MenuItem>
-                    <MenuItem value="Transferred">Transferred</MenuItem>
-                    <MenuItem value="Inactive">Inactive</MenuItem>
-                    <MenuItem value="Dropped">Dropped</MenuItem>
-                  </Select>
-                  <FormHelperText error={!!errors.status}>
-                    {errors.status?.message}
-                  </FormHelperText>
-                </FormControl>
-              )}
-            />{" "}
           </DialogContent>
           <DialogActions>
             <Button onClick={handleClose} color="primary">

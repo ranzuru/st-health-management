@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { DataGrid } from "@mui/x-data-grid";
 import IconButton from "@mui/material/IconButton";
 import EditIcon from "@mui/icons-material/Edit";
@@ -11,12 +11,13 @@ import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
-import Typography from "@mui/material/Typography";
+import { Tabs, Tab } from "@mui/material";
 
 // Form for inputs
 import NutritionalStatusForm from "../modal/NutritionalStatusForm";
 // axios imports
 import axiosInstance from "../config/axios-instance";
+import CustomGridToolbar from "../utils/CustomGridToolbar.js";
 
 const NutritionalStatusPreGrid = () => {
   const [searchValue, setSearchValue] = useState("");
@@ -26,6 +27,7 @@ const NutritionalStatusPreGrid = () => {
   const [recordIdToDelete, setRecordIdToDelete] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedRecord, setSelectedRecord] = useState(null);
+  const [currentType, setCurrentType] = useState("PRE");
 
   const handleSearchChange = (event) => {
     setSearchValue(event.target.value);
@@ -57,70 +59,73 @@ const NutritionalStatusPreGrid = () => {
     setFormOpen(false);
   };
 
-  const fetchRecord = async (type = "PRE") => {
+  const transformRecord = (record) => {
+    const {
+      classEnrollment: {
+        student = {},
+        academicYear = {},
+        classProfile = {},
+      } = {},
+    } = record;
+    const name =
+      student.firstName || student.lastName
+        ? `${student.lastName || ""}, ${student.firstName || ""}${
+            student.middleName ? ` ${student.middleName.charAt(0)}.` : ""
+          } ${student.nameExtension || ""}`.trim()
+        : "N/A";
+
+    return {
+      id: record._id,
+      lrn: student.lrn || "N/A",
+      name,
+      age: student.age || "N/A",
+      gender: student.gender || "N/A",
+      birthDate: student.birthDate || "N/A",
+      address: student.address || "N/A",
+      grade: classProfile.grade || "N/A",
+      section: classProfile.section || "N/A",
+      schoolYear: academicYear.schoolYear || "N/A",
+      dateMeasured: record.dateMeasured,
+      weightKg: record.weightKg,
+      heightCm: record.heightCm,
+      BMI: record.BMI,
+      BMIClassification: record.BMIClassification,
+      heightForAge: record.heightForAge,
+      beneficiaryOfSBFP: record.beneficiaryOfSBFP,
+      measurementType: record.measurementType,
+      remarks: record.remarks,
+    };
+  };
+
+  const fetchRecord = useCallback(async (type = "PRE") => {
     setIsLoading(true);
     try {
       const response = await axiosInstance.get(
         `nutritionalStatus/fetch/${type}`
       );
-      const updatedRecord = response.data.map((record) => {
-        return {
-          id: record._id,
-          dateMeasured: record.dateMeasured,
-          lrn: record.studentProfile ? record.studentProfile.lrn : "N/A",
-          name:
-            record.studentProfile && record.studentProfile.middleName
-              ? `${record.studentProfile.lastName}, ${
-                  record.studentProfile.firstName
-                } ${record.studentProfile.middleName.charAt(0)}. ${
-                  record.studentProfile.nameExtension
-                }`.trim()
-              : "N/A",
-          age: record.studentProfile ? record.studentProfile.age : "N/A",
-          gender: record.studentProfile ? record.studentProfile.gender : "N/A",
-          birthDate: record.studentProfile
-            ? record.studentProfile.birthDate
-            : "N/A",
-          grade:
-            record.studentProfile && record.studentProfile.classProfile
-              ? record.studentProfile.classProfile.grade
-              : "N/A",
-          section:
-            record.studentProfile && record.studentProfile.classProfile
-              ? record.studentProfile.classProfile.section
-              : "N/A",
-          weightKg: record.weightKg,
-          heightCm: record.heightCm,
-          BMI: record.BMI,
-          BMIClassification: record.BMIClassification,
-          heightForAge: record.heightForAge,
-          beneficiaryOfSBFP: record.beneficiaryOfSBFP,
-          measurementType: record.measurementType,
-          remarks: record.remarks,
-        };
-      });
-      setPreRecords(updatedRecord); // Assuming setRecords is a state setter function
+      const updatedRecord = response.data.map(transformRecord);
+      setPreRecords(updatedRecord);
     } catch (error) {
       console.error("Error:", error.message, "Data:", error.data);
       setIsLoading(true);
     } finally {
-      setIsLoading(false); // This ensures loading is set to false regardless of try or catch outcomes.
+      setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchRecord("PRE");
-  }, []);
+    fetchRecord(currentType);
+  }, [fetchRecord, currentType]);
 
   const addNewNutritionalStatus = (newRecord) => {
     setPreRecords((prevCheckups) => [...prevCheckups, newRecord]);
   };
 
   const columns = [
-    { field: "lrn", headerName: "LRN", width: 100 },
-    { field: "gender", headerName: "Sex", width: 150 },
-    { field: "grade", headerName: "Grade Level", width: 150 },
-    { field: "section", headerName: "Section", width: 150 },
+    { field: "lrn", headerName: "LRN", width: 150 },
+    { field: "gender", headerName: "Gender", width: 100 },
+    { field: "grade", headerName: "Grade Level", width: 100 },
+    { field: "section", headerName: "Section", width: 100 },
     {
       field: "birthDate",
       headerName: "Birthday",
@@ -145,13 +150,13 @@ const NutritionalStatusPreGrid = () => {
     { field: "heightForAge", headerName: "Height For Age", width: 150 },
     {
       field: "beneficiaryOfSBFP",
-      headerName: "Eligible for Feeding",
+      headerName: "Feeding?",
       width: 100,
       valueGetter: (params) => (params.row.beneficiaryOfSBFP ? "Yes" : "No"),
     },
     {
       field: "measurementType",
-      headerName: "Type of Measurement",
+      headerName: "Type",
       width: 100,
     },
     {
@@ -185,13 +190,11 @@ const NutritionalStatusPreGrid = () => {
   };
 
   const updatedRecord = (updatedRecords) => {
-    setPreRecords((prevRecords) => {
-      const updated = prevRecords.map((record) =>
+    setPreRecords((prevRecords) =>
+      prevRecords.map((record) =>
         record.id === updatedRecords.id ? updatedRecords : record
-      );
-      console.log("Nutritional Record after:", updated);
-      return updated;
-    });
+      )
+    );
   };
 
   const handleDelete = async () => {
@@ -211,32 +214,14 @@ const NutritionalStatusPreGrid = () => {
     handleDialogClose();
   };
 
-  const FilteredRecords = preRecords.filter(
-    (record) =>
-      (record.lrn?.toString() || "").includes(searchValue) ||
-      (record.gender?.toLowerCase() || "").includes(
-        searchValue.toLowerCase()
-      ) ||
-      (record.grade?.toLowerCase() || "").includes(searchValue.toLowerCase()) ||
-      (record.section?.toLowerCase() || "").includes(
-        searchValue.toLowerCase()
-      ) ||
-      (record.birthDate?.toString() || "").includes(searchValue) ||
-      (record.dateMeasured?.toString() || "").includes(searchValue) ||
-      (record.age?.toString() || "").includes(searchValue) ||
-      (record.heightCm?.toString() || "").includes(searchValue) ||
-      (record.weightKg?.toString() || "").includes(searchValue) ||
-      (record.BMI?.toString() || "").includes(searchValue) ||
-      (record.BMIClassification?.toLowerCase() || "").includes(
-        searchValue.toLowerCase()
-      ) ||
-      (record.heightForAge?.toString() || "").includes(searchValue) ||
-      (record.beneficiaryOfSBFP?.toString() || "").includes(searchValue) ||
-      (record.measurementType?.toLowerCase() || "").includes(
-        searchValue.toLowerCase()
-      ) ||
-      (record.remarks?.toLowerCase() || "").includes(searchValue.toLowerCase())
-  );
+  const displayedRecords = preRecords
+    .filter((record) => record.measurementType === currentType)
+    .filter((record) =>
+      Object.keys(record).some((key) => {
+        const value = record[key]?.toString().toLowerCase();
+        return value?.includes(searchValue.toLowerCase());
+      })
+    );
 
   return (
     <div className="flex flex-col h-full">
@@ -268,20 +253,23 @@ const NutritionalStatusPreGrid = () => {
             </div>
           </div>
         </div>
-        <Typography
-          variant="h4"
-          sx={{
-            fontSize: { xs: "1 rem", sm: "1 rem", md: "1.5rem" },
-            fontWeight: "bold",
-            py: { xs: 0.5, md: 1 },
-          }}
+        <Tabs
+          value={currentType}
+          onChange={(_, newValue) => setCurrentType(newValue)}
+          indicatorColor="primary"
+          textColor="primary"
+          centered
         >
-          PRE-INTERVENTION
-        </Typography>
+          <Tab label="PRE-INTERVENTION" value="PRE" />
+          <Tab label="POST-INTERVENTION" value="POST" />
+        </Tabs>
         <DataGrid
-          rows={FilteredRecords}
+          rows={displayedRecords}
           columns={columns}
           getRowId={(row) => row.id}
+          slots={{
+            toolbar: CustomGridToolbar,
+          }}
           initialState={{
             pagination: {
               paginationModel: {
@@ -298,7 +286,7 @@ const NutritionalStatusPreGrid = () => {
           checkboxSelection
           disableRowSelectionOnClick
           loading={isLoading}
-          style={{ height: 500 }}
+          style={{ height: 650 }}
         />
         <NutritionalStatusForm
           open={formOpen}

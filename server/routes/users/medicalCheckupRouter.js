@@ -2,43 +2,66 @@ const express = require("express");
 const MedicalCheckup = require("../../models/MedicalCheckupSchema");
 const StudentProfile = require("../../models/StudentProfileSchema");
 const NutritionalStatus = require("../../models/NutritionalStatusSchema");
+const ClassEnrollment = require("../../models/ClassEnrollment");
 const router = express.Router();
 const authenticateMiddleware = require("../../auth/authenticateMiddleware.js");
 
 // Create a new medical checkup
 router.post("/create", authenticateMiddleware, async (req, res) => {
   try {
-    const { lrn, ...medicalData } = req.body;
-    // Find the student based on LRN
-    const student = await StudentProfile.findOne({ lrn });
+    const { lrn, checkupType, ...medicalData } = req.body;
 
+    const student = await StudentProfile.findOne({ lrn });
     if (!student) return res.status(400).json({ error: "Invalid LRN" });
 
-    // Find the latest nutritional status for the student
+    const classEnrollment = await ClassEnrollment.findOne({
+      student: student._id,
+    }).exec();
+
+    if (!classEnrollment) {
+      return res
+        .status(400)
+        .json({ error: "Student is not enrolled in any class" });
+    }
+
+    // Fetch the latest nutritional status for the student
     const latestNutrition = await NutritionalStatus.findOne({
-      studentProfile: student._id,
+      classEnrollment: classEnrollment._id,
     }).sort({ updatedAt: -1 });
 
     const newCheckup = new MedicalCheckup({
       ...medicalData,
-      studentProfile: student._id,
-      nutritionalStatus: latestNutrition ? latestNutrition._id : null, // Associate the latest nutritional status if available
+      classEnrollment: classEnrollment._id,
+      nutritionalStatus: latestNutrition ? latestNutrition._id : null,
+      checkupType,
     });
     await newCheckup.save();
 
     const populatedCheckup = await MedicalCheckup.findById(newCheckup._id)
       .populate({
-        path: "studentProfile",
-        populate: {
-          path: "classProfile",
-        },
+        path: "classEnrollment",
+        populate: [
+          {
+            path: "student",
+          },
+          {
+            path: "classProfile",
+          },
+          {
+            path: "academicYear",
+          },
+        ],
       })
       .populate("nutritionalStatus")
       .exec();
 
     res.status(201).json({ newCheckup: populatedCheckup });
   } catch (error) {
-    console.error("Error occurred: ", error.message);
+    if (error.code === 11000) {
+      return res.status(400).json({
+        error: "Student already has a checkup record for this school year.",
+      });
+    }
     res.status(400).json({ error: error.message });
   }
 });
@@ -48,10 +71,14 @@ router.get("/fetch", authenticateMiddleware, async (req, res) => {
   try {
     const checkups = await MedicalCheckup.find()
       .populate({
-        path: "studentProfile",
-        populate: { path: "classProfile" },
+        path: "classEnrollment",
+        populate: [
+          { path: "student" },
+          { path: "classProfile" },
+          { path: "academicYear" },
+        ],
       })
-      .populate("nutritionalStatus") // populate nutritionalStatus
+      .populate("nutritionalStatus")
       .exec();
     res.status(200).json(checkups);
   } catch (error) {
@@ -70,27 +97,40 @@ router.put("/update/:lrn", authenticateMiddleware, async (req, res) => {
       return res.status(404).json({ error: "StudentProfile not found" });
     }
 
+    const classEnrollment = await ClassEnrollment.findOne({
+      student: studentProfile._id,
+    });
+
+    if (!classEnrollment) {
+      return res.status(404).json({ error: "Class Enrollment not found" });
+    }
+
     const existingCheckup = await MedicalCheckup.findOne({
-      studentProfile: studentProfile._id,
+      classEnrollment: classEnrollment._id,
     });
 
     if (!existingCheckup) {
       return res.status(404).json({ error: "Medical checkup not found" });
     }
 
-    // This merges the request body with the existing checkup, only updating the provided fields.
     const updatedData = { ...existingCheckup.toObject(), ...req.body };
 
     const updatedMedicalCheckup = await MedicalCheckup.findOneAndUpdate(
       {
-        studentProfile: studentProfile._id,
+        classEnrollment: classEnrollment._id,
       },
       updatedData,
       { new: true }
-    ).populate([
-      { path: "studentProfile", populate: { path: "classProfile" } },
-      "nutritionalStatus",
-    ]);
+    )
+      .populate({
+        path: "classEnrollment",
+        populate: [
+          { path: "student" },
+          { path: "classProfile" },
+          { path: "academicYear" },
+        ],
+      })
+      .populate("nutritionalStatus");
 
     res.status(200).json(updatedMedicalCheckup);
   } catch (error) {
@@ -112,38 +152,74 @@ router.delete("/delete/:id", authenticateMiddleware, async (req, res) => {
 });
 
 router.get("/search/:partialLrn", authenticateMiddleware, async (req, res) => {
-  try {
-    const partialLrn = req.params.partialLrn;
-    const students = await StudentProfile.find({
-      lrn: new RegExp(partialLrn, "i"),
-      status: "Enrolled",
-    })
-      .populate("classProfile", "grade section academicYear -_id")
-      .select(
-        "lrn lastName firstName middleName nameExtension gender age birthDate classProfile -_id"
-      );
+  const { partialLrn } = req.params;
 
-    if (!students || students.length === 0)
-      return res.status(404).json({ error: "No matches found" });
+  if (!partialLrn || partialLrn.trim().length < 3) {
+    return res.status(400).json({ error: "Invalid LRN provided." });
+  }
+
+  try {
+    const enrollments = await ClassEnrollment.find({
+      status: "Active",
+    })
+      .populate({
+        path: "student",
+        match: { lrn: new RegExp(partialLrn, "i") },
+        select:
+          "lrn lastName firstName middleName nameExtension gender age birthDate address -_id",
+      })
+      .populate({
+        path: "classProfile",
+        select: "grade section -_id",
+      })
+      .populate({
+        path: "academicYear",
+        select: "schoolYear -_id",
+      })
+      .lean(); // Using lean() to get plain JS objects
 
     const studentsWithLatestNutrition = await Promise.all(
-      students.map(async (student) => {
-        const studentObj = await StudentProfile.findOne({ lrn: student.lrn });
-        const latestNutrition = await NutritionalStatus.findOne({
-          studentProfile: studentObj,
-        }) // Now we are using student's LRN
-          .sort({ updatedAt: -1 })
-          .select(
-            "heightCm weightKg BMI BMIClassification heightForAge beneficiaryOfSBFP"
-          );
-        return {
-          ...student._doc,
-          nutritionalStatus: latestNutrition,
-        };
-      })
+      enrollments
+        .filter((enrollment) => enrollment.student)
+        .map(async (enrollment) => {
+          const latestNutritionalStatus = await NutritionalStatus.findOne({
+            classEnrollment: enrollment._id,
+          })
+            .sort({ updatedAt: -1 })
+            .select(
+              "weightKg heightCm BMI BMIClassification heightForAge beneficiaryOfSBFP"
+            )
+            .lean();
+
+          return {
+            ...enrollment.student,
+            classProfile: enrollment.classProfile,
+            academicYear: enrollment.academicYear,
+            nutritionalStatus: latestNutritionalStatus || null,
+            warning: latestNutritionalStatus
+              ? null
+              : "Please add data in the nutritionalStatus module for better record keeping.",
+          };
+        })
     );
 
-    res.status(200).json(studentsWithLatestNutrition);
+    const hasWarning = studentsWithLatestNutrition.some(
+      (student) => student.warning
+    );
+
+    if (!studentsWithLatestNutrition.length) {
+      return res.status(404).json({ error: "No matches found" });
+    }
+
+    const responseObject = {
+      data: studentsWithLatestNutrition,
+      ...(hasWarning && {
+        message:
+          "Some students lack nutritionalStatus data. Please check and update accordingly.",
+      }),
+    };
+
+    res.status(200).json(responseObject);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

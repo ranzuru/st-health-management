@@ -19,7 +19,10 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import FormHelperText from "@mui/material/FormHelperText";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
-
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import { parseISO } from "date-fns";
 const FacultyProfileForm = (props) => {
   const {
     open,
@@ -43,6 +46,11 @@ const FacultyProfileForm = (props) => {
   const handleCloseSnackbar = () => {
     setSnackbarOpen(false);
   };
+
+  const minDate = new Date(
+    new Date().setFullYear(new Date().getFullYear() - 100)
+  );
+  const maxDate = new Date();
 
   const validationSchema = yup.object().shape({
     employeeId: yup
@@ -74,38 +82,11 @@ const FacultyProfileForm = (props) => {
     nameExtension: yup.string(),
     gender: yup.string().required("Gender is required"),
     birthDate: yup
-      .string()
-      .test(
-        "is-date-in-past",
-        "Birth date cannot be in the future",
-        function (birthDateString) {
-          const birthDate = new Date(birthDateString);
-          const today = new Date();
-          return birthDate <= today;
-        }
-      )
+      .date()
+      .min(minDate, "You can't be more than 100 years old")
+      .max(maxDate, "You can't be born in the future")
       .required("Birth Date is required"),
-    age: yup
-      .number()
-      .min(22, "Age must be at least 22")
-      .required("Age is required")
-      .test(
-        "age-birthDate-consistency",
-        "Age and Birth Date must be consistent",
-        function (age) {
-          const birthDateString = this.parent.birthDate; // Now it's a string
-          if (!birthDateString || !age) {
-            return true;
-          }
-
-          const birthDate = new Date(birthDateString); // Convert it to a Date object here
-          const birthYear = birthDate.getFullYear();
-          const currentYear = new Date().getFullYear();
-          const ageDifference = Math.abs(currentYear - birthYear - age);
-
-          return ageDifference <= 1;
-        }
-      ),
+    age: yup.number().required("Age is required"),
     email: yup
       .string()
       .email("Invalid email format")
@@ -131,7 +112,7 @@ const FacultyProfileForm = (props) => {
       middleName: "",
       nameExtension: "",
       gender: "",
-      birthDate: "",
+      birthDate: null,
       age: "",
       email: "",
       mobileNumber: "",
@@ -227,17 +208,27 @@ const FacultyProfileForm = (props) => {
 
   useEffect(() => {
     if (selectedFaculty) {
-      setValue("employeeId", selectedFaculty.employeeId || "");
-      setValue("lastName", selectedFaculty.lastName || "");
-      setValue("firstName", selectedFaculty.firstName || "");
-      setValue("middleName", selectedFaculty.middleName || "");
-      setValue("nameExtension", selectedFaculty.nameExtension || "");
-      setValue("gender", selectedFaculty.gender || "");
-      setValue("birthDate", selectedFaculty.birthDate || "");
-      setValue("age", selectedFaculty.age || "");
-      setValue("email", selectedFaculty.email || "");
-      setValue("mobileNumber", selectedFaculty.mobileNumber || "");
-      setValue("role", selectedFaculty.role || "");
+      const keysToSet = [
+        "employeeId",
+        "lastName",
+        "firstName",
+        "middleName",
+        "nameExtension",
+        "gender",
+        "birthDate",
+        "age",
+        "email",
+        "mobileNumber",
+        "role",
+      ];
+
+      keysToSet.forEach((key) => {
+        if (key === "birthDate" && selectedFaculty[key]) {
+          setValue(key, parseISO(selectedFaculty[key]));
+        } else {
+          setValue(key, selectedFaculty[key] || "");
+        }
+      });
     }
   }, [selectedFaculty, setValue]);
 
@@ -361,57 +352,81 @@ const FacultyProfileForm = (props) => {
                 />
               </Grid>
             </Grid>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
-                <Controller
-                  name="birthDate"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      label="Birth Date"
-                      type="date"
-                      fullWidth
-                      margin="normal"
-                      {...field}
-                      required
-                      InputLabelProps={{
-                        shrink: true,
-                      }}
-                      error={!!errors.birthDate}
-                      helperText={errors.birthDate?.message}
-                      onBlur={field.onBlur}
-                    />
-                  )}
-                />
+            <LocalizationProvider dateAdapter={AdapterDateFns}>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <Controller
+                    name="birthDate"
+                    control={control}
+                    render={({ field }) => (
+                      <DatePicker
+                        {...field}
+                        label="Birthday"
+                        required
+                        fullWidth
+                        slotProps={{
+                          textField: {
+                            fullWidth: true,
+                            margin: "normal",
+                            error: !!errors.birthDate,
+                            helperText: errors.birthDate?.message,
+                          },
+                        }}
+                        onChange={(date) => {
+                          // Set the birthDate value
+                          field.onChange(date);
+
+                          // If date is not null or empty, calculate the age
+                          if (date) {
+                            const today = new Date();
+                            let age = today.getFullYear() - date.getFullYear();
+                            const m = today.getMonth() - date.getMonth();
+                            if (
+                              m < 0 ||
+                              (m === 0 && today.getDate() < date.getDate())
+                            ) {
+                              age--;
+                            }
+                            // Set the age value in the form
+                            setValue("age", age.toString());
+                          } else {
+                            // If date is null or empty, set age to an empty string or a default value
+                            setValue("age", "");
+                          }
+                        }}
+                      />
+                    )}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Controller
+                    name="age"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField
+                        label="Age"
+                        fullWidth
+                        margin="normal"
+                        {...field}
+                        required
+                        error={!!errors.age}
+                        helperText={errors.age?.message}
+                        onBlur={field.onBlur}
+                        onChange={(e) => {
+                          // Allow only numbers and limit to 3 digits
+                          if (
+                            /^[0-9]*$/.test(e.target.value) &&
+                            e.target.value.length <= 3
+                          ) {
+                            field.onChange(e);
+                          }
+                        }}
+                      />
+                    )}
+                  />
+                </Grid>
               </Grid>
-              <Grid item xs={12} sm={6}>
-                <Controller
-                  name="age"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      label="Age"
-                      fullWidth
-                      margin="normal"
-                      {...field}
-                      required
-                      error={!!errors.age}
-                      helperText={errors.age?.message}
-                      onBlur={field.onBlur}
-                      onChange={(e) => {
-                        // Allow only numbers and limit to 3 digits
-                        if (
-                          /^[0-9]*$/.test(e.target.value) &&
-                          e.target.value.length <= 3
-                        ) {
-                          field.onChange(e);
-                        }
-                      }}
-                    />
-                  )}
-                />
-              </Grid>
-            </Grid>
+            </LocalizationProvider>
             <Grid container spacing={3}>
               <Grid item xs={12} sm={6}>
                 <Controller

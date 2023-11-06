@@ -21,7 +21,7 @@ const FacultyCheckUpGrid = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [recordIdToDelete, setRecordIdToDelete] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedMedicalCheckup, setSelectedMedicalCheckup] = useState(null);
+  const [selectedRecord, setSelectedRecord] = useState(null);
 
   const handleSearchChange = (event) => {
     setSearchValue(event.target.value);
@@ -73,6 +73,9 @@ const FacultyCheckUpGrid = () => {
           gender: checkup.facultyProfile
             ? checkup.facultyProfile.gender
             : "N/A",
+          schoolYear: checkup.academicYear
+            ? checkup.academicYear.schoolYear
+            : "N/A",
           heightCm: checkup.heightCm,
           weightKg: checkup.weightKg,
           temperature: checkup.temperature,
@@ -96,6 +99,7 @@ const FacultyCheckUpGrid = () => {
           heartScreening: checkup.heartScreening,
           abdomen: checkup.abdomen,
           deformities: checkup.deformities,
+          remarks: checkup.remarks,
         };
       });
       setMedicalCheckups(updatedCheckups);
@@ -128,11 +132,13 @@ const FacultyCheckUpGrid = () => {
     { field: "employeeId", headerName: "Employee ID", width: 150 },
     { field: "age", headerName: "Age", width: 100 },
     { field: "gender", headerName: "Gender", width: 100 },
+    { field: "schoolYear", headerName: "S.Y", width: 100 },
     { field: "heightCm", headerName: "Height (cm)", width: 100 },
     { field: "weightKg", headerName: "Weight (kg)", width: 100 },
     { field: "temperature", headerName: "Temp (°C)", width: 100 },
     { field: "bloodPressure", headerName: "BP mmHg", width: 100 },
     { field: "heartRate", headerName: "Heart Rate", width: 100 },
+    { field: "remarks", headerName: "Notes", width: 150 },
 
     {
       field: "action",
@@ -155,7 +161,7 @@ const FacultyCheckUpGrid = () => {
     const medicalToEdit = medicalCheckups.find(
       (medicalCheckup) => medicalCheckup.id === checkupId
     );
-    setSelectedMedicalCheckup(medicalToEdit);
+    setSelectedRecord(medicalToEdit);
     setFormOpen(true);
   };
 
@@ -270,14 +276,14 @@ const FacultyCheckUpGrid = () => {
         <FacultyMedicalForm
           open={formOpen}
           addNewMedicalCheckup={addNewMedicalCheckup}
-          selectedMedicalCheckup={selectedMedicalCheckup}
+          selectedRecord={selectedRecord}
           onCheckupUpdate={updatedMedicalCheckup}
           onClose={() => {
-            setSelectedMedicalCheckup(null);
+            setSelectedRecord(null);
             handleModalClose();
           }}
           onCancel={() => {
-            setSelectedMedicalCheckup(null);
+            setSelectedRecord(null);
             handleModalClose();
           }}
         />

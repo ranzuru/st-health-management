@@ -16,8 +16,11 @@ import FormControl from "@mui/material/FormControl";
 import FormHelperText from "@mui/material/FormHelperText";
 import Grid from "@mui/material/Grid";
 import Autocomplete from "@mui/material/Autocomplete";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 // Imports Validation
-import * as Yup from "yup";
+import { nutritionalStatusValidationSchema } from "../schemas/nutritionalStatusValidation";
 import { yupResolver } from "@hookform/resolvers/yup";
 // React-hook-form imports
 import { useForm, Controller } from "react-hook-form";
@@ -25,6 +28,7 @@ import { useForm, Controller } from "react-hook-form";
 import axiosInstance from "../config/axios-instance";
 // csv reader
 import Papa from "papaparse";
+import { parseISO } from "date-fns";
 
 const NutritionalStatusForm = (props) => {
   const {
@@ -64,59 +68,12 @@ const NutritionalStatusForm = (props) => {
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toISOString().split("T")[0];
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
   };
-
-  const getTodayDate = () => {
-    const today = new Date();
-    return today.toISOString().split("T")[0];
-  };
-
-  const nutritionalStatusValidationSchema = Yup.object().shape({
-    dateMeasured: Yup.date()
-      .required("Date measured is required")
-      .max(new Date(), "Date cannot be in the future"),
-    lrn: Yup.string(),
-    weightKg: Yup.number()
-      .transform((value, originalValue) =>
-        isNaN(originalValue) || originalValue === "" ? null : value
-      )
-      .positive("Weight must be positive")
-      .max(150, "Weight cannot be more than 150 kg")
-      .test("is-null", "Weight is required", (value) => value !== null),
-    heightCm: Yup.number()
-      .transform((value, originalValue) =>
-        isNaN(originalValue) || originalValue === "" ? null : value
-      )
-      .positive("Height must be positive")
-      .max(250, "Height cannot be more than 250 cm")
-      .test("is-null", "Height is required", (value) => value !== null),
-    BMI: Yup.number()
-      .transform((value, originalValue) =>
-        isNaN(originalValue) || originalValue === "" ? null : value
-      )
-      .positive("BMI must be positive")
-      .test("is-null", "BMI is required", (value) => value !== null),
-    BMIClassification: Yup.string()
-      .required("BMI Classification is required")
-      .oneOf(
-        ["Severely Wasted", "Wasted", "Normal", "Overweight", "Obese"],
-        "Invalid BMI Classification"
-      ),
-    heightForAge: Yup.string()
-      .required("Height for Age is required")
-      .oneOf(
-        ["Severely Stunted", "Stunted", "Normal", "Tall"],
-        "Invalid Height for Age classification"
-      ),
-    beneficiaryOfSBFP: Yup.boolean()
-      .transform((value, originalValue) =>
-        originalValue === "" ? undefined : value
-      )
-      .required("Beneficiary of SBFP is required"),
-    measurementType: Yup.string().required("Measurement Type is required"),
-    remarks: Yup.string().max(500, "Remarks cannot exceed 500 characters"),
-  });
 
   const {
     handleSubmit,
@@ -127,7 +84,7 @@ const NutritionalStatusForm = (props) => {
     formState: { errors },
   } = useForm({
     defaultValues: initialData || {
-      dateMeasured: getTodayDate(),
+      dateMeasured: new Date(),
       lrn: "",
       weightKg: "",
       heightCm: "",
@@ -142,27 +99,38 @@ const NutritionalStatusForm = (props) => {
   });
 
   const enrichNewRecord = (newRecord) => {
-    const { studentProfile } = newRecord;
+    const {
+      classEnrollment: { student, academicYear, classProfile } = {},
+      ...rest
+    } = newRecord;
 
+    const lrn = student?.lrn;
+    const age = student?.age;
+    const gender = student?.gender;
+    const address = student?.address;
+    const birthDate = student?.birthDate;
     const name =
-      studentProfile && studentProfile.middleName
-        ? `${studentProfile.lastName}, ${
-            studentProfile.firstName
-          } ${studentProfile.middleName.charAt(0)}. ${
-            studentProfile.nameExtension || ""
-          }`.trim()
+      student && (student.firstName || student.lastName)
+        ? `${student.lastName || ""}, ${student.firstName || ""}${
+            student.middleName ? ` ${student.middleName.charAt(0)}.` : ""
+          } ${student.nameExtension || ""}`.trim()
         : "N/A";
+    const schoolYear = academicYear?.schoolYear;
+    const grade = classProfile?.grade;
+    const section = classProfile?.section;
 
     return {
-      ...newRecord,
+      ...rest,
       id: newRecord._id,
-      lrn: studentProfile?.lrn,
-      gender: studentProfile?.gender,
-      age: studentProfile?.age,
-      birthDate: studentProfile?.birthDate,
-      grade: studentProfile?.classProfile?.grade,
-      section: studentProfile?.classProfile?.section,
       name,
+      lrn,
+      age,
+      gender,
+      address,
+      birthDate,
+      grade,
+      section,
+      schoolYear,
     };
   };
 
@@ -178,7 +146,6 @@ const NutritionalStatusForm = (props) => {
       );
       if (response.data && response.data.newRecord) {
         let enrichedNewRecord = enrichNewRecord(response.data.newRecord);
-
         if (typeof addNewNutritionalStatus === "function") {
           addNewNutritionalStatus(enrichedNewRecord);
         }
@@ -191,15 +158,7 @@ const NutritionalStatusForm = (props) => {
         showSnackbar(errorMsg, "error");
       }
     } catch (error) {
-      console.error("An error occurred during adding record:", error);
-      if (error.response && error.response.data) {
-        console.error("Server responded with:", error.response.data);
-        const errorMsg =
-          error.response.data.error || "An error occurred during adding";
-        showSnackbar(errorMsg, "error");
-      } else {
-        showSnackbar("An error occurred during adding", "error");
-      }
+      handleAPIError(error);
     }
   };
 
@@ -207,16 +166,16 @@ const NutritionalStatusForm = (props) => {
     try {
       const payload = {
         ...data,
-        lrn: selectedRecord.lrn, // using selectedRecord's LRN here
-        measurementType: data.measurementType, // using the measurementType from the form data
+        lrn: selectedRecord.lrn,
+        measurementType: data.measurementType,
       };
 
-      // Incorporate LRN and measurementType in the URL
+      console.log("Payload before UPDATE API call:", payload);
       const response = await axiosInstance.put(
         `/nutritionalStatus/update/${payload.lrn}/${payload.measurementType}`,
         payload
       );
-
+      console.log("Server response after UPDATE:", response.data);
       if (response.data && response.data._id) {
         const enrichedUpdatedRecord = enrichNewRecord(response.data);
 
@@ -232,15 +191,7 @@ const NutritionalStatusForm = (props) => {
         showSnackbar(errorMsg, "error");
       }
     } catch (error) {
-      console.error("Server responded with:", error.response.data);
-      if (error.response && error.response.data) {
-        console.error("Server responded with:", error.response.data);
-        const errorMsg =
-          error.response.data.error || "An error occurred during updating";
-        showSnackbar(errorMsg, "error");
-      } else {
-        showSnackbar("An error occurred during updating", "error");
-      }
+      handleAPIError(error);
     }
   };
 
@@ -249,6 +200,17 @@ const NutritionalStatusForm = (props) => {
       handleUpdateNutritionalStatus(data);
     } else {
       handleCreateNutritionalStatus(data);
+    }
+  };
+
+  const handleAPIError = (error) => {
+    if (error.response && error.response.data) {
+      console.error("Server responded with:", error.response.data);
+      const errorMsg =
+        error.response.data.error || "An error occurred during adding";
+      showSnackbar(errorMsg, "error");
+    } else {
+      showSnackbar("An error occurred during adding", "error");
     }
   };
 
@@ -267,11 +229,14 @@ const NutritionalStatusForm = (props) => {
         setLoading(true);
         try {
           const response = await axiosInstance.get(
-            `/studentProfile/search/${lrnInput}`
+            `/nutritionalStatus/search/${lrnInput}`
           );
           setLrnOptions(response.data);
         } catch (error) {
-          console.error("Error fetching LRN:", error);
+          showSnackbar(
+            "No student with the provided LRN found in the system.",
+            "error"
+          );
         }
         setLoading(false);
       }
@@ -430,28 +395,89 @@ const NutritionalStatusForm = (props) => {
 
   useEffect(() => {
     if (selectedRecord) {
-      const formattedDate = new Date(selectedRecord.dateMeasured)
-        .toISOString()
-        .split("T")[0];
+      const keys = [
+        "lrn",
+        "name",
+        "age",
+        "gender",
+        "grade",
+        "section",
+        "schoolYear",
+        "birthDate",
+        "address",
+        "heightCm",
+        "weightKg",
+        "BMI",
+        "BMIClassification",
+        "heightForAge",
+        "beneficiaryOfSBFP",
+        "measurementType",
+        "remarks",
+      ];
+      keys.forEach((key) => {
+        setValue(
+          key,
+          selectedRecord[key] !== null && selectedRecord[key] !== undefined
+            ? selectedRecord[key]
+            : ""
+        );
+      });
+
       setSelectedStudent(selectedRecord);
-      setValue("lrn", selectedRecord.lrn || "");
-      setValue("dateMeasured", formattedDate);
-      setValue("name", selectedRecord.name || "");
-      setValue("gender", selectedRecord.gender || "");
-      setValue("age", selectedRecord.age || "");
-      setValue("birthDate", selectedRecord.birthDate || "");
-      setValue("grade", selectedRecord.grade || "");
-      setValue("section", selectedRecord.section || "");
-      setValue("heightCm", selectedRecord.heightCm || "");
-      setValue("weightKg", selectedRecord.weightKg || "");
-      setValue("BMI", selectedRecord.BMI || "");
-      setValue("BMIClassification", selectedRecord.BMIClassification || "");
-      setValue("heightForAge", selectedRecord.heightForAge || "");
-      setValue("beneficiaryOfSBFP", selectedRecord.beneficiaryOfSBFP || "");
-      setValue("measurementType", selectedRecord.measurementType || "");
-      setValue("remarks", selectedRecord.remarks || "");
+      const dateFields = ["dateMeasured"];
+      dateFields.forEach((dateField) => {
+        const parsedDate = selectedRecord[dateField]
+          ? parseISO(selectedRecord[dateField])
+          : null;
+        setValue(dateField, parsedDate);
+      });
     }
   }, [selectedRecord, setValue]);
+
+  const isOptionEqualToValue = (option, value) => {
+    if (!option || !value) return false;
+
+    const isClassProfileEqual =
+      option.classProfile?.grade === value.classProfile?.grade &&
+      option.classProfile?.section === value.classProfile?.section;
+
+    const isAcademicYear =
+      option.academicYear?.schoolYear === value.academicYear?.schoolYear;
+
+    return (
+      option.lrn === value.lrn &&
+      option.lastName === value.lastName &&
+      option.firstName === value.firstName &&
+      option.middleName === value.middleName &&
+      option.nameExtension === value.nameExtension &&
+      option.age === value.age &&
+      option.gender === value.gender &&
+      option.birthDate === value.birthDate &&
+      isClassProfileEqual &&
+      isAcademicYear
+    );
+  };
+
+  const ReadOnlyTextField = ({ control, name, label, value }) => {
+    return (
+      <Controller
+        name={name}
+        control={control}
+        render={({ field }) => (
+          <TextField
+            label={label}
+            fullWidth
+            margin="normal"
+            {...field}
+            value={value || ""}
+            InputProps={{
+              readOnly: true,
+            }}
+          />
+        )}
+      />
+    );
+  };
 
   return (
     <>
@@ -477,217 +503,166 @@ const NutritionalStatusForm = (props) => {
             <DialogContentText>
               Enter nutritional status record:
             </DialogContentText>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6} md={2.5}>
-                <Controller
-                  name="dateMeasured"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="Date Measured"
-                      margin="normal"
-                      type="date"
-                      fullWidth
-                      InputLabelProps={{
-                        shrink: true,
-                      }}
-                      error={!!errors.dateMeasured}
-                      helperText={errors?.dateMeasured?.message}
-                    />
-                  )}
-                />
+            <LocalizationProvider dateAdapter={AdapterDateFns}>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6} md={2.5}>
+                  <Controller
+                    name="dateMeasured"
+                    control={control}
+                    render={({ field, fieldState: { error } }) => (
+                      <DatePicker
+                        {...field}
+                        label="Date Measure"
+                        maxDate={new Date()}
+                        slotProps={{
+                          textField: {
+                            fullWidth: true,
+                            sx: { marginTop: "15px" },
+                            error: !!error,
+                            helperText: error?.message,
+                          },
+                        }}
+                      />
+                    )}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <Controller
+                    name="lrn"
+                    control={control}
+                    render={({ field }) => (
+                      <Autocomplete
+                        {...field}
+                        options={lrnOptions}
+                        getOptionLabel={(option) => option.lrn || ""}
+                        value={
+                          lrnOptions.find(
+                            (option) => option.lrn === selectedLRN
+                          ) || null
+                        }
+                        inputValue={lrnInput}
+                        loading={loading}
+                        loadingText="Loading..."
+                        disabled={isEditing}
+                        isOptionEqualToValue={isOptionEqualToValue}
+                        onInputChange={(_, newInputValue) => {
+                          setLrnInput(newInputValue);
+                        }}
+                        onChange={(_, newValue) => {
+                          setSelectedStudent(newValue);
+                          setSelectedLRN(newValue ? newValue.lrn : "");
+                        }}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            margin="normal"
+                            label="Student's LRN"
+                          />
+                        )}
+                      />
+                    )}
+                  />
+                </Grid>
               </Grid>
-              <Grid item xs={12} sm={6} md={4}>
-                <Controller
-                  name="lrn"
-                  control={control}
-                  render={({ field }) => (
-                    <Autocomplete
-                      {...field}
-                      options={lrnOptions}
-                      getOptionLabel={(option) => option.lrn || ""}
-                      value={
-                        lrnOptions.find(
-                          (option) => option.lrn === selectedLRN
-                        ) || null
-                      }
-                      inputValue={lrnInput}
-                      loading={loading}
-                      loadingText="Loading..."
-                      disabled={isEditing}
-                      isOptionEqualToValue={(option, value) =>
-                        option.lrn === value.lrn &&
-                        option.lastName === value.lastName &&
-                        option.firstName === value.firstName &&
-                        option.middleName === value.middleName &&
-                        option.nameExtension === value.nameExtension &&
-                        option.gender === value.gender &&
-                        option.age === value.age &&
-                        option.birthDate === value.birthDate &&
-                        option.classProfile.grade ===
-                          value.classProfile.grade &&
-                        option.classProfile.section ===
-                          value.classProfile.section
-                      }
-                      onInputChange={(_, newInputValue) => {
-                        setLrnInput(newInputValue);
-                      }}
-                      onChange={(_, newValue) => {
-                        setSelectedStudent(newValue);
-                        setSelectedLRN(newValue ? newValue.lrn : "");
-                      }}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          margin="normal"
-                          label="Student's LRN"
-                          error={!!errors.lrn}
-                          helperText={errors?.lrn?.message}
-                        />
-                      )}
-                    />
-                  )}
-                />
-              </Grid>
-            </Grid>
+            </LocalizationProvider>
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6} md={4}>
-                <Controller
+                <ReadOnlyTextField
+                  control={control}
                   name="name"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      label="Name"
-                      margin="normal"
-                      fullWidth
-                      {...field}
-                      value={
-                        selectedStudent
-                          ? selectedStudent.middleName &&
-                            selectedStudent.firstName &&
-                            selectedStudent.lastName
-                            ? `${selectedStudent.lastName}, ${
-                                selectedStudent.firstName
-                              } ${selectedStudent.middleName.charAt(0)}. ${
-                                selectedStudent.nameExtension
-                              }`.trim()
-                            : selectedStudent.name
-                          : ""
-                      }
-                      InputProps={{
-                        readOnly: true,
-                      }}
-                    />
-                  )}
+                  label="Name"
+                  value={
+                    selectedStudent
+                      ? selectedStudent.firstName && selectedStudent.lastName
+                        ? `${selectedStudent.lastName}, ${
+                            selectedStudent.firstName
+                          }${
+                            selectedStudent.middleName
+                              ? ` ${selectedStudent.middleName.charAt(0)}.`
+                              : ""
+                          } ${selectedStudent.nameExtension || ""}`.trim()
+                        : selectedStudent.name || ""
+                      : ""
+                  }
                 />
               </Grid>
               <Grid item xs={12} sm={6} md={2}>
-                <Controller
+                <ReadOnlyTextField
+                  control={control}
                   name="gender"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      label="Gender"
-                      margin="normal"
-                      fullWidth
-                      {...field}
-                      value={selectedStudent ? selectedStudent.gender : ""}
-                      InputProps={{
-                        readOnly: true,
-                      }}
-                    />
-                  )}
+                  label="Gender"
+                  value={
+                    selectedStudent
+                      ? selectedStudent.classProfile
+                        ? selectedStudent.classProfile.grade
+                        : selectedStudent.grade
+                      : ""
+                  }
                 />
               </Grid>
               <Grid item xs={12} sm={6} md={2}>
-                <Controller
+                <ReadOnlyTextField
+                  control={control}
                   name="age"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      label="Age"
-                      margin="normal"
-                      fullWidth
-                      {...field}
-                      value={selectedStudent ? selectedStudent.age : ""}
-                      InputProps={{
-                        readOnly: true,
-                      }}
-                    />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6} md={4}>
-                <Controller
-                  name="birthDate"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      label="Birthday"
-                      margin="normal"
-                      fullWidth
-                      {...field}
-                      value={
-                        selectedStudent
-                          ? formatDate(selectedStudent.birthDate)
-                          : ""
-                      }
-                      InputProps={{
-                        readOnly: true,
-                      }}
-                    />
-                  )}
-                />
-              </Grid>
-            </Grid>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6} md={2.5}>
-                <Controller
-                  name="grade"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      label="Grade Level"
-                      margin="normal"
-                      fullWidth
-                      {...field}
-                      value={
-                        selectedStudent
-                          ? selectedStudent.classProfile
-                            ? selectedStudent.classProfile.grade
-                            : selectedStudent.grade
-                          : ""
-                      }
-                      InputProps={{
-                        readOnly: true,
-                      }}
-                    />
-                  )}
+                  label="Age"
+                  value={selectedStudent ? selectedStudent.age : ""}
                 />
               </Grid>
               <Grid item xs={12} sm={6} md={3}>
-                <Controller
-                  name="section"
+                <ReadOnlyTextField
                   control={control}
-                  render={({ field }) => (
-                    <TextField
-                      label="Section"
-                      margin="normal"
-                      fullWidth
-                      {...field}
-                      value={
-                        selectedStudent
-                          ? selectedStudent.classProfile
-                            ? selectedStudent.classProfile.section
-                            : selectedStudent.section
-                          : ""
-                      }
-                      InputProps={{
-                        readOnly: true,
-                      }}
-                    />
-                  )}
+                  name="birthDate"
+                  label="Birthday"
+                  value={
+                    selectedStudent ? formatDate(selectedStudent.birthDate) : ""
+                  }
+                  InputProps={{
+                    readOnly: true,
+                  }}
+                />
+              </Grid>
+            </Grid>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6} md={2.5}>
+                <ReadOnlyTextField
+                  control={control}
+                  name="grade"
+                  label="Grade"
+                  value={
+                    selectedStudent
+                      ? selectedStudent.classProfile
+                        ? selectedStudent.classProfile.grade
+                        : selectedStudent.grade
+                      : ""
+                  }
+                />
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <ReadOnlyTextField
+                  control={control}
+                  name="section"
+                  label="Section"
+                  value={
+                    selectedStudent
+                      ? selectedStudent.classProfile
+                        ? selectedStudent.classProfile.section
+                        : selectedStudent.section
+                      : ""
+                  }
+                />
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <ReadOnlyTextField
+                  control={control}
+                  name="schoolYear"
+                  label="School Year"
+                  value={
+                    selectedStudent
+                      ? selectedStudent.academicYear
+                        ? selectedStudent.academicYear.schoolYear
+                        : selectedStudent.schoolYear
+                      : ""
+                  }
                 />
               </Grid>
             </Grid>
@@ -706,15 +681,12 @@ const NutritionalStatusForm = (props) => {
                       helperText={errors?.heightCm?.message}
                       onChange={(event) => {
                         const value = event.target.value;
-
-                        // Check if the value matches the desired pattern (only numbers, possibly a single dot)
                         const regex = /^\d*\.?\d*$/;
                         if (regex.test(value)) {
-                          // Check if value starts with a ".", if so prepend "0"
                           if (value.startsWith(".")) {
                             event.target.value = "0" + value;
                           }
-                          field.onChange(event); // If valid, propagate the onChange event
+                          field.onChange(event);
                         }
                       }}
                     />
@@ -735,15 +707,12 @@ const NutritionalStatusForm = (props) => {
                       helperText={errors?.weightKg?.message}
                       onChange={(event) => {
                         const value = event.target.value;
-
-                        // Check if the value matches the desired pattern (only numbers, possibly a single dot)
                         const regex = /^\d*\.?\d*$/;
                         if (regex.test(value)) {
-                          // Check if value starts with a ".", if so prepend "0"
                           if (value.startsWith(".")) {
                             event.target.value = "0" + value;
                           }
-                          field.onChange(event); // If valid, propagate the onChange event
+                          field.onChange(event);
                         }
                       }}
                     />

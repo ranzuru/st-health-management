@@ -7,49 +7,37 @@ import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
-import FormControl from "@mui/material/FormControl";
-import InputLabel from "@mui/material/InputLabel";
-import Select from "@mui/material/Select";
-import MenuItem from "@mui/material/MenuItem";
-import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
-import FormHelperText from "@mui/material/FormHelperText";
-import Snackbar from "@mui/material/Snackbar";
-import Alert from "@mui/material/Alert";
 import axiosInstance from "../config/axios-instance";
-import InputAdornment from "@mui/material/InputAdornment";
 import Grid from "@mui/material/Grid";
 import Typography from "@mui/material/Typography";
 import Autocomplete from "@mui/material/Autocomplete";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
+import { FormControl, MenuItem, Select, InputLabel } from "@mui/material";
+import FormHelperText from "@mui/material/FormHelperText";
+import { facultyCheckupValidation } from "../schemas/facultyCheckupValidation";
+import {
+  visionScreeningOptions,
+  auditoryScreeningOptions,
+  scalpScreeningOptions,
+  skinScreeningOptions,
+  eyesScreeningOptions,
+  earScreeningOptions,
+  noseScreeningOptions,
+  mouthNeckThroatOptions,
+  lungsHeartOptions,
+  abdomenOptions,
+  deformitiesOptions,
+} from "../constants/dropdownOptions";
+import AutoCompleteDropdown from "../constants/autoCompleteDropdown";
+import { parseISO } from "date-fns";
+import VitalSignInput from "../constants/vitalSignInput";
 
-const visionScreeningOptions = ["Passed", "Failed"];
-const auditoryScreeningOptions = ["Passed", "Failed"];
-const scalpScreeningOptions = ["Normal", "Presence of Lice"];
-const skinScreeningOptions = [
-  "Normal",
-  "Redness of Skin",
-  "White Spots",
-  "Flaky Skin",
-  "Impetigo/Boil",
-  "Hematoma",
-  "Bruises/Injuries",
-  "Itchiness",
-  "Skin Lesions",
-  "Acne/Pimple",
-];
-const eyesScreeningOptions = [
-  "Normal",
-  "Stye",
-  "Eye Redness",
-  "Ocular Misalignment",
-  "Pale Conjunctive",
-  "Eye Discharge",
-  "Matted Eyelashes",
-];
-const earScreeningOptions = ["Normal", "Ear Discharge", "Impacted Cerumen"];
-const noseScreeningOptions = ["Normal", "Mucus Discharge", "Nose Bleeding"];
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import CustomSnackbar from "../components/CustomSnackbar";
 
 const FacultyMedicalForm = (props) => {
   const {
@@ -57,16 +45,16 @@ const FacultyMedicalForm = (props) => {
     onClose,
     initialData,
     addNewMedicalCheckup,
-    selectedMedicalCheckup,
+    selectedRecord,
     onCheckupUpdate,
   } = props;
-  const [focusState, setFocusState] = useState({});
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [employeeIdOptions, setEmployeeIdOptions] = useState([]);
   const [employeeIdInput, setEmployeeIdInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
   const [selectedFaculty, setSelectedFaculty] = useState(null);
+  const [schoolYears, setSchoolYears] = useState([]);
   const [snackbarData, setSnackbarData] = useState({
     message: "",
     severity: "success",
@@ -81,56 +69,14 @@ const FacultyMedicalForm = (props) => {
     setSnackbarOpen(false);
   };
 
-  const handleFocus = (field) => {
-    setFocusState((prevFocusState) => ({ ...prevFocusState, [field]: true }));
-  };
-
-  const handleBlur = (field) => {
-    setFocusState((prevFocusState) => ({ ...prevFocusState, [field]: false }));
-  };
-
   const formatDate = (dateString) => {
-    if (!dateString) return ""; // handle null or undefined
-
     const date = new Date(dateString);
-
-    if (isNaN(date.getTime())) return ""; // handle invalid date
-
-    return date.toISOString().split("T")[0];
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
   };
-
-  const getTodayDate = () => {
-    const today = new Date();
-    return today.toISOString().split("T")[0];
-  };
-
-  const validationSchema = yup.object().shape({
-    dateOfExamination: yup.date(),
-    employeeId: yup.string(),
-    weightKg: yup.number(),
-    heightCm: yup.number(),
-    temperature: yup.string(),
-    bloodPressure: yup.string(),
-    heartRate: yup.number(),
-    pulseRate: yup.number(),
-    respiratoryRate: yup.number(),
-    visionScreeningLeft: yup.string(),
-    visionScreeningRight: yup.string(),
-    auditoryScreeningLeft: yup.string(),
-    auditoryScreeningRight: yup.string(),
-    skinScreening: yup.string(),
-    scalpScreening: yup.string(),
-    eyesScreening: yup.string(),
-    earScreening: yup.string(),
-    noseScreening: yup.string(),
-    mouthScreening: yup.string(),
-    throatScreening: yup.string(),
-    neckScreening: yup.string(),
-    lungScreening: yup.string(),
-    heartScreening: yup.string(),
-    abdomen: yup.string(),
-    deformities: yup.string(),
-  });
 
   const {
     handleSubmit,
@@ -140,12 +86,13 @@ const FacultyMedicalForm = (props) => {
     formState: { errors },
   } = useForm({
     defaultValues: initialData || {
-      dateOfExamination: getTodayDate(),
+      dateOfExamination: new Date(),
       employeeId: "",
       weightKg: "",
       heightCmp: "",
       temperature: "",
       bloodPressure: "",
+      schoolYear: "",
       heartRate: "",
       pulseRate: "",
       respiratoryRate: "",
@@ -165,12 +112,13 @@ const FacultyMedicalForm = (props) => {
       heartScreening: "",
       abdomen: "",
       deformities: "",
+      remarks: "",
     },
-    resolver: yupResolver(validationSchema),
+    resolver: yupResolver(facultyCheckupValidation),
   });
 
   const enrichMedicalCheckup = (newCheckup, classProfileData) => {
-    const { facultyProfile, ...rest } = newCheckup;
+    const { facultyProfile, academicYear, ...rest } = newCheckup;
 
     const name =
       facultyProfile && facultyProfile.middleName
@@ -191,6 +139,7 @@ const FacultyMedicalForm = (props) => {
       birthDate: facultyProfile?.birthDate,
       section: classProfileData?.section,
       grade: classProfileData?.section,
+      schoolYear: academicYear?.schoolYear,
     };
   };
 
@@ -216,12 +165,7 @@ const FacultyMedicalForm = (props) => {
         showSnackbar("Operation failed", "error");
       }
     } catch (error) {
-      console.error("An error occurred during adding medical checkup:", error);
-      if (error.response && error.response.data && error.response.data.error) {
-        showSnackbar(error.response.data.error, "error");
-      } else {
-        showSnackbar("An error occurred during adding", "error");
-      }
+      handleAPIError(error);
     }
   };
 
@@ -229,7 +173,7 @@ const FacultyMedicalForm = (props) => {
     try {
       const payload = {
         ...data,
-        employeeId: selectedMedicalCheckup.employeeId,
+        employeeId: selectedRecord.employeeId,
       };
       const response = await axiosInstance.put(
         `/facultyMedical/update/${payload.employeeId}`,
@@ -242,7 +186,6 @@ const FacultyMedicalForm = (props) => {
         if (onCheckupUpdate) {
           onCheckupUpdate(enrichedUpdatedRecord);
         }
-        console.log("Enriched Checkup Data:", enrichedUpdatedRecord);
         showSnackbar("Successfully updated record", "success");
         handleClose();
       } else {
@@ -251,20 +194,13 @@ const FacultyMedicalForm = (props) => {
         showSnackbar(errorMsg, "error");
       }
     } catch (error) {
-      console.error("Server responded with:", error?.response?.data);
-      if (error.response && error.response.data) {
-        const errorMsg =
-          error.response.data.error || "An error occurred during updating";
-        showSnackbar(errorMsg, "error");
-      } else {
-        showSnackbar("An error occurred during updating", "error");
-      }
+      handleAPIError(error);
     }
   };
 
   const handleSaveOrUpdate = async (data) => {
     try {
-      if (selectedMedicalCheckup && selectedMedicalCheckup.employeeId) {
+      if (selectedRecord && selectedRecord.employeeId) {
         await handleUpdateMedicalCheckup(data);
       } else {
         await handleCreateMedicalCheckup(data);
@@ -291,22 +227,48 @@ const FacultyMedicalForm = (props) => {
     fetchData();
   }, [employeeIdInput]);
 
+  const handleAPIError = (error) => {
+    if (error.response && error.response.data) {
+      console.error("Server responded with:", error.response.data);
+      const errorMsg =
+        error.response.data.error || "An error occurred during adding";
+      showSnackbar(errorMsg, "error");
+    } else {
+      showSnackbar("An error occurred during adding", "error");
+    }
+  };
+
   const handleClose = () => {
     reset();
     onClose();
-    setFocusState({});
     setSelectedEmployeeId(null);
     setEmployeeIdInput("");
     setSelectedFaculty(null);
   };
 
   useEffect(() => {
-    if (selectedMedicalCheckup) {
+    const fetchSchoolYears = async () => {
+      try {
+        const res = await axiosInstance.get(
+          "/classEnrollment/fetchActiveSchoolYears"
+        );
+        setSchoolYears(res.data);
+      } catch (error) {
+        console.error("An error occurred while fetching data: ", error);
+      }
+    };
+
+    fetchSchoolYears();
+  }, []);
+
+  useEffect(() => {
+    if (selectedRecord) {
       const keys = [
         "employeeId",
         "name",
         "gender",
         "birthDate",
+        "schoolYear",
         "heightCm",
         "weightKg",
         "temperature",
@@ -330,34 +292,69 @@ const FacultyMedicalForm = (props) => {
         "heartScreening",
         "abdomen",
         "deformities",
+        "remarks",
       ];
       keys.forEach((key) => {
-        setValue(key, selectedMedicalCheckup[key] || "");
+        setValue(key, selectedRecord[key] || "");
       });
-
-      const formattedDate = new Date(selectedMedicalCheckup.dateOfExamination)
-        .toISOString()
-        .split("T")[0];
-      setSelectedFaculty(selectedMedicalCheckup);
-      setValue("dateOfExamination", formattedDate);
+      setSelectedFaculty(selectedRecord);
+      const dateFields = ["dateOfExamination"];
+      dateFields.forEach((dateField) => {
+        const parsedDate = selectedRecord[dateField]
+          ? parseISO(selectedRecord[dateField])
+          : null;
+        setValue(dateField, parsedDate);
+      });
     }
-  }, [selectedMedicalCheckup, setValue]);
+  }, [selectedRecord, setValue]);
+
+  const ReadOnlyTextField = ({ control, name, label, value }) => {
+    return (
+      <Controller
+        name={name}
+        control={control}
+        render={({ field }) => (
+          <TextField
+            label={label}
+            fullWidth
+            margin="normal"
+            {...field}
+            value={value || ""}
+            InputProps={{
+              readOnly: true,
+            }}
+          />
+        )}
+      />
+    );
+  };
+  const isOptionEqualToValue = (option, value) => {
+    if (!option || !value) return false;
+
+    const isAcademicYear =
+      option.academicYear?.schoolYear === value.academicYear?.schoolYear;
+
+    return (
+      option.lrn === value.lrn &&
+      option.lastName === value.lastName &&
+      option.firstName === value.firstName &&
+      option.middleName === value.middleName &&
+      option.nameExtension === value.nameExtension &&
+      option.age === value.age &&
+      option.gender === value.gender &&
+      option.birthDate === value.birthDate &&
+      isAcademicYear
+    );
+  };
 
   return (
     <>
-      <Snackbar
+      <CustomSnackbar
         open={snackbarOpen}
-        autoHideDuration={6000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{
-          vertical: "top",
-          horizontal: "center",
-        }}
-      >
-        <Alert onClose={handleCloseSnackbar} severity={snackbarData.severity}>
-          {snackbarData.message}
-        </Alert>
-      </Snackbar>
+        handleClose={handleCloseSnackbar}
+        severity={snackbarData.severity}
+        message={snackbarData.message}
+      />
       <Dialog
         open={open}
         onClose={handleClose}
@@ -366,99 +363,118 @@ const FacultyMedicalForm = (props) => {
         className="overflow-auto"
       >
         <DialogTitle>
-          {selectedMedicalCheckup
-            ? "Edit Medical Checkup"
-            : "Add Medical Checkup"}
+          {selectedRecord ? "Edit Medical Checkup" : "Add Medical Checkup"}
         </DialogTitle>
         <form onSubmit={handleSubmit(handleSaveOrUpdate)}>
           <DialogContent>
             <DialogContentText>
               Enter medical checkup details:
             </DialogContentText>
-            <Card
-              variant="outlined"
-              style={{ marginBottom: "16px", overflow: "hidden" }}
-              className="rounded-md shadow-md"
-            >
-              <CardContent>
-                <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6} md={2}>
-                    <Controller
-                      name="dateOfExamination"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          label="Date of Examination"
-                          margin="normal"
-                          type="date"
-                          {...field}
-                          InputLabelProps={{
-                            shrink: true,
-                          }}
-                          error={!!errors.dateOfExamination}
-                          helperText={errors.dateOfExamination?.message}
-                        />
-                      )}
-                    />
+            <LocalizationProvider dateAdapter={AdapterDateFns}>
+              <Card
+                variant="outlined"
+                style={{ marginBottom: "16px", overflow: "hidden" }}
+                className="rounded-md shadow-md"
+              >
+                <CardContent>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={6} md={2}>
+                      <Controller
+                        name="dateOfExamination"
+                        control={control}
+                        render={({ field, fieldState: { error } }) => (
+                          <DatePicker
+                            {...field}
+                            label="Date of Examination"
+                            maxDate={new Date()}
+                            slotProps={{
+                              textField: {
+                                fullWidth: true,
+                                margin: "normal",
+                                error: !!error,
+                                helperText: error?.message,
+                              },
+                            }}
+                          />
+                        )}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={2.5}>
+                      <Controller
+                        name="employeeId"
+                        control={control}
+                        render={({ field }) => (
+                          <Autocomplete
+                            {...field}
+                            options={employeeIdOptions}
+                            getOptionLabel={(option) => option.employeeId || ""}
+                            value={
+                              employeeIdOptions.find(
+                                (option) =>
+                                  option.employeeId === selectedEmployeeId
+                              ) || null
+                            }
+                            inputValue={employeeIdInput}
+                            loading={loading}
+                            loadingText="Loading..."
+                            isOptionEqualToValue={isOptionEqualToValue}
+                            onInputChange={(_, newInputValue) => {
+                              setEmployeeIdInput(newInputValue);
+                            }}
+                            onChange={(_, newValue) => {
+                              setSelectedFaculty(newValue);
+                              setSelectedEmployeeId(
+                                newValue ? newValue.employeeId : ""
+                              );
+                            }}
+                            renderInput={(params) => (
+                              <TextField
+                                {...params}
+                                margin="normal"
+                                label="Employee's ID"
+                              />
+                            )}
+                          />
+                        )}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={3}>
+                      <Controller
+                        name="schoolYear"
+                        control={control}
+                        render={({ field }) => (
+                          <FormControl
+                            fullWidth
+                            margin="normal"
+                            error={!!errors.schoolYear}
+                          >
+                            <InputLabel id="school-year-label">
+                              School Year
+                            </InputLabel>
+                            <Select
+                              labelId="school-year-label"
+                              label="School Year"
+                              {...field}
+                            >
+                              {schoolYears.map((year, index) => (
+                                <MenuItem key={index} value={year}>
+                                  {year}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                            {errors.schoolYear && (
+                              <FormHelperText>
+                                {errors.schoolYear.message}
+                              </FormHelperText>
+                            )}
+                          </FormControl>
+                        )}
+                      />
+                    </Grid>
                   </Grid>
-                  <Grid item xs={12} sm={6} md={2.5}>
-                    <Controller
-                      name="employeeId"
-                      control={control}
-                      render={({ field }) => (
-                        <Autocomplete
-                          {...field}
-                          options={employeeIdOptions}
-                          getOptionLabel={(option) => option.employeeId || ""}
-                          value={
-                            employeeIdOptions.find(
-                              (option) =>
-                                option.employeeId === selectedEmployeeId
-                            ) || null
-                          }
-                          inputValue={employeeIdInput}
-                          loading={loading}
-                          loadingText="Loading..."
-                          isOptionEqualToValue={(option, value) => {
-                            return (
-                              option.employeeId === value.employeeId &&
-                              option.lastName === value.lastName &&
-                              option.firstName === value.firstName &&
-                              option.middleName === value.middleName &&
-                              option.nameExtension === value.nameExtension &&
-                              option.gender === value.gender &&
-                              option.birthDate === value.birthDate &&
-                              (option.classProfile
-                                ? option.classProfile.academicYear
-                                : null) ===
-                                (value.classProfile
-                                  ? value.classProfile.academicYear
-                                  : null)
-                            );
-                          }}
-                          onInputChange={(_, newInputValue) => {
-                            setEmployeeIdInput(newInputValue);
-                          }}
-                          onChange={(_, newValue) => {
-                            setSelectedFaculty(newValue);
-                            setSelectedEmployeeId(
-                              newValue ? newValue.employeeId : ""
-                            );
-                          }}
-                          renderInput={(params) => (
-                            <TextField
-                              {...params}
-                              margin="normal"
-                              label="Employee's ID"
-                            />
-                          )}
-                        />
-                      )}
-                    />
-                  </Grid>
-                </Grid>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </LocalizationProvider>
             <Card
               variant="outlined"
               style={{ marginBottom: "16px", overflow: "hidden" }}
@@ -475,73 +491,51 @@ const FacultyMedicalForm = (props) => {
                 </Typography>
                 <Grid container spacing={2}>
                   <Grid item xs={12} sm={6} md={3}>
-                    <Controller
+                    <ReadOnlyTextField
+                      control={control}
                       name="name"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          label="Name"
-                          fullWidth
-                          margin="normal"
-                          {...field}
-                          value={
-                            selectedFaculty
-                              ? selectedFaculty.middleName &&
-                                selectedFaculty.firstName &&
-                                selectedFaculty.lastName
-                                ? `${selectedFaculty.lastName}, ${
-                                    selectedFaculty.firstName
-                                  } ${selectedFaculty.middleName.charAt(0)}. ${
-                                    selectedFaculty.nameExtension
-                                  }`.trim()
-                                : selectedFaculty.name
-                              : ""
-                          }
-                          InputProps={{
-                            readOnly: true,
-                          }}
-                        />
-                      )}
+                      label="Name"
+                      value={
+                        selectedFaculty
+                          ? selectedFaculty.middleName &&
+                            selectedFaculty.firstName &&
+                            selectedFaculty.lastName
+                            ? `${selectedFaculty.lastName}, ${
+                                selectedFaculty.firstName
+                              } ${selectedFaculty.middleName.charAt(0)}. ${
+                                selectedFaculty.nameExtension
+                              }`.trim()
+                            : selectedFaculty.name
+                          : ""
+                      }
                     />
                   </Grid>
                   <Grid item xs={12} sm={6} md={2}>
-                    <Controller
+                    <ReadOnlyTextField
+                      control={control}
                       name="gender"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          label="Gender"
-                          fullWidth
-                          margin="normal"
-                          {...field}
-                          value={selectedFaculty ? selectedFaculty.gender : ""}
-                          InputProps={{
-                            readOnly: true,
-                          }}
-                        />
-                      )}
+                      label="Gender"
+                      value={selectedFaculty ? selectedFaculty.gender : ""}
                     />
                   </Grid>
                   <Grid item xs={12} sm={6} md={2}>
-                    <Controller
-                      name="birthDate"
+                    <ReadOnlyTextField
                       control={control}
-                      render={({ field }) => (
-                        <TextField
-                          label="Birthday"
-                          fullWidth
-                          margin="normal"
-                          {...field}
-                          value={
-                            selectedFaculty && selectedFaculty.birthDate
-                              ? formatDate(selectedFaculty.birthDate)
-                              : ""
-                          }
-                          InputProps={{
-                            readOnly: true,
-                          }}
-                        />
-                      )}
+                      name="age"
+                      label="Age"
+                      value={selectedFaculty ? selectedFaculty.age : ""}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={2}>
+                    <ReadOnlyTextField
+                      control={control}
+                      name="birthDate"
+                      label="Birthday"
+                      value={
+                        selectedFaculty && selectedFaculty.birthDate
+                          ? formatDate(selectedFaculty.birthDate)
+                          : ""
+                      }
                     />
                   </Grid>
                 </Grid>
@@ -563,220 +557,105 @@ const FacultyMedicalForm = (props) => {
                 </Typography>
                 <Grid container spacing={2}>
                   <Grid item xs={12} sm={6} md={1.5}>
-                    <Controller
+                    <VitalSignInput
+                      control={control}
                       name="heightCm"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          label="Height"
-                          margin="normal"
-                          fullWidth
-                          {...field}
-                          error={!!errors.height}
-                          helperText={errors.height?.message}
-                          onFocus={() => handleFocus("heightCm")}
-                          onBlur={() => handleBlur("heightCm")}
-                          onInput={(e) => {
-                            // Allow only numbers and a single decimal point
-                            e.target.value = e.target.value.replace(
-                              /[^0-9.]/g,
-                              ""
-                            );
-                          }}
-                          InputProps={{
-                            endAdornment:
-                              focusState["heightCm"] || field.value ? (
-                                <InputAdornment position="end">
-                                  cm
-                                </InputAdornment>
-                              ) : null,
-                          }}
-                        />
-                      )}
+                      label="Height (cm)"
+                      placeholder="120"
+                      adornmentText="cm"
+                      error={!!errors.heightCm}
+                      helperText={errors.heightCm?.message}
+                      onInputValidation={(e) => {
+                        e.target.value = e.target.value.replace(/[^0-9.]/g, "");
+                      }}
                     />
                   </Grid>
                   <Grid item xs={12} sm={6} md={1.5}>
-                    <Controller
+                    <VitalSignInput
+                      control={control}
                       name="weightKg"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          label="Weight"
-                          fullWidth
-                          margin="normal"
-                          {...field}
-                        />
-                      )}
+                      label="WeightKg (kg)"
+                      placeholder="20"
+                      adornmentText="kg"
+                      error={!!errors.weightKg}
+                      helperText={errors.weightKg?.message}
+                      onInputValidation={(e) => {
+                        e.target.value = e.target.value.replace(/[^0-9.]/g, "");
+                      }}
                     />
                   </Grid>
                   <Grid item xs={12} sm={6} md={1.5}>
-                    <Controller
-                      name="temperature"
+                    <VitalSignInput
                       control={control}
-                      render={({ field }) => (
-                        <TextField
-                          label="Temperature"
-                          margin="normal"
-                          fullWidth
-                          {...field}
-                          error={!!errors.temperature}
-                          helperText={errors.temperature?.message}
-                          onFocus={() => handleFocus("temperature")}
-                          onBlur={() => handleBlur("temperature")}
-                          InputProps={{
-                            endAdornment:
-                              focusState["temperature"] || field.value ? (
-                                <InputAdornment position="end">
-                                  °C
-                                </InputAdornment>
-                              ) : null,
-                            placeholder: "36",
-                          }}
-                          onInput={(e) => {
-                            // Allow only numbers and a single decimal point
-                            e.target.value = e.target.value.replace(
-                              /[^0-9.]/g,
-                              ""
-                            );
-                          }}
-                        />
-                      )}
+                      name="temperature"
+                      label="Temperature"
+                      placeholder="36"
+                      adornmentText="°C"
+                      error={!!errors.temperature}
+                      helperText={errors.temperature?.message}
+                      onInputValidation={(e) => {
+                        e.target.value = e.target.value.replace(/[^0-9.]/g, "");
+                      }}
                     />
                   </Grid>
                   <Grid item xs={12} sm={6} md={1.8}>
-                    <Controller
+                    <VitalSignInput
                       name="bloodPressure"
                       control={control}
-                      render={({ field }) => (
-                        <TextField
-                          label="Blood Pressure"
-                          margin="normal"
-                          fullWidth
-                          {...field}
-                          onChange={(e) => {
-                            const re = /^[0-9]{0,3}[/]?[0-9]{0,2}$/;
-                            if (
-                              e.target.value === "" ||
-                              re.test(e.target.value)
-                            ) {
-                              field.onChange(e);
-                            }
-                          }}
-                          error={!!errors.bloodPressure}
-                          helperText={errors.bloodPressure?.message}
-                          onFocus={() => handleFocus("bloodPressure")}
-                          onBlur={() => handleBlur("bloodPressure")}
-                          InputProps={{
-                            endAdornment:
-                              focusState["bloodPressure"] || field.value ? (
-                                <InputAdornment position="end">
-                                  mmHg
-                                </InputAdornment>
-                              ) : null,
-                            placeholder: "120/80",
-                          }}
-                        />
-                      )}
+                      label="Blood Pressure"
+                      placeholder="120/80"
+                      adornmentText="mmHg"
+                      error={!!errors.bloodPressure}
+                      helperText={errors.bloodPressure?.message}
+                      onInputValidation={(e) => {
+                        const value = e.target.value;
+                        const lastChar = value.charAt(value.length - 1);
+                        if (isNaN(lastChar) && lastChar !== "/") {
+                          e.target.value = value.substring(0, value.length - 1);
+                        }
+                      }}
                     />
                   </Grid>
                   <Grid item xs={12} sm={6} md={1.5}>
-                    <Controller
+                    <VitalSignInput
                       name="heartRate"
                       control={control}
-                      render={({ field }) => (
-                        <TextField
-                          label="Heart Rate"
-                          margin="normal"
-                          fullWidth
-                          {...field}
-                          error={!!errors.heartRate}
-                          helperText={errors.heartRate?.message}
-                          onFocus={() => handleFocus("heartRate")}
-                          onBlur={() => handleBlur("heartRate")}
-                          InputProps={{
-                            endAdornment:
-                              focusState["heartRate"] || field.value ? (
-                                <InputAdornment position="end">
-                                  BPM
-                                </InputAdornment>
-                              ) : null,
-                            placeholder: "80",
-                          }}
-                          onInput={(e) => {
-                            // Allow only numbers and a single decimal point
-                            e.target.value = e.target.value.replace(
-                              /[^0-9.]/g,
-                              ""
-                            );
-                          }}
-                        />
-                      )}
+                      label="Heart Rate"
+                      placeholder="80"
+                      adornmentText="BPM"
+                      error={!!errors.heartRate}
+                      helperText={errors.heartRate?.message}
+                      onInputValidation={(e) => {
+                        e.target.value = e.target.value.replace(/[^0-9.]/g, "");
+                      }}
                     />
                   </Grid>
                   <Grid item xs={12} sm={6} md={1.5}>
-                    <Controller
+                    <VitalSignInput
                       name="pulseRate"
                       control={control}
-                      render={({ field }) => (
-                        <TextField
-                          label="Pulse Rate"
-                          margin="normal"
-                          fullWidth
-                          {...field}
-                          error={!!errors.pulseRate}
-                          helperText={errors.pulseRate?.message}
-                          onFocus={() => handleFocus("pulseRate")}
-                          onBlur={() => handleBlur("pulseRate")}
-                          InputProps={{
-                            endAdornment:
-                              focusState["pulseRate"] || field.value ? (
-                                <InputAdornment position="end">
-                                  BPM
-                                </InputAdornment>
-                              ) : null, // 'bpm' stands for beats per minute, a common unit for pulse rate
-                          }}
-                          onInput={(e) => {
-                            // Allow only numbers and a single decimal point
-                            e.target.value = e.target.value.replace(
-                              /[^0-9.]/g,
-                              ""
-                            );
-                          }}
-                        />
-                      )}
+                      label="Pulse Rate"
+                      placeholder="80"
+                      adornmentText="BPM"
+                      error={!!errors.pulseRate}
+                      helperText={errors.pulseRate?.message}
+                      onInputValidation={(e) => {
+                        e.target.value = e.target.value.replace(/[^0-9.]/g, "");
+                      }}
                     />
                   </Grid>
                   <Grid item xs={12} sm={6} md={2}>
-                    <Controller
+                    <VitalSignInput
                       name="respiratoryRate"
                       control={control}
-                      render={({ field }) => (
-                        <TextField
-                          label="Respiratory Rate"
-                          margin="normal"
-                          fullWidth
-                          {...field}
-                          error={!!errors.respiratoryRate}
-                          helperText={errors.respiratoryRate?.message}
-                          onFocus={() => handleFocus("respiratoryRate")}
-                          onBlur={() => handleBlur("respiratoryRate")}
-                          InputProps={{
-                            endAdornment:
-                              focusState["respiratoryRate"] || field.value ? (
-                                <InputAdornment position="end">
-                                  breaths/min
-                                </InputAdornment>
-                              ) : null, // 'breaths/min' stands for breaths per minute, a common unit for respiratory rate
-                          }}
-                          onInput={(e) => {
-                            // Allow only numbers and a single decimal point
-                            e.target.value = e.target.value.replace(
-                              /[^0-9.]/g,
-                              ""
-                            );
-                          }}
-                        />
-                      )}
+                      label="Respiratory Rate"
+                      placeholder="e.g. 20"
+                      adornmentText="breaths/min"
+                      error={!!errors.respiratoryRate}
+                      helperText={errors.respiratoryRate?.message}
+                      onInputValidation={(e) => {
+                        e.target.value = e.target.value.replace(/[^0-9.]/g, "");
+                      }}
                     />
                   </Grid>
                 </Grid>
@@ -798,135 +677,39 @@ const FacultyMedicalForm = (props) => {
                 </Typography>
                 <Grid container spacing={2}>
                   <Grid item xs={12} sm={6} md={2}>
-                    <Controller
+                    <AutoCompleteDropdown
+                      control={control}
                       name="visionScreeningLeft"
-                      control={control}
-                      render={({ field }) => (
-                        <FormControl
-                          fullWidth
-                          margin="normal"
-                          error={!!errors.visionScreeningLeft}
-                        >
-                          <InputLabel id="visionScreeningLeft-label">
-                            Vision (Left)
-                          </InputLabel>
-                          <Select
-                            labelId="visionScreeningLeft-label"
-                            label="Vision Screening (Left)"
-                            {...field}
-                          >
-                            {visionScreeningOptions.map((option) => (
-                              <MenuItem key={option} value={option}>
-                                {option}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                          {errors.visionScreeningLeft && (
-                            <FormHelperText>
-                              {errors.visionScreeningLeft.message}
-                            </FormHelperText>
-                          )}
-                        </FormControl>
-                      )}
+                      options={visionScreeningOptions}
+                      label="Vision (Left)"
+                      errors={errors}
                     />
                   </Grid>
                   <Grid item xs={12} sm={6} md={2}>
-                    <Controller
+                    <AutoCompleteDropdown
+                      control={control}
                       name="visionScreeningRight"
-                      control={control}
-                      render={({ field }) => (
-                        <FormControl
-                          fullWidth
-                          margin="normal"
-                          error={!!errors.visionScreeningRight}
-                        >
-                          <InputLabel id="visionScreeningRight-label">
-                            Vision (Right)
-                          </InputLabel>
-                          <Select
-                            labelId="visionScreeningRight-label"
-                            label="Vision Screening (Right)"
-                            {...field}
-                          >
-                            {visionScreeningOptions.map((option) => (
-                              <MenuItem key={option} value={option}>
-                                {option}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                          {errors.visionScreeningRight && (
-                            <FormHelperText>
-                              {errors.visionScreeningRight.message}
-                            </FormHelperText>
-                          )}
-                        </FormControl>
-                      )}
+                      options={visionScreeningOptions}
+                      label="Vision (Right)"
+                      errors={errors}
                     />
                   </Grid>
                   <Grid item xs={12} sm={6} md={2}>
-                    <Controller
+                    <AutoCompleteDropdown
+                      control={control}
                       name="auditoryScreeningLeft"
-                      control={control}
-                      render={({ field }) => (
-                        <FormControl
-                          fullWidth
-                          margin="normal"
-                          error={!!errors.auditoryScreeningLeft}
-                        >
-                          <InputLabel id="auditoryScreeningLeft-label">
-                            Auditory (Left)
-                          </InputLabel>
-                          <Select
-                            labelId="auditoryScreeningLeft-label"
-                            label="Auditory Screening (Left)"
-                            {...field}
-                          >
-                            {auditoryScreeningOptions.map((option) => (
-                              <MenuItem key={option} value={option}>
-                                {option}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                          {errors.auditoryScreeningLeft && (
-                            <FormHelperText>
-                              {errors.auditoryScreeningLeft.message}
-                            </FormHelperText>
-                          )}
-                        </FormControl>
-                      )}
+                      options={auditoryScreeningOptions}
+                      label="Hearing (Left)"
+                      errors={errors}
                     />
                   </Grid>
                   <Grid item xs={12} sm={6} md={2}>
-                    <Controller
-                      name="auditoryScreeningRight"
+                    <AutoCompleteDropdown
                       control={control}
-                      render={({ field }) => (
-                        <FormControl
-                          fullWidth
-                          margin="normal"
-                          error={!!errors.auditoryScreeningRight}
-                        >
-                          <InputLabel id="auditoryScreeningRight-label">
-                            Auditory (Right)
-                          </InputLabel>
-                          <Select
-                            labelId="auditoryScreeningRight-label"
-                            label="Auditory Screening (Right)"
-                            {...field}
-                          >
-                            {auditoryScreeningOptions.map((option) => (
-                              <MenuItem key={option} value={option}>
-                                {option}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                          {errors.auditoryScreening && (
-                            <FormHelperText>
-                              {errors.auditoryScreening.message}
-                            </FormHelperText>
-                          )}
-                        </FormControl>
-                      )}
+                      name="auditoryScreeningRight"
+                      options={auditoryScreeningOptions}
+                      label="Hearing (Right)"
+                      errors={errors}
                     />
                   </Grid>
                 </Grid>
@@ -948,333 +731,129 @@ const FacultyMedicalForm = (props) => {
                 </Typography>
                 <Grid container spacing={2}>
                   <Grid item xs={12} sm={6} md={2}>
-                    <Controller
+                    <AutoCompleteDropdown
+                      control={control}
                       name="scalpScreening"
-                      control={control}
-                      render={({ field }) => (
-                        <FormControl
-                          fullWidth
-                          margin="normal"
-                          error={!!errors.scalpScreening}
-                        >
-                          <InputLabel id="scalpScreening-label">
-                            Scalp Issue
-                          </InputLabel>
-                          <Select
-                            labelId="scalpScreening-label"
-                            label="Scalp Issue"
-                            {...field}
-                          >
-                            {scalpScreeningOptions.map((option) => (
-                              <MenuItem key={option} value={option}>
-                                {option}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                          {errors.scalpScreening && (
-                            <FormHelperText>
-                              {errors.scalpScreening.message}
-                            </FormHelperText>
-                          )}
-                        </FormControl>
-                      )}
+                      options={scalpScreeningOptions}
+                      label="Scalp Issue"
+                      errors={errors}
                     />
                   </Grid>
                   <Grid item xs={12} sm={6} md={2}>
-                    <Controller
+                    <AutoCompleteDropdown
+                      control={control}
                       name="skinScreening"
-                      control={control}
-                      render={({ field }) => (
-                        <FormControl
-                          fullWidth
-                          margin="normal"
-                          error={!!errors.skinScreening}
-                        >
-                          <InputLabel id="skinScreening-label">
-                            Skin Issue
-                          </InputLabel>
-                          <Select
-                            labelId="skinScreening-label"
-                            label="Skin Issue"
-                            {...field}
-                          >
-                            {skinScreeningOptions.map((option) => (
-                              <MenuItem key={option} value={option}>
-                                {option}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                          {errors.skinScreening && (
-                            <FormHelperText>
-                              {errors.skinScreening.message}
-                            </FormHelperText>
-                          )}
-                        </FormControl>
-                      )}
+                      options={skinScreeningOptions}
+                      label="Skin Issue"
+                      errors={errors}
                     />
                   </Grid>
                   <Grid item xs={12} sm={6} md={2.5}>
-                    <Controller
+                    <AutoCompleteDropdown
+                      control={control}
                       name="eyesScreening"
-                      control={control}
-                      render={({ field }) => (
-                        <FormControl
-                          fullWidth
-                          margin="normal"
-                          error={!!errors.eyesScreening}
-                        >
-                          <InputLabel id="eyesScreening-label">
-                            Eyes Screening
-                          </InputLabel>
-                          <Select
-                            labelId="eyesScreening-label"
-                            label="Eyes Screening"
-                            {...field}
-                          >
-                            {eyesScreeningOptions.map((option) => (
-                              <MenuItem key={option} value={option}>
-                                {option}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                          {errors.eyesScreening && (
-                            <FormHelperText>
-                              {errors.eyesScreening.message}
-                            </FormHelperText>
-                          )}
-                        </FormControl>
-                      )}
+                      options={eyesScreeningOptions}
+                      label="Eyes Issue"
+                      errors={errors}
                     />
                   </Grid>
                   <Grid item xs={12} sm={6} md={2.5}>
-                    <Controller
-                      name="earScreening"
+                    <AutoCompleteDropdown
                       control={control}
-                      render={({ field }) => (
-                        <FormControl
-                          fullWidth
-                          margin="normal"
-                          error={!!errors.earsScreening}
-                        >
-                          <InputLabel id="earScreening-label">
-                            Ear Screening
-                          </InputLabel>
-                          <Select
-                            labelId="earScreening-label"
-                            label="Ear Screening"
-                            {...field}
-                            value={field.value || ""}
-                          >
-                            {earScreeningOptions.map((option) => (
-                              <MenuItem key={option} value={option}>
-                                {option}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                          {errors.earsScreening && (
-                            <FormHelperText>
-                              {errors.earsScreening.message}
-                            </FormHelperText>
-                          )}
-                        </FormControl>
-                      )}
+                      name="earScreening"
+                      options={earScreeningOptions}
+                      label="Ear Issue"
+                      errors={errors}
                     />
                   </Grid>
                   <Grid item xs={12} sm={6} md={2}>
-                    <Controller
+                    <AutoCompleteDropdown
+                      control={control}
                       name="noseScreening"
-                      control={control}
-                      render={({ field }) => (
-                        <FormControl
-                          fullWidth
-                          margin="normal"
-                          error={!!errors.noseScreening}
-                        >
-                          <InputLabel id="noseScreening-label">
-                            Nose Screening
-                          </InputLabel>
-                          <Select
-                            labelId="noseScreening-label"
-                            label="Nose Screening"
-                            {...field}
-                          >
-                            {noseScreeningOptions.map((option) => (
-                              <MenuItem key={option} value={option}>
-                                {option}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                          {errors.noseScreening && (
-                            <FormHelperText>
-                              {errors.noseScreening.message}
-                            </FormHelperText>
-                          )}
-                        </FormControl>
-                      )}
+                      options={noseScreeningOptions}
+                      label="Nose Issue"
+                      errors={errors}
                     />
                   </Grid>
                 </Grid>
                 <Grid container spacing={2}>
                   <Grid item xs={12} sm={6} md={2.2}>
-                    <Controller
+                    <AutoCompleteDropdown
+                      control={control}
                       name="mouthScreening"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          label="Mouth Screening"
-                          margin="normal"
-                          fullWidth
-                          {...field}
-                          error={!!errors.mouthScreening}
-                          helperText={errors.mouthScreening?.message}
-                          InputProps={{ placeholder: "Normal" }}
-                          onChange={(e) => {
-                            e.target.value = e.target.value.replace(
-                              /(?:^|\s)\S/g,
-                              function (a) {
-                                return a.toUpperCase();
-                              }
-                            );
-                            field.onChange(e);
-                          }}
-                        />
-                      )}
+                      options={mouthNeckThroatOptions}
+                      label="Mouth Issue"
+                      errors={errors}
                     />
                   </Grid>
                   <Grid item xs={12} sm={6} md={2.2}>
-                    <Controller
+                    <AutoCompleteDropdown
+                      control={control}
                       name="neckScreening"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          label="Neck Screening"
-                          margin="normal"
-                          fullWidth
-                          {...field}
-                          error={!!errors.neckScreening}
-                          helperText={errors.neckScreening?.message}
-                          InputProps={{ placeholder: "Normal" }}
-                          onChange={(e) => {
-                            e.target.value = e.target.value.replace(
-                              /(?:^|\s)\S/g,
-                              function (a) {
-                                return a.toUpperCase();
-                              }
-                            );
-                            field.onChange(e);
-                          }}
-                        />
-                      )}
+                      options={mouthNeckThroatOptions}
+                      label="Neck Issue"
+                      errors={errors}
                     />
                   </Grid>
                   <Grid item xs={12} sm={6} md={2.2}>
-                    <Controller
+                    <AutoCompleteDropdown
+                      control={control}
                       name="throatScreening"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          label="Throat Screening"
-                          margin="normal"
-                          fullWidth
-                          {...field}
-                          error={!!errors.throatScreening}
-                          helperText={errors.throatScreening?.message}
-                          InputProps={{ placeholder: "Normal" }}
-                          onChange={(e) => {
-                            e.target.value = e.target.value.replace(
-                              /(?:^|\s)\S/g,
-                              function (a) {
-                                return a.toUpperCase();
-                              }
-                            );
-                            field.onChange(e);
-                          }}
-                        />
-                      )}
+                      options={mouthNeckThroatOptions}
+                      label="Throat Issue"
+                      errors={errors}
                     />
                   </Grid>
                   <Grid item xs={12} sm={6} md={2.2}>
-                    <Controller
+                    <AutoCompleteDropdown
+                      control={control}
                       name="lungScreening"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          label="Lung Screening"
-                          margin="normal"
-                          fullWidth
-                          {...field}
-                          error={!!errors.lungScreening}
-                          helperText={errors.lungScreening?.message}
-                          InputProps={{ placeholder: "Normal" }}
-                          onChange={(e) => {
-                            e.target.value = e.target.value.replace(
-                              /(?:^|\s)\S/g,
-                              function (a) {
-                                return a.toUpperCase();
-                              }
-                            );
-                            field.onChange(e);
-                          }}
-                        />
-                      )}
+                      options={lungsHeartOptions}
+                      label="Lungs Issue"
+                      errors={errors}
                     />
                   </Grid>
                   <Grid item xs={12} sm={6} md={2.2}>
-                    <Controller
-                      name="heartScreening"
+                    <AutoCompleteDropdown
                       control={control}
-                      render={({ field }) => (
-                        <TextField
-                          label="Heart Screening"
-                          margin="normal"
-                          fullWidth
-                          {...field}
-                          error={!!errors.heartScreening}
-                          helperText={errors.heartScreening?.message}
-                          InputProps={{ placeholder: "Normal" }}
-                          onChange={(e) => {
-                            e.target.value = e.target.value.replace(
-                              /(?:^|\s)\S/g,
-                              function (a) {
-                                return a.toUpperCase();
-                              }
-                            );
-                            field.onChange(e);
-                          }}
-                        />
-                      )}
+                      name="heartScreening"
+                      options={lungsHeartOptions}
+                      label="Heart Issue"
+                      errors={errors}
+                    />
+                  </Grid>
+                </Grid>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6} md={3}>
+                    <AutoCompleteDropdown
+                      control={control}
+                      name="abdomen"
+                      options={abdomenOptions}
+                      label="Abdomen Issue"
+                      errors={errors}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={3}>
+                    <AutoCompleteDropdown
+                      control={control}
+                      name="deformities"
+                      options={deformitiesOptions}
+                      label="Deformities"
+                      errors={errors}
                     />
                   </Grid>
                 </Grid>
                 <Grid container spacing={2}>
                   <Grid item xs={12} sm={6} md={3}>
                     <Controller
-                      name="abdomen"
+                      name="remarks"
                       control={control}
                       render={({ field }) => (
                         <TextField
-                          label="Abdomen"
-                          margin="normal"
-                          fullWidth
                           {...field}
-                          error={!!errors.abdomen}
-                          helperText={errors.abdomen?.message}
-                        />
-                      )}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Controller
-                      name="deformities"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          label="Deformities"
+                          label="Remarks"
                           margin="normal"
-                          fullWidth
-                          {...field}
-                          error={!!errors.deformities}
-                          helperText={errors.deformities?.message}
+                          multiline
                         />
                       )}
                     />
@@ -1288,7 +867,7 @@ const FacultyMedicalForm = (props) => {
               Cancel
             </Button>
             <Button type="submit" color="primary">
-              {selectedMedicalCheckup ? "Update" : "Save"}
+              {selectedRecord ? "Update" : "Save"}
             </Button>
           </DialogActions>
         </form>
