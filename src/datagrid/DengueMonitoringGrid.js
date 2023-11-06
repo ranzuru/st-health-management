@@ -65,10 +65,14 @@ const DengueMonitoringGrid = () => {
   };
 
   const formatYearFromDate = (dateString) => {
+    if (!dateString) return "N/A"; // Return 'N/A' if dateString is null or undefined
+
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "N/A"; // Return 'N/A' if the date is invalid
+
     const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0"); // Add leading zero if needed
-    const day = String(date.getDate()).padStart(2, "0"); // Add leading zero if needed
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
   };
 
@@ -106,10 +110,10 @@ const DengueMonitoringGrid = () => {
       grade: classProfile.grade || "N/A",
       section: classProfile.section || "N/A",
       schoolYear: academicYear.schoolYear || "N/A",
-      dateOfOnset: record.dateOfOnset,
-      dateOfAdmission: record.dateOfAdmission,
+      dateOfOnset: record.dateOfOnset || null,
+      dateOfAdmission: record.dateOfAdmission || null,
       hospitalAdmission: record.hospitalAdmission,
-      dateOfDischarge: record.dateOfDischarge,
+      dateOfDischarge: record.dateOfDischarge || null,
       status: record.status,
     };
   };

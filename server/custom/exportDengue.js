@@ -57,13 +57,9 @@ async function exportDengueMonitoringData(status) {
     }${student.nameExtension ? ` ${student.nameExtension}` : ""}`.trim();
 
     const birthDate = moment(student.birthDate).format("MM/DD/YYYY");
-    const dateOfOnset = moment(record.dateOfOnset).format("MM/DD/YYYY");
-    const dateOfAdmission = record.dateOfAdmission
-      ? moment(record.dateOfAdmission).format("MM/DD/YYYY")
-      : "";
-    const dateOfDischarge = record.dateOfDischarge
-      ? moment(record.dateOfDischarge).format("MM/DD/YYYY")
-      : "";
+    const formatMomentDate = (date) => {
+      return date ? moment(date).format("MM/DD/YYYY") : "N/A";
+    };
     return {
       lrn: student.lrn,
       name: name,
@@ -74,10 +70,10 @@ async function exportDengueMonitoringData(status) {
       grade: classProfile.grade,
       section: classProfile.section,
       schoolYear: academicYear.schoolYear,
-      dateOfOnset: dateOfOnset,
-      dateOfAdmission: dateOfAdmission,
+      dateOfOnset: formatMomentDate(record.dateOfOnset),
+      dateOfAdmission: formatMomentDate(record.dateOfAdmission),
       hospitalAdmission: record.hospitalAdmission,
-      dateOfDischarge: dateOfDischarge,
+      dateOfDischarge: formatMomentDate(record.dateOfDischarge),
       status: record.status,
     };
   });

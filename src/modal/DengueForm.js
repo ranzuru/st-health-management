@@ -61,32 +61,10 @@ const DengueForm = (props) => {
 
   const validationSchema = yup.object().shape({
     lrn: yup.string(),
-    dateOfOnset: yup
-      .date()
-      .required("Date of Onset is required")
-      .max(
-        yup.ref("dateOfAdmission"),
-        "Date of Onset must be before Date of Admission"
-      ),
-    dateOfAdmission: yup
-      .date()
-      .required("Date of Admission is required")
-      .min(
-        yup.ref("dateOfOnset"),
-        "Date of Admission must be after Date of Onset"
-      )
-      .max(
-        yup.ref("dateOfDischarge"),
-        "Date of Admission must be before Date of Discharge"
-      ),
+    dateOfOnset: yup.date().nullable(),
+    dateOfAdmission: yup.date().nullable(),
     hospitalAdmission: yup.string().required("Hospital Admission is required"),
-    dateOfDischarge: yup
-      .date()
-      .required("Date of Discharge is required")
-      .min(
-        yup.ref("dateOfAdmission"),
-        "Date of Discharge must be after Date of Admission"
-      ),
+    dateOfDischarge: yup.date().nullable(),
   });
 
   const {
@@ -98,10 +76,10 @@ const DengueForm = (props) => {
   } = useForm({
     defaultValues: initialData || {
       lrn: "",
-      dateOfOnset: undefined,
-      dateOfAdmission: undefined,
+      dateOfOnset: null,
+      dateOfAdmission: null,
       hospitalAdmission: "",
-      dateOfDischarge: undefined,
+      dateOfDischarge: null,
     },
     resolver: yupResolver(validationSchema),
   });
@@ -528,9 +506,7 @@ const DengueForm = (props) => {
                         slotProps={{
                           textField: {
                             fullWidth: true,
-                            sx: { marginTop: "15px" },
-                            error: !!error,
-                            helperText: error?.message,
+                            margin: "normal",
                           },
                         }}
                       />
@@ -549,9 +525,7 @@ const DengueForm = (props) => {
                         slotProps={{
                           textField: {
                             fullWidth: true,
-                            sx: { marginTop: "15px" },
-                            error: !!error,
-                            helperText: error?.message,
+                            margin: "normal",
                           },
                         }}
                       />
@@ -570,9 +544,7 @@ const DengueForm = (props) => {
                         slotProps={{
                           textField: {
                             fullWidth: true,
-                            sx: { marginTop: "15px" },
-                            error: !!error,
-                            helperText: error?.message,
+                            margin: "normal",
                           },
                         }}
                       />
