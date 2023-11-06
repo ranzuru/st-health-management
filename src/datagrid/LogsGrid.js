@@ -1,71 +1,46 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { DataGrid } from "@mui/x-data-grid";
 import TextField from "@mui/material/TextField";
-import axiosInstance from "../config/axios-instance.js";
 
-const DengueDataGrid = () => {
+const LogsGrid = () => {
   const [searchValue, setSearchValue] = useState("");
-  const [documents, setDocuments] = useState([]);
 
-  // Function to handle search input changes
   const handleSearchChange = (event) => {
     setSearchValue(event.target.value);
   };
 
-  // Function to format date string to YYYY-MM-DD
-  const dateFormat = (dateString) => {
-    const date = new Date(dateString);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0"); // Add leading zero if needed
-    const day = String(date.getDate()).padStart(2, "0"); // Add leading zero if needed
-    return `${year}-${month}-${day}`;
-  };
-
-  const fetchDocuments = async () => {
-    try {
-      const response = await axiosInstance.get(
-        "logs/get"
-      );
-      setDocuments(response.data);
-    } catch (error) {
-      console.error("Fetching data error:", error);
-    }
-  };
-
-  // Fetch medicines when the component mounts
-  useEffect(() => {
-    fetchDocuments();
-  }, []);
-
-  const columns = [
-    { field: "_id", headerName: "ID", width: 150 },
-    { field: "section", headerName: "Section", width: 150 },
-    { field: "action", headerName: "Action", width: 150 },
-    { field: "details", headerName: "Details", width: 300 },
-    { field: "a", headerName: "User ID", width: 100 },
-    { field: "b", headerName: "Full Name", width: 100 },
-    { field: "createdAt", headerName: "Created",  width: 150,
-      valueGetter: (params) => dateFormat(params.row.createdAt),
+  const log = [
+    {
+      id: 1,
+      log_id: 1,
+      user_id: 51249,
+      log_category: "Access",
+      log_section: "Medicine Inventory",
+      log_timestamp: "08/22/2023",
+      log_sum: "Visited Medicine Inventory",
     },
-    { field: "updatedAt", headerName: "Updated",  width: 150,
-      valueGetter: (params) => dateFormat(params.row.updatedAt),
-    },
+    // ... more user data
   ];
 
+  const columns = [
+    { field: "log_id", headerName: "ID", width: 100 },
+    { field: "user_id", headerName: "User ID", width: 150 },
+    { field: "log_category", headerName: "Action", width: 150 },
+    { field: "log_section", headerName: "Section", width: 200 },
+    { field: "log_timestamp", headerName: "Timestamp", width: 150 },
+    { field: "log_sum", headerName: "Summary", width: 300 },
+  ];
 
-  const filteredDocumentData = documents.filter((document) => {
-    const lowerSearchValue = searchValue.toLowerCase();
-
-    // Explicitly convert numeric or date fields to string before using `toLowerCase()`.
-    return (
-      (document.lrn?.toLowerCase() || "").includes(lowerSearchValue) ||
-      (document.section?.toLowerCase() || "").includes(lowerSearchValue) ||
-      (document.action?.toLowerCase() || "").includes(lowerSearchValue) ||
-      (document.details?.toLowerCase() || "").includes(lowerSearchValue) ||
-      (new Date(document.createdAt).toLocaleDateString()?.toLowerCase() || "").includes(lowerSearchValue) ||
-      (new Date(document.updatedAt).toLocaleDateString()?.toLowerCase() || "").includes(lowerSearchValue)
-    );
-  });
+  const filteredUsers = log.filter(
+    (user) =>
+      user.log_id.toString().includes(searchValue) ||
+      user.user_id.toString().includes(searchValue) ||
+      user.user_lName.toLowerCase().includes(searchValue.toLowerCase()) ||
+      user.log_category.toLowerCase().includes(searchValue.toLowerCase()) ||
+      user.log_section.toLowerCase().includes(searchValue.toLowerCase()) ||
+      user.log_timestamp.toLowerCase().includes(searchValue.toLowerCase()) ||
+      user.log_sum.toLowerCase().includes(searchValue.toLowerCase())
+  );
 
   return (
     <div className="flex flex-col h-full">
@@ -74,6 +49,7 @@ const DengueDataGrid = () => {
           <div className="ml-2">
             <TextField
               label="Search"
+              variant="outlined"
               size="small"
               value={searchValue}
               onChange={handleSearchChange}
@@ -81,8 +57,7 @@ const DengueDataGrid = () => {
           </div>
         </div>
         <DataGrid
-          getRowId={(row) => row._id}
-          rows={filteredDocumentData}
+          rows={filteredUsers}
           columns={columns}
           initialState={{
             pagination: {
@@ -100,4 +75,4 @@ const DengueDataGrid = () => {
   );
 };
 
-export default DengueDataGrid;
+export default LogsGrid;

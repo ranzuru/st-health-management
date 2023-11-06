@@ -1,228 +1,182 @@
-import React, { useState } from 'react';
-import { DataGrid } from '@mui/x-data-grid';
-import IconButton from '@mui/material/IconButton';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
-import TextField from '@mui/material/TextField';
-import Button from '@mui/material/Button';
-import ReportIcon from '@mui/icons-material/Description';
+import React, { useState, useEffect, useCallback } from "react";
+import { DataGrid } from "@mui/x-data-grid";
+import IconButton from "@mui/material/IconButton";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import TextField from "@mui/material/TextField";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogContentText from "@mui/material/DialogContentText";
+import DialogTitle from "@mui/material/DialogTitle";
+import Button from "@mui/material/Button";
+import ReportIcon from "@mui/icons-material/Description";
+import MedicalCheckupForm from "../modal/MedicalStudentForm";
+import axiosInstance from "../config/axios-instance";
 
 const MedicalCheckUpGrid = () => {
+  const [medicalCheckups, setMedicalCheckups] = useState([]);
+  const [searchValue, setSearchValue] = useState("");
+  const [formOpen, setFormOpen] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [recordIdToDelete, setRecordIdToDelete] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedRecord, setSelectedRecord] = useState(null);
 
-  const [searchValue, setSearchValue] = useState('');
-  
   const handleSearchChange = (event) => {
     setSearchValue(event.target.value);
   };
 
-  const medicalCheckUp = [
+  const handleDialogOpen = (checkupId) => {
+    setRecordIdToDelete(checkupId);
+    setDialogOpen(true);
+  };
 
-    {
-        id: 1,
-        stud_id: 101,
-        name: 'Ava Martinez',
-        age: '12',
-        gender: 'Female',
-        grade: '2',
-        section: 'Mabait',
-        vision: 'Pass',
-        hearing: 'Pass',
-        oral: 'Fair',
-        height: '130',
-        weight: '27',
-        bp: '100/70',
-        immunization: 'Up-to-date',
-        assessment: 'On-Track'
-    },
+  const handleDialogClose = () => {
+    setRecordIdToDelete(null);
+    setDialogOpen(false);
+  };
 
-    {
-        id: 2,
-        stud_id: 206,
-        name: 'Ethan Williams',
-        age: '13',
-        gender: 'Male',
-        grade: '7',
-        section: 'Masunurin',
-        vision: 'Pass',
-        hearing: 'Pass',
-        oral: 'Good',
-        height: '140',
-        weight: '35',
-        bp: '110/75',
-        immunization: 'Up-to-date',
-        assessment: 'On-Track'
-    },
+  const formatYearFromDate = (dateString) => {
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0"); // Add leading zero if needed
+    const day = String(date.getDate()).padStart(2, "0"); // Add leading zero if needed
+    return `${year}-${month}-${day}`;
+  };
 
-    {
-        id: 3,
-        stud_id: 207,
-        name: 'Sophia Johnson',
-        age: '10',
-        gender: 'Female',
-        grade: '4',
-        section: 'Mabait',
-        vision: 'Pass',
-        hearing: 'Pass',
-        oral: 'Fair',
-        height: '125',
-        weight: '28',
-        bp: '105/70',
-        immunization: 'Up-to-date',
-        assessment: 'Need Further Evaluation'
-    },
+  const transformRecord = (checkup = {}) => {
+    let {
+      classEnrollment: {
+        student = {},
+        academicYear = {},
+        classProfile = {},
+      } = {},
+      nutritionalStatus = {},
+    } = checkup;
 
-    {
-        id: 4,
-        stud_id: 208,
-        name: 'Jackson Davis',
-        age: '9',
-        gender: 'Male',
-        grade: '3',
-        section: 'Mabait',
-        vision: 'Pass',
-        hearing: 'Pass',
-        oral: 'Good',
-        height: '120',
-        weight: '25',
-        bp: '100/65',
-        immunization: 'Up-to-date',
-        assessment: 'On-Track'
-    },
-
-    {
-        id: 5,
-        stud_id: 209,
-        name: 'Olivia Smith',
-        age: '7',
-        gender: 'Female',
-        grade: '1',
-        section: 'Mabait',
-        vision: 'Pass',
-        hearing: 'Pass',
-        oral: 'Fair',
-        height: '110',
-        weight: '22',
-        bp: '95/60',
-        immunization: 'Up-to-date',
-        assessment: 'Need Further Evaluation'
-    },
-
-    {
-        id: 6,
-        stud_id: 210,
-        name: 'Noah Martinez',
-        age: '12',
-        gender: 'Male',
-        grade: '6',
-        section: 'Masunurin',
-        vision: 'Pass',
-        hearing: 'Pass',
-        oral: 'Good',
-        height: '135',
-        weight: '30',
-        bp: '105/70',
-        immunization: 'Up-to-date',
-        assessment: 'On-Track'
-    },
-    
-    {
-        id: 7,
-        stud_id: 211,
-        name: 'Emma Johnson',
-        age: '8',
-        gender: 'Female',
-        grade: '2',
-        section: 'Mabait',
-        vision: 'Pass',
-        hearing: 'Pass',
-        oral: 'Fair',
-        height: '115',
-        weight: '24',
-        bp: '100/65',
-        immunization: 'Up-to-date',
-        assessment: 'On-Track'
-    },
-
-    {
-        id: 8,
-        stud_id: 212,
-        name: 'Liam Davis',
-        age: '9',
-        gender: 'Male',
-        grade: '3',
-        section: 'Mabait',
-        vision: 'Pass',
-        hearing: 'Pass',
-        oral: 'Good',
-        height: '120',
-        weight: '26',
-        bp: '100/70',
-        immunization: 'Up-to-date',
-        assessment: 'On-Track'
-    },
-
-    {
-        id: 9,
-        stud_id: 213,
-        name: 'Isabella Garcia',
-        age: '14',
-        gender: 'Female',
-        grade: '8',
-        section: 'Masunurin',
-        vision: 'Pass',
-        hearing: 'Pass',
-        oral: 'Good',
-        height: '145',
-        weight: '38',
-        bp: '110/75',
-        immunization: 'Up-to-date',
-        assessment: 'On-Track'
-    },
-
-    {
-        id: 10,
-        stud_id: 214,
-        name: 'Mason Smith',
-        age: '15',
-        gender: 'Male',
-        grade: '9',
-        section: 'Magalang',
-        vision: 'Pass',
-        hearing: 'Pass',
-        oral: 'Fair',
-        height: '150',
-        weight: '45',
-        bp: '115/80',
-        immunization: 'Up-to-date',
-        assessment: 'Need Further Evaluation'
+    if (!nutritionalStatus) {
+      nutritionalStatus = {};
     }
-  ];
+
+    const name =
+      student.firstName || student.lastName
+        ? `${student.lastName || ""}, ${student.firstName || ""}${
+            student.middleName ? ` ${student.middleName.charAt(0)}.` : ""
+          } ${student.nameExtension || ""}`.trim()
+        : "N/A";
+
+    return {
+      id: checkup._id,
+      lrn: student.lrn || "N/A",
+      name,
+      age: student.age || "N/A",
+      gender: student.gender || "N/A",
+      birthDate: student.birthDate || "N/A",
+      address: student.address || "N/A",
+      grade: classProfile.grade || "N/A",
+      section: classProfile.section || "N/A",
+      schoolYear: academicYear.schoolYear || "N/A",
+      heightCm: nutritionalStatus.heightCm || "N/A",
+      weightKg: nutritionalStatus.weightKg || "N/A",
+      BMI: nutritionalStatus.BMI || "N/A",
+      BMIClassification: nutritionalStatus.BMIClassification || "N/A",
+      heightForAge: nutritionalStatus.heightForAge || "N/A",
+      beneficiaryOfSBFP: nutritionalStatus.beneficiaryOfSBFP || "N/A",
+      ironSupplementation: checkup.ironSupplementation,
+      dateOfExamination: checkup.dateOfExamination,
+      deworming: checkup.deworming,
+      pulseRate: checkup.pulseRate,
+      respiratoryRate: checkup.respiratoryRate,
+      visionScreeningLeft: checkup.visionScreeningLeft,
+      visionScreeningRight: checkup.visionScreeningRight,
+      auditoryScreeningLeft: checkup.auditoryScreeningLeft,
+      auditoryScreeningRight: checkup.auditoryScreeningRight,
+      scalpScreening: checkup.scalpScreening,
+      skinScreening: checkup.skinScreening,
+      eyesScreening: checkup.eyesScreening,
+      earScreening: checkup.earScreening,
+      noseScreening: checkup.noseScreening,
+      mouthScreening: checkup.mouthScreening,
+      neckScreening: checkup.neckScreening,
+      throatScreening: checkup.throatScreening,
+      lungScreening: checkup.lungScreening,
+      heartScreening: checkup.heartScreening,
+      abdomen: checkup.abdomen,
+      deformities: checkup.deformities,
+      menarche: checkup.menarche,
+      temperature: checkup.temperature,
+      bloodPressure: checkup.bloodPressure,
+      heartRate: checkup.heartRate,
+      remarks: checkup.remarks,
+    };
+  };
+
+  const fetchMedicalCheckups = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await axiosInstance.get("medicalCheckup/fetch");
+      const updatedCheckups = response.data.map(transformRecord);
+      setMedicalCheckups(updatedCheckups);
+    } catch (error) {
+      console.error(
+        "An error occurred while fetching medical checkups:",
+        error
+      );
+      setIsLoading(false);
+    } finally {
+      setIsLoading(false); // This ensures loading is set to false regardless of try or catch outcomes.
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchMedicalCheckups();
+  }, [fetchMedicalCheckups]);
+
+  const addNewMedicalCheckup = (newCheckup) => {
+    setMedicalCheckups((prevCheckups) => [...prevCheckups, newCheckup]);
+  };
 
   const columns = [
-    { field: 'stud_id', headerName: 'Stud_ID', width: 100 },
-    { field: 'name', headerName: 'Name', width: 200 },
-    { field: 'age', headerName: 'Age', width: 150 },
-    { field: 'gender', headerName: 'Gender', width: 150 },
-    { field: 'grade', headerName: 'Grade Level', width: 150 },
-    { field: 'section', headerName: 'Section', width: 150 },
-    { field: 'vision', headerName: 'Vision', width: 100 },
-    { field: 'hearing', headerName: 'Hearing', width: 100 },
-    { field: 'oral', headerName: 'Oral Health', width: 100 },
-    { field: 'height', headerName: 'Height (cm)', width: 100 },
-    { field: 'weight', headerName: 'Weight (kg)', width: 100 },
-    { field: 'bp', headerName: 'BP', width: 100 },
-    { field: 'immunization', headerName: 'Immunization Status', width: 150 },
-    { field: 'assessment', headerName: 'Assessment', width: 150 },
     {
-      field: 'action',
-      headerName: 'Action',
+      field: "dateOfExamination",
+      headerName: "Examination Date",
+      width: 125,
+      valueGetter: (params) => formatYearFromDate(params.row.dateOfExamination),
+    },
+    { field: "lrn", headerName: "LRN", width: 150 },
+    { field: "age", headerName: "Age", width: 100 },
+    { field: "gender", headerName: "Gender", width: 100 },
+    { field: "section", headerName: "Section", width: 100 },
+    { field: "schoolYear", headerName: "S.Y", width: 100 },
+    { field: "temperature", headerName: "Temp (°C)", width: 100 },
+    { field: "bloodPressure", headerName: "BP mmHg", width: 100 },
+    { field: "heartRate", headerName: "Heart Rate", width: 100 },
+    { field: "heightCm", headerName: "Height (cm)", width: 100 },
+    { field: "weightKg", headerName: "Weight (kg)", width: 100 },
+    { field: "BMIClassification", headerName: "Classification", width: 100 },
+    {
+      field: "ironSupplementation",
+      headerName: "Iron Supp.",
+      width: 100,
+      valueGetter: (params) => (params.row.ironSupplementation ? "Yes" : "No"),
+    },
+    {
+      field: "deworming",
+      headerName: "Deworming",
+      width: 100,
+      valueGetter: (params) => (params.row.deworming ? "Yes" : "No"),
+    },
+    {
+      field: "action",
+      headerName: "Action",
       width: 150,
       renderCell: (params) => (
         <div>
-        <IconButton onClick={() => handleAction(params.row.id)}>
+          <IconButton onClick={() => handleEditRecord(params.row.id)}>
             <EditIcon />
           </IconButton>
-          <IconButton onClick={() => handleDelete(params.row.id)}>
+          <IconButton onClick={() => handleDialogOpen(params.row.id)}>
             <DeleteOutlineIcon />
           </IconButton>
         </div>
@@ -230,64 +184,136 @@ const MedicalCheckUpGrid = () => {
     },
   ];
 
-  const handleAction = (userId) => {
-    // Implement your action logic here
-    console.log(`Edit user with ID: ${userId}`);
+  const handleEditRecord = (checkupId) => {
+    const medicalToEdit = medicalCheckups.find(
+      (medicalCheckup) => medicalCheckup.id === checkupId
+    );
+    setSelectedRecord(medicalToEdit);
+    setFormOpen(true);
   };
 
-  const handleDelete = (userId) => {
-    // Implement your delete logic here
-    console.log(`Delete user with ID: ${userId}`);
+  const updatedMedicalCheckup = (updatedCheckup) => {
+    setMedicalCheckups((prevCheckups) =>
+      prevCheckups.map((checkup) =>
+        checkup.id === updatedCheckup.id ? updatedCheckup : checkup
+      )
+    );
   };
 
-  const FilteredMedicalCheckUp = medicalCheckUp.filter(user => 
-    user.stud_id.toString().includes(searchValue) ||
-    user.name.toLowerCase().includes(searchValue.toLowerCase()) ||
-    user.section.toLowerCase().includes(searchValue.toLowerCase()) ||
-    user.grade.toLowerCase().includes(searchValue.toLowerCase()) ||
-    user.gender.toLowerCase().includes(searchValue.toLowerCase())
+  const handleDelete = async () => {
+    try {
+      await axiosInstance.delete(`medicalCheckup/delete/${recordIdToDelete}`);
+
+      // Update the state to filter out the deleted record
+      const updatedRecords = medicalCheckups.filter(
+        (checkup) => checkup.id !== recordIdToDelete
+      );
+      setMedicalCheckups(updatedRecords);
+    } catch (error) {
+      console.error("Error deleting the record:", error.message);
+    }
+    handleDialogClose();
+  };
+
+  const FilteredMedicalCheckups = medicalCheckups.filter((checkup) =>
+    Object.keys(checkup).some((key) => {
+      const value = checkup[key]?.toString().toLowerCase();
+      return value?.includes(searchValue.toLowerCase());
+    })
   );
-  
+
+  const handleModalOpen = () => {
+    setFormOpen(true);
+  };
+
+  const handleModalClose = () => {
+    setFormOpen(false);
+  };
 
   return (
     <div className="flex flex-col h-full">
-      <div className="w-full max-w-screen-xl mx-auto px-4">
-       <div className="mb-4 flex justify-between items-center">
-       <div>
-       <Button variant="contained" color="secondary">
-        <ReportIcon /> Generate Report
-        </Button>
-        </div>
-        <div className="flex items-center">
-        <div className="ml-2">
-       <Button variant="contained" color="primary">Add Patients</Button>
+      <div className="w-full max-w-screen-xl mx-auto px-8">
+        <div className="mb-4 flex justify-between items-center">
+          <div>
+            <Button variant="contained" color="secondary">
+              <ReportIcon /> Generate Report
+            </Button>
           </div>
-       <div className="ml-2">
-        <TextField
-          label="Search"
-          variant="outlined"
-          size="small"
-          value={searchValue}
-          onChange={handleSearchChange}
+          <div className="flex items-center">
+            <div className="ml-2">
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleModalOpen}
+              >
+                Add Patients
+              </Button>
+            </div>
+            <div className="ml-2">
+              <TextField
+                label="Search"
+                variant="outlined"
+                size="small"
+                value={searchValue}
+                onChange={handleSearchChange}
+              />
+            </div>
+          </div>
+        </div>
+        <DataGrid
+          rows={FilteredMedicalCheckups}
+          columns={columns}
+          getRowId={(row) => row.id}
+          initialState={{
+            pagination: {
+              paginationModel: {
+                pageSize: 10,
+              },
+            },
+          }}
+          sx={{
+            "& .MuiDataGrid-row:nth-of-type(odd)": {
+              backgroundColor: "#f3f4f6",
+            },
+          }}
+          pageSizeOptions={[10]}
+          checkboxSelection
+          disableRowSelectionOnClick
+          loading={isLoading}
+          style={{ height: 650 }}
+        />
+        <MedicalCheckupForm
+          open={formOpen}
+          isEditing={!!selectedRecord}
+          addNewMedicalCheckup={addNewMedicalCheckup}
+          selectedRecord={selectedRecord}
+          onCheckupUpdate={updatedMedicalCheckup}
+          onClose={() => {
+            setSelectedRecord(null);
+            handleModalClose();
+          }}
+          onCancel={() => {
+            setSelectedRecord(null);
+            handleModalClose();
+          }}
         />
       </div>
-      </div>
-      </div>
-      <DataGrid 
-      rows={FilteredMedicalCheckUp}
-      columns={columns}
-      initialState={{
-        pagination: {
-          paginationModel: {
-            pageSize: 10,
-          },
-        },
-      }}
-      pageSizeOptions={[10]}
-      checkboxSelection
-      disableRowSelectionOnClick  
-      />
-    </div>
+      <Dialog open={dialogOpen} onClose={handleDialogClose}>
+        <DialogTitle>Confirm Delete!</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to delete this record?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDialogClose} color="primary">
+            Cancel
+          </Button>
+          <Button onClick={handleDelete} color="primary">
+            Confirm
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 };

@@ -44,8 +44,84 @@ exports.register = async (req, res) => {
 
     res.status(201).json({ message: "User registered successfully" });
   } catch (error) {
-    console.error("Register error:", error);
     res.status(500).json({ error: "An error occurred" });
+  }
+};
+
+//Automate refreshToken
+exports.refreshToken = (req, res) => {
+  const refreshToken = req.body.refreshToken;
+
+  if (!refreshToken) {
+    return res.status(401).json({ error: "Refresh token required" });
+  }
+
+  try {
+    const decodedToken = jwt.verify(
+      refreshToken,
+      process.env.REFRESH_TOKEN_SECRET
+    );
+    const newToken = jwt.sign(
+      { userId: decodedToken.userId },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: "1h",
+      }
+    );
+    return res.status(200).json({ newToken });
+  } catch (error) {
+    console.error("Refresh Token failed:", error);
+    return res.status(401).json({ error: "Invalid or expired refresh token" });
+  }
+};
+
+exports.internalRegister = async (req, res) => {
+  try {
+    const { firstName, lastName, phoneNumber, email, password, gender, role } =
+      req.body;
+
+    // Validate required fields
+    if (
+      !firstName ||
+      !lastName ||
+      !phoneNumber ||
+      !email ||
+      !password ||
+      !gender
+    ) {
+      return res.status(400).json({ error: "All fields are required" });
+    }
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ error: "Email already exists" });
+    }
+
+    // Here you can add additional validations or logic specific to internal registration.
+
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create a new user in the database
+    const newUser = new User({
+      firstName,
+      lastName,
+      phoneNumber,
+      email,
+      password: hashedPassword,
+      gender,
+      role,
+    });
+
+    await newUser.save();
+
+    res
+      .status(201)
+      .json({ message: "User registered successfully internally" });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: "An error occurred during internal registration" });
   }
 };
 
@@ -90,15 +166,17 @@ exports.login = async (req, res) => {
       }
     );
 
-    res.status(200).json({ token, refreshToken });
+    const userResponse = {
+      _id: user._id,
+      email: user.email,
+      role: user.role, // assuming 'role' is a field in your User model
+      // Add any other necessary fields, but exclude password for security reasons.
+    };
+
+    res.status(200).json({ token, refreshToken, user: userResponse });
   } catch (error) {
-    console.error("Login error:", error);
     res
       .status(500)
       .json({ error: "An error occurred is", details: error.message });
   }
-};
-
-exports.refreshToken = (req, res) => {
-  return res.status(200).json({ newToken: req.newToken });
 };

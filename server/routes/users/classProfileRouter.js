@@ -1,16 +1,16 @@
 const express = require("express");
 const router = express.Router();
-const ClassSchema = require("../../models/ClassProfileSchema"); // Adjust the path as needed
-const FacultySchema = require("../../models/FacultyProfileSchema"); // Adjust the path as needed
+const ClassProfile = require("../../models/ClassProfileSchema"); // Adjust the path as needed
+const FacultyProfile = require("../../models/FacultyProfileSchema"); // Adjust the path as needed
 const authenticateMiddleware = require("../../auth/authenticateMiddleware.js");
 
 // Create a new ClassProfile with a reference to a FacultyProfile using employeeId
 router.post("/createClassProfile", authenticateMiddleware, async (req, res) => {
   try {
-    const { grade, section, room, syFrom, syTo, faculty } = req.body;
+    const { grade, section, room, faculty } = req.body;
 
     // Check if the provided employeeId is valid
-    const facultyProfile = await FacultySchema.findOne({
+    const facultyProfile = await FacultyProfile.findOne({
       employeeId: faculty,
     });
     if (!facultyProfile) {
@@ -18,21 +18,27 @@ router.post("/createClassProfile", authenticateMiddleware, async (req, res) => {
     }
 
     // Validate that none of the fields are missing
-    if (!grade || !section || !room || !syFrom || !syTo || !faculty) {
+    if (!grade || !section || !room || !faculty) {
       return res.status(400).json({ error: "All fields are required" });
     }
 
-    const classProfile = new ClassSchema({
+    // Validate that the grade-section combination is unique
+    const existingClassProfile = await ClassProfile.findOne({ grade, section });
+    if (existingClassProfile) {
+      return res
+        .status(400)
+        .json({ error: "This grade-section combination already exists" });
+    }
+
+    const classProfile = new ClassProfile({
       grade,
       section,
       room,
-      syFrom,
-      syTo,
       faculty: facultyProfile._id,
     });
 
     await classProfile.save();
-    const populatedClassProfile = await ClassSchema.findById(
+    const populatedClassProfile = await ClassProfile.findById(
       classProfile._id
     ).populate("faculty");
     res.status(201).json({ classProfile: populatedClassProfile });
@@ -51,7 +57,7 @@ router.post("/createClassProfile", authenticateMiddleware, async (req, res) => {
 // Get all ClassProfiles with faculty name populated
 router.get("/fetchClassProfile", authenticateMiddleware, async (req, res) => {
   try {
-    const classProfiles = await ClassSchema.find().populate({
+    const classProfiles = await ClassProfile.find().populate({
       path: "faculty",
       match: { role: "Adviser" },
       select: "employeeId firstName lastName",
@@ -73,7 +79,7 @@ router.get(
   authenticateMiddleware,
   async (req, res) => {
     try {
-      const classProfile = await ClassSchema.findById(req.params.id).populate({
+      const classProfile = await ClassProfile.findById(req.params.id).populate({
         path: "faculty",
         select: "firstName lastName",
         transform: (doc) => ({
@@ -94,29 +100,46 @@ router.get(
   }
 );
 
+router.post(
+  "/checkGradeSectionUnique",
+  authenticateMiddleware,
+  async (req, res) => {
+    try {
+      const { grade, section } = req.body;
+
+      // Check if the grade and section combination is unique
+      const existingRecord = await ClassProfile.findOne({
+        $and: [{ grade }, { section }],
+      });
+
+      return res.status(200).json({ isUnique: !existingRecord });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
 // Update a ClassProfile by ID
 router.put(
   "/updateClassProfile/:id",
   authenticateMiddleware,
   async (req, res) => {
     try {
-      const { grade, section, room, syFrom, syTo, faculty } = req.body; // change employeeId to faculty
-      const facultyProfile = await FacultySchema.findOne({
+      const { grade, section, room, faculty } = req.body;
+      const facultyProfile = await FacultyProfile.findOne({
         employeeId: faculty,
-      }); // change employeeId to faculty
+      });
 
       if (!facultyProfile) {
         return res.status(404).json({ error: "FacultyProfile not found" });
       }
 
-      const classProfile = await ClassSchema.findByIdAndUpdate(
+      const classProfile = await ClassProfile.findByIdAndUpdate(
         req.params.id,
         {
           grade,
           section,
           room,
-          syFrom,
-          syTo,
           faculty: facultyProfile._id,
         },
         { new: true }
@@ -140,7 +163,7 @@ router.delete(
   authenticateMiddleware,
   async (req, res) => {
     try {
-      const classProfile = await ClassSchema.findByIdAndRemove(req.params.id);
+      const classProfile = await ClassProfile.findByIdAndRemove(req.params.id);
 
       if (!classProfile) {
         return res.status(404).json({ error: "ClassProfile not found" });

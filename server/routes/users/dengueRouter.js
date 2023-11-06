@@ -1,153 +1,409 @@
 const express = require("express");
-const Schema = require("../../models/dengue.js");
-const StudentSchema = require("../../models/Student.js");
-const ClassSchema = require("../../models/ClassProfileSchema.js");
-const AdviserSchema = require("../../models/FacultyProfileSchema.js");
-const authenticateMiddleware = require("../../auth/authenticateMiddleware.js");
+const DengueMonitoring = require("../../models/DengueSchema");
+const ClassEnrollment = require("../../models/ClassEnrollment");
+const StudentProfile = require("../../models/StudentProfileSchema");
 const router = express.Router();
+const authenticateMiddleware = require("../../auth/authenticateMiddleware.js");
+const exportDengueMonitoringData = require("../../custom/exportDengue.js");
+const multer = require("multer");
+const ExcelJS = require("exceljs");
 
-// Middleware to authenticate routes if needed
-router.use(authenticateMiddleware);
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
+const Joi = require("joi");
 
-// Create a new document
-router.post("/post", async (req, res) => {
+const validationSchema = Joi.object({
+  LRN: Joi.string().required("LRN is required."),
+  "Date of Onset": Joi.date().required("Date of Onset is required."),
+  "Date of Admission": Joi.date().required("Date of Admission is required."),
+  "Hospital Admission": Joi.string().required(
+    "Hospital Admission is required."
+  ),
+  "Date of Discharge": Joi.date().required("Date of Discharge is required."),
+});
+
+// Create a new dengue monitoring record
+router.post("/create", authenticateMiddleware, async (req, res) => {
   try {
-    const { onsetDate, admissionDate, admissionHospital, dischargeDate, adviser_data, student_data, student_age, class_data } = req.body;
+    const { lrn, ...dengueData } = req.body;
 
-    const lrnValidation = await StudentSchema.findOne({
-      student_class: class_data,
+    const student = await StudentProfile.findOne({ lrn: lrn }).exec();
+
+    if (!student) {
+      return res
+        .status(400)
+        .json({ error: "Invalid LRN or the student is not enrolled" });
+    }
+
+    const classEnrollment = await ClassEnrollment.findOne({
+      student: student._id,
+    }).exec();
+
+    if (!classEnrollment) {
+      return res
+        .status(400)
+        .json({ error: "Student is not enrolled in any class" });
+    }
+
+    const newDengueRecord = new DengueMonitoring({
+      ...dengueData,
+      classEnrollment: classEnrollment._id,
     });
-    if (!lrnValidation) {
-      return res.status(404).json({ error: "student lrn does not exist in this class" });
-    }
-    const classDataValidation = await ClassSchema.findById(class_data);
-    if (!classDataValidation) {
-      return res.status(404).json({ error: "Class not found" });
-    }
-    const adviserDataValidation = await AdviserSchema.findById(adviser_data);
-    if (!adviserDataValidation) {
-      return res.status(404).json({ error: "Adviser not found" });
+
+    await newDengueRecord.save();
+
+    // Populate the Dengue record with ClassEnrollment and further details
+    const populatedDengueRecord = await DengueMonitoring.findById(
+      newDengueRecord._id
+    )
+      .populate({
+        path: "classEnrollment",
+        populate: [
+          {
+            path: "student",
+          },
+          {
+            path: "classProfile",
+          },
+          {
+            path: "academicYear",
+          },
+        ],
+      })
+      .exec();
+
+    res.status(201).json({ newDengueRecord: populatedDengueRecord });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Fetch all dengue monitoring records
+router.get("/fetch/:status", authenticateMiddleware, async (req, res) => {
+  const { status } = req.params;
+
+  if (!["Active", "Archived", "Inactive"].includes(status)) {
+    return res.status(400).json({ error: "Invalid student status." });
+  }
+
+  try {
+    const records = await DengueMonitoring.find({
+      status: status,
+    })
+      .populate({
+        path: "classEnrollment",
+        populate: [
+          {
+            path: "student",
+          },
+          {
+            path: "classProfile",
+          },
+          {
+            path: "academicYear",
+          },
+        ],
+      })
+      .exec();
+
+    res.status(200).json(records);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update a dengue monitoring record by LRN
+router.put("/update/:lrn", authenticateMiddleware, async (req, res) => {
+  try {
+    const student = await StudentProfile.findOne({ lrn: req.params.lrn });
+
+    if (!student) {
+      return res.status(404).json({ error: "Student not found" });
     }
 
-    if (!onsetDate || !student_age || !class_data || !adviser_data || !student_data) {
-      console.log("Missing required fields");
-      return res.status(400).json({
-        error:
-          "Missing required fields: onsetDate, adviser_data, student_data, class_data",
+    // Step 2: Find the ClassEnrollment using student's _id
+    const classEnrollment = await ClassEnrollment.findOne({
+      student: student._id,
+    });
+
+    if (!classEnrollment) {
+      return res.status(404).json({
+        error: "ClassEnrollment not found or the student is not enrolled",
       });
     }
 
-    // Create a new document
-    const document = new Schema({ onsetDate, admissionDate, admissionHospital, dischargeDate, adviser_data: adviserDataValidation._id, student_data, student_age, class_data: classDataValidation._id });
+    // Find existing Dengue monitoring record for the student
+    const existingRecord = await DengueMonitoring.findOne({
+      classEnrollment: classEnrollment._id,
+    });
 
-    // Save the document to the database
-    await document.save();
-    res.status(201).json(document);
-  } catch (error) {
-    console.error("Internal server error:", error);
-    res.status(500).json({ error: "Internal server error: " + error.message });
-  }
-});
+    if (!existingRecord)
+      return res
+        .status(404)
+        .json({ error: "Dengue monitoring record not found" });
 
-// Get all documents
-router.get("/get", async (req, res) => {
-  try {
-    const documents = await Schema.find();
+    // Merge the existing data with the update
+    const updatedData = { ...existingRecord.toObject(), ...req.body };
 
-    // Manually populate student_data using LRN
-    const populatedDocuments = await Promise.all(
-      documents.map(async (doc) => {
-        // Fetch student data using LRN
-        const studentData = await StudentSchema.findOne({ lrn: doc.student_data }).select("lrn lastName firstName middleName nameExtension address");
-
-        // Fetch class data
-        const classData = await ClassSchema.findById(doc.class_data).select("_id grade section syFrom syTo");
-
-        // Fetch adviser data based on role "Adviser"
-        const adviserData = await AdviserSchema.findOne({ _id: doc.adviser_data, role: "Adviser" }).select("_id firstName lastName");
-
-        return {
-          ...doc.toObject(),
-          student_data: studentData || null,
-          class_data: classData || null,
-          adviser_data: adviserData || null,
-        };
-      })
-    );
-
-    res.json(populatedDocuments);
-  } catch (error) {
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-// Get a specific document by ID
-router.get("/get/:id", async (req, res) => {
-  try {
-    const document = await Schema.findById(req.params.id);
-    if (!document) {
-      return res.status(404).json({ error: "Student profile not found" });
-    }
-
-    const populatedDocuments = await Promise.all(
-      document.map(async (doc) => {
-        // Fetch student data using LRN
-        const studentData = await StudentSchema.findOne({ lrn: doc.student_data }).select("lrn lastName firstName middleName nameExtension address");
-
-        // Fetch class data
-        const classData = await ClassSchema.findById(doc.class_data).select("_id grade section syFrom syTo");
-
-        // Fetch adviser data based on role "Adviser"
-        const adviserData = await AdviserSchema.findOne({ _id: doc.adviser_data, role: "Adviser" }).select("_id firstName lastName");
-
-        return {
-          ...doc.toObject(),
-          student_data: studentData || null,
-          class_data: classData || null,
-          adviser_data: adviserData || null,
-        };
-      })
-    );
-
-    res.json(populatedDocuments);
-  } catch (error) {
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-// Update a specific document by ID
-router.put("/put/:id", async (req, res) => {
-  try {
-    const updatedDocumentData = {
-      ...req.body,
-    };
-
-    const updatedDocument = await Schema.findByIdAndUpdate(
-      req.params.id,
-      updatedDocumentData,
+    // Update the Dengue monitoring record
+    const updatedDengueRecord = await DengueMonitoring.findOneAndUpdate(
+      { classEnrollment: classEnrollment._id },
+      updatedData,
       { new: true }
-    );
+    ).populate({
+      path: "classEnrollment",
+      populate: [
+        {
+          path: "student",
+        },
+        {
+          path: "classProfile",
+        },
+        {
+          path: "academicYear",
+        },
+      ],
+    });
 
-    if (!updatedDocument) {
-      return res.status(404).json({ error: "Student profile not found" });
-    }
-    res.json(updatedDocument);
+    res.status(200).json(updatedDengueRecord);
   } catch (error) {
-    res.status(500).json({ error: "Internal server error" });
+    res.status(400).json({ error: error.message });
   }
 });
 
-// Delete a specific document by ID
-// router.delete("/deleteMedicine/:id", async (req, res) => {
-//   try {
-//     const deletedMedicine = await Schema.findByIdAndRemove(req.params.id);
-//     if (!deletedMedicine) {
-//       return res.status(404).json({ error: "Medicine not found" });
-//     }
-//     res.json({ message: "Medicine deleted successfully" });
-//   } catch (error) {
-//     res.status(500).json({ error: "Internal server error" });
-//   }
-// });
+router.get("/search/:partialLrn", authenticateMiddleware, async (req, res) => {
+  try {
+    const partialLrn = req.params.partialLrn;
+
+    const enrollments = await ClassEnrollment.find({
+      status: "Active",
+    }).populate([
+      {
+        path: "student",
+        match: { lrn: new RegExp(partialLrn, "i") },
+        select:
+          "lrn lastName firstName middleName nameExtension gender age birthDate address -_id",
+      },
+      {
+        path: "classProfile",
+        select: "grade section -_id",
+      },
+      {
+        path: "academicYear",
+        select: "schoolYear -_id",
+      },
+    ]);
+
+    const filteredEnrollments = enrollments.filter(
+      (enrollment) => enrollment.student !== null
+    );
+
+    if (filteredEnrollments.length === 0)
+      return res.status(404).json({ error: "No matches found" });
+
+    const students = filteredEnrollments.map((enrollment) => ({
+      ...enrollment.student.toObject(),
+      classProfile: enrollment.classProfile,
+      academicYear: enrollment.academicYear,
+    }));
+
+    res.status(200).json(students);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete a dengue monitoring record by ID
+router.put("/delete/:recordId", authenticateMiddleware, async (req, res) => {
+  try {
+    const dengueRecord = await DengueMonitoring.findById(req.params.recordId);
+
+    if (!dengueRecord) {
+      return res
+        .status(404)
+        .json({ error: "Dengue monitoring record not found" });
+    }
+
+    // Check if the Dengue monitoring record is already inactive
+    if (dengueRecord.status === "Inactive") {
+      return res.status(400).json({ error: "Record already inactive" });
+    }
+
+    dengueRecord.status = "Inactive";
+    await dengueRecord.save();
+    res.status(200).json({
+      message: "Dengue monitoring record marked as Inactive",
+      dengueRecord,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.put("/reinstate/:recordId", authenticateMiddleware, async (req, res) => {
+  try {
+    const dengueRecord = await DengueMonitoring.findById(req.params.recordId);
+
+    if (!dengueRecord) {
+      return res
+        .status(404)
+        .json({ error: "Dengue monitoring record not found" });
+    }
+
+    // Check if the Dengue monitoring record is already active
+    if (dengueRecord.status === "Active") {
+      return res.status(400).json({ error: "Record is already active" });
+    }
+
+    dengueRecord.status = "Active";
+    await dengueRecord.save();
+    res.status(200).json({
+      message: "Dengue monitoring record reinstated to Active",
+      dengueRecord,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get("/export/:status?", async (req, res) => {
+  const { status } = req.params;
+  try {
+    const buffer = await exportDengueMonitoringData(status);
+
+    // Set the headers to prompt a download with a proper file name.
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=dengue-monitoring-report.xlsx"
+    );
+
+    // Send the buffer.
+    res.send(buffer);
+  } catch (error) {
+    // Error handling
+    console.error("Failed to export Dengue Monitoring data:", error);
+    res.status(500).send("Error when trying to export data");
+  }
+});
+
+router.post(
+  "/import-excel",
+  authenticateMiddleware,
+  upload.single("file"),
+  async (req, res) => {
+    if (!req.file || !req.file.buffer) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    const fileBuffer = req.file.buffer;
+    const workbook = new ExcelJS.Workbook();
+    const headers = [
+      "LRN",
+      "Date of Onset",
+      "Date of Admission",
+      "Hospital Admission",
+      "Date of Discharge",
+    ];
+
+    const dengueRecords = [];
+    const errors = [];
+    const invalidLRNs = [];
+
+    try {
+      await workbook.xlsx.load(fileBuffer);
+      const worksheet = workbook.getWorksheet(1);
+
+      if (!workbook || !worksheet) {
+        return res.status(400).json({ message: "Invalid Excel file format" });
+      }
+
+      const convertStringToDate = (dateString) => {
+        const [year, month, day] = dateString.split("-").map(Number);
+        return new Date(year, month - 1, day); // months are 0-indexed in JS
+      };
+
+      for (const row of worksheet.getRows(2, worksheet.rowCount - 1)) {
+        const rowData = {};
+
+        headers.forEach((header, colIndex) => {
+          const cellValue = row.getCell(colIndex + 1).text;
+
+          if (
+            [
+              "Date of Onset",
+              "Date of Admission",
+              "Date of Discharge",
+            ].includes(header)
+          ) {
+            rowData[header] = convertStringToDate(cellValue);
+          } else {
+            rowData[header] = cellValue;
+          }
+        });
+
+        const { error } = validationSchema.validate(rowData);
+        if (error) {
+          errors.push(
+            `Validation error for LRN ${rowData.LRN}: ${error.details[0].message}`
+          );
+          continue;
+        }
+
+        const studentProfile = await StudentProfile.findOne({
+          lrn: rowData.LRN,
+        });
+
+        if (!studentProfile) {
+          errors.push(`Invalid LRN found: ${rowData.LRN}`);
+          invalidLRNs.push(rowData.LRN);
+          continue;
+        }
+
+        const classEnrollment = await ClassEnrollment.findOne({
+          student: studentProfile._id,
+        });
+
+        if (!classEnrollment) {
+          errors.push(
+            `ClassEnrollment not found or the student is not enrolled: ${rowData.LRN}`
+          );
+          invalidLRNs.push(rowData.LRN);
+          continue;
+        }
+
+        const newDengueRecord = new DengueMonitoring({
+          dateOfOnset: rowData["Date of Onset"],
+          dateOfAdmission: rowData["Date of Admission"],
+          hospitalAdmission: rowData["Hospital Admission"],
+          dateOfDischarge: rowData["Date of Discharge"],
+          classEnrollment: classEnrollment._id,
+        });
+
+        dengueRecords.push(newDengueRecord);
+      }
+
+      if (errors.length > 0 && dengueRecords.length > 0) {
+        await DengueMonitoring.insertMany(dengueRecords);
+        return res
+          .status(207)
+          .json({ message: "Partial data import", errors, invalidLRNs });
+      } else if (errors.length > 0) {
+        return res
+          .status(400)
+          .json({ message: "Data import failed", errors, invalidLRNs });
+      } else {
+        await DengueMonitoring.insertMany(dengueRecords);
+        return res.json({ message: "Data imported successfully" });
+      }
+    } catch (error) {
+      console.error("Error while importing Excel:", error.message);
+      res.status(500).json({ message: "Failed to import data" });
+    }
+  }
+);
 
 module.exports = router;

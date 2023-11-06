@@ -4,16 +4,11 @@ const authenticateMiddleware = require("../../auth/authenticateMiddleware.js"); 
 const router = express.Router();
 const bcrypt = require("bcrypt");
 
-function containsSpecialCharacter(input) {
-  const specialCharacters = /[!@#$%^&*()_+{}\[\]:;<>,.?~\\]/; // Define the set of special characters you want to check for
-  return specialCharacters.test(input);
-}
-
 // Protected route to fetch user settings
 router.get("/user/fetchSettings", authenticateMiddleware, async (req, res) => {
   try {
     // Fetch the authenticated user's settings data based on their ID
-    const userId = req.userData.userId;
+    const userId = req.user._id;
     const user = await User.findById(userId);
 
     if (!user) {
@@ -32,7 +27,9 @@ router.get("/user/fetchSettings", authenticateMiddleware, async (req, res) => {
     res.status(200).json({ userSettings });
   } catch (error) {
     console.error("Error fetching user settings:", error);
-    res.status(500).json({ error: "An error occurred" });
+    res
+      .status(500)
+      .json({ error: "An error occurred", details: error.message });
   }
 });
 
@@ -42,15 +39,9 @@ router.put(
   authenticateMiddleware,
   async (req, res) => {
     try {
-      const userId = req.userData.userId;
-      const { firstName } = req.body;
+      const userId = req.user._id;
 
-      // Check if the first name contains any special character
-      if (containsSpecialCharacter(firstName)) {
-        return res
-          .status(400)
-          .json({ error: "First name cannot contain special characters" });
-      }
+      const { firstName } = req.body;
 
       // Update the user's first name in the database
       await User.findByIdAndUpdate(userId, { firstName });
@@ -66,15 +57,8 @@ router.put(
 // Route to update user's last name
 router.put("/user/updateLastName", authenticateMiddleware, async (req, res) => {
   try {
-    const userId = req.userData.userId;
+    const userId = req.user.userId;
     const { lastName } = req.body;
-
-    // Check if the last name contains any special character
-    if (containsSpecialCharacter(lastName)) {
-      return res
-        .status(400)
-        .json({ error: "Last name cannot contain special characters" });
-    }
 
     // Update the user's last name in the database
     await User.findByIdAndUpdate(userId, { lastName });
@@ -89,7 +73,7 @@ router.put("/user/updateLastName", authenticateMiddleware, async (req, res) => {
 // Route to update user's password
 router.put("/user/updatePassword", authenticateMiddleware, async (req, res) => {
   try {
-    const userId = req.userData.userId;
+    const userId = req.user._id;
     const { oldPassword, newPassword, confirmPassword } = req.body;
 
     // Fetch the user from the database

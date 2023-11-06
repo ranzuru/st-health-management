@@ -16,6 +16,14 @@ const nutritionalStatusRoutes = require("./routes/users/nutritionalStatusRouter.
 
 const facultyProfileRoutes = require("./routes/users/facultyProfileRouter.js");
 const classProfileRoutes = require("./routes/users/classProfileRouter.js");
+const studentProfileRoutes = require("./routes/users/studentProfileRouter.js");
+const medicalCheckupRoutes = require("./routes/users/medicalCheckupRouter.js");
+const dewormingReportRoutes = require("./routes/users/dewormingReportRouter.js");
+const nutritionalStatusRoutes = require("./routes/users/nutritionalStatusRouter.js");
+const facultyMedicalRoutes = require("./routes/users/facultyCheckupRouter.js");
+const dengueMonitoringRoutes = require("./routes/users/dengueRouter.js");
+const academicYearRoutes = require("./routes/users/academicYearRouter.js");
+const classEnrollmentRoutes = require("./routes/users/classEnrollmentRouter.js");
 
 const cors = require("cors");
 
@@ -49,6 +57,22 @@ app.use("/medicineInventory", medicineInventoryRoutes);
 app.use("/facultyProfile", facultyProfileRoutes);
 
 app.use("/classProfile", classProfileRoutes);
+
+app.use("/studentProfile", studentProfileRoutes);
+
+app.use("/medicalCheckup", medicalCheckupRoutes);
+
+app.use("/dewormingReport", dewormingReportRoutes);
+
+app.use("/nutritionalStatus", nutritionalStatusRoutes);
+
+app.use("/facultyMedical", facultyMedicalRoutes);
+
+app.use("/dengueMonitoring", dengueMonitoringRoutes);
+
+app.use("/academicYear", academicYearRoutes);
+
+app.use("/classEnrollment", classEnrollmentRoutes);
 
 app.use("/auth", authRoutes);
 

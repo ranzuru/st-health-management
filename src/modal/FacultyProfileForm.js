@@ -19,7 +19,10 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import FormHelperText from "@mui/material/FormHelperText";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
-
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import { parseISO } from "date-fns";
 const FacultyProfileForm = (props) => {
   const {
     open,
@@ -43,6 +46,11 @@ const FacultyProfileForm = (props) => {
   const handleCloseSnackbar = () => {
     setSnackbarOpen(false);
   };
+
+  const minDate = new Date(
+    new Date().setFullYear(new Date().getFullYear() - 100)
+  );
+  const maxDate = new Date();
 
   const validationSchema = yup.object().shape({
     employeeId: yup
@@ -71,7 +79,18 @@ const FacultyProfileForm = (props) => {
     lastName: yup.string().required("Last Name is required"),
     firstName: yup.string().required("First Name is required"),
     middleName: yup.string(),
+    nameExtension: yup.string(),
     gender: yup.string().required("Gender is required"),
+    birthDate: yup
+      .date()
+      .min(minDate, "You can't be more than 100 years old")
+      .max(maxDate, "You can't be born in the future")
+      .required("Birth Date is required"),
+    age: yup.number().required("Age is required"),
+    email: yup
+      .string()
+      .email("Invalid email format")
+      .required("Email is required"),
     mobileNumber: yup
       .string()
       .required("Mobile Number is required")
@@ -91,7 +110,11 @@ const FacultyProfileForm = (props) => {
       lastName: "",
       firstName: "",
       middleName: "",
+      nameExtension: "",
       gender: "",
+      birthDate: null,
+      age: "",
+      email: "",
       mobileNumber: "",
       role: "", // Set the default role as empty
     },
@@ -121,8 +144,16 @@ const FacultyProfileForm = (props) => {
       console.error("An error occurred during adding faculty profile:", error);
       if (error.response && error.response.data) {
         console.error("Server responded with:", error.response.data);
+
+        // Check for a 400 status code
+        if (error.response.status === 400) {
+          showSnackbar(error.response.data.error, "error"); // Show the server's error message
+        } else {
+          showSnackbar("An error occurred during adding", "error");
+        }
+      } else {
+        showSnackbar("An unknown error occurred", "error");
       }
-      showSnackbar("An error occurred during adding", "error");
     }
   };
 
@@ -177,13 +208,27 @@ const FacultyProfileForm = (props) => {
 
   useEffect(() => {
     if (selectedFaculty) {
-      setValue("employeeId", selectedFaculty.employeeId || "");
-      setValue("lastName", selectedFaculty.lastName || "");
-      setValue("firstName", selectedFaculty.firstName || "");
-      setValue("middleName", selectedFaculty.middleName || "");
-      setValue("gender", selectedFaculty.gender || "");
-      setValue("mobileNumber", selectedFaculty.mobileNumber || "");
-      setValue("role", selectedFaculty.role || "");
+      const keysToSet = [
+        "employeeId",
+        "lastName",
+        "firstName",
+        "middleName",
+        "nameExtension",
+        "gender",
+        "birthDate",
+        "age",
+        "email",
+        "mobileNumber",
+        "role",
+      ];
+
+      keysToSet.forEach((key) => {
+        if (key === "birthDate" && selectedFaculty[key]) {
+          setValue(key, parseISO(selectedFaculty[key]));
+        } else {
+          setValue(key, selectedFaculty[key] || "");
+        }
+      });
     }
   }, [selectedFaculty, setValue]);
 
@@ -211,85 +256,178 @@ const FacultyProfileForm = (props) => {
             <DialogContentText>
               Enter faculty profile details:
             </DialogContentText>
-            <Controller
-              name="employeeId"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  label="Employee ID"
-                  margin="normal"
-                  {...field}
-                  required
-                  error={!!errors.employeeId}
-                  helperText={errors.employeeId?.message}
-                  onBlur={field.onBlur}
-                />
-              )}
-            />
-            <Controller
-              name="lastName"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  label="Last Name"
-                  fullWidth
-                  margin="normal"
-                  {...field}
-                  required
-                  error={!!errors.lastName}
-                  helperText={errors.lastName?.message}
-                  onBlur={field.onBlur}
-                />
-              )}
-            />
-            <Controller
-              name="firstName"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  label="First Name"
-                  fullWidth
-                  margin="normal"
-                  {...field}
-                  required
-                  error={!!errors.firstName}
-                  helperText={errors.firstName?.message}
-                  onBlur={field.onBlur}
-                />
-              )}
-            />
-            <Controller
-              name="middleName"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  label="Middle Name"
-                  fullWidth
-                  margin="normal"
-                  {...field}
-                />
-              )}
-            />
-            <Grid container spacing={3}>
+            <Grid container spacing={2}>
               <Grid item xs={12} sm={6}>
                 <Controller
-                  name="gender"
+                  name="employeeId"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      label="Employee ID"
+                      margin="normal"
+                      fullWidth
+                      {...field}
+                      required
+                      error={!!errors.employeeId}
+                      helperText={errors.employeeId?.message}
+                      onBlur={field.onBlur}
+                    />
+                  )}
+                />
+              </Grid>
+            </Grid>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <Controller
+                  name="lastName"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      label="Last Name"
+                      fullWidth
+                      margin="normal"
+                      {...field}
+                      required
+                      error={!!errors.lastName}
+                      helperText={errors.lastName?.message}
+                      onBlur={field.onBlur}
+                    />
+                  )}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Controller
+                  name="firstName"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      label="First Name"
+                      fullWidth
+                      margin="normal"
+                      {...field}
+                      required
+                      error={!!errors.firstName}
+                      helperText={errors.firstName?.message}
+                      onBlur={field.onBlur}
+                    />
+                  )}
+                />
+              </Grid>
+            </Grid>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <Controller
+                  name="middleName"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      label="Middle Name"
+                      fullWidth
+                      margin="normal"
+                      {...field}
+                    />
+                  )}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Controller
+                  name="nameExtension"
                   control={control}
                   render={({ field }) => (
                     <FormControl fullWidth margin="normal">
-                      <InputLabel id="gender-label">Gender</InputLabel>
-                      <Select labelId="gender-label" label="Gender" {...field}>
-                        <MenuItem value="Male">Male</MenuItem>
-                        <MenuItem value="Female">Female</MenuItem>
-                        <MenuItem value="Other">Other</MenuItem>
+                      <InputLabel>Suffix</InputLabel>
+                      <Select {...field}>
+                        <MenuItem value="">
+                          <em>None</em>
+                        </MenuItem>
+                        <MenuItem value="Jr.">Jr.</MenuItem>
+                        <MenuItem value="Sr.">Sr.</MenuItem>
+                        <MenuItem value="II">II</MenuItem>
+                        <MenuItem value="III">III</MenuItem>
+                        <MenuItem value="IV">IV</MenuItem>
+                        <MenuItem value="V">V</MenuItem>
                       </Select>
                     </FormControl>
                   )}
                 />
-                <FormHelperText error={!!errors.gender}>
-                  {errors.gender?.message}
-                </FormHelperText>
               </Grid>
+            </Grid>
+            <LocalizationProvider dateAdapter={AdapterDateFns}>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <Controller
+                    name="birthDate"
+                    control={control}
+                    render={({ field }) => (
+                      <DatePicker
+                        {...field}
+                        label="Birthday"
+                        required
+                        fullWidth
+                        slotProps={{
+                          textField: {
+                            fullWidth: true,
+                            margin: "normal",
+                            error: !!errors.birthDate,
+                            helperText: errors.birthDate?.message,
+                          },
+                        }}
+                        onChange={(date) => {
+                          // Set the birthDate value
+                          field.onChange(date);
+
+                          // If date is not null or empty, calculate the age
+                          if (date) {
+                            const today = new Date();
+                            let age = today.getFullYear() - date.getFullYear();
+                            const m = today.getMonth() - date.getMonth();
+                            if (
+                              m < 0 ||
+                              (m === 0 && today.getDate() < date.getDate())
+                            ) {
+                              age--;
+                            }
+                            // Set the age value in the form
+                            setValue("age", age.toString());
+                          } else {
+                            // If date is null or empty, set age to an empty string or a default value
+                            setValue("age", "");
+                          }
+                        }}
+                      />
+                    )}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Controller
+                    name="age"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField
+                        label="Age"
+                        fullWidth
+                        margin="normal"
+                        {...field}
+                        required
+                        error={!!errors.age}
+                        helperText={errors.age?.message}
+                        onBlur={field.onBlur}
+                        onChange={(e) => {
+                          // Allow only numbers and limit to 3 digits
+                          if (
+                            /^[0-9]*$/.test(e.target.value) &&
+                            e.target.value.length <= 3
+                          ) {
+                            field.onChange(e);
+                          }
+                        }}
+                      />
+                    )}
+                  />
+                </Grid>
+              </Grid>
+            </LocalizationProvider>
+            <Grid container spacing={3}>
               <Grid item xs={12} sm={6}>
                 <Controller
                   name="mobileNumber"
@@ -322,8 +460,44 @@ const FacultyProfileForm = (props) => {
                   )}
                 />
               </Grid>
+              <Grid item xs={12} sm={6}>
+                <Controller
+                  name="email"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      label="Email"
+                      margin="normal"
+                      fullWidth
+                      {...field}
+                      required
+                      error={!!errors.email}
+                      helperText={errors.email?.message}
+                      onBlur={field.onBlur}
+                    />
+                  )}
+                />
+              </Grid>
             </Grid>
             <Grid container spacing={3}>
+              <Grid item xs={12} sm={6}>
+                <Controller
+                  name="gender"
+                  control={control}
+                  render={({ field }) => (
+                    <FormControl fullWidth margin="normal">
+                      <InputLabel id="gender-label">Gender</InputLabel>
+                      <Select labelId="gender-label" label="Gender" {...field}>
+                        <MenuItem value="Male">Male</MenuItem>
+                        <MenuItem value="Female">Female</MenuItem>
+                      </Select>
+                    </FormControl>
+                  )}
+                />
+                <FormHelperText error={!!errors.gender}>
+                  {errors.gender?.message}
+                </FormHelperText>
+              </Grid>
               <Grid item xs={12} sm={6}>
                 <Controller
                   name="role"
@@ -337,7 +511,6 @@ const FacultyProfileForm = (props) => {
                           Subject teacher
                         </MenuItem>
                         <MenuItem value="Other">Other</MenuItem>
-                        {/* Add more roles as needed */}
                       </Select>
                     </FormControl>
                   )}
