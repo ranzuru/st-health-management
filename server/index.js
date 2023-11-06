@@ -17,6 +17,9 @@ const facultyMedicalRoutes = require("./routes/users/facultyCheckupRouter.js");
 const dengueMonitoringRoutes = require("./routes/users/dengueRouter.js");
 const academicYearRoutes = require("./routes/users/academicYearRouter.js");
 const classEnrollmentRoutes = require("./routes/users/classEnrollmentRouter.js");
+const clinicVisitRoutes = require("./routes/users/clinicVisitRouter.js");
+const viewLogRoutes = require("./routes/viewLogRouter.js");
+
 
 const cors = require("cors");
 
@@ -60,6 +63,10 @@ app.use("/dengueMonitoring", dengueMonitoringRoutes);
 app.use("/academicYear", academicYearRoutes);
 
 app.use("/classEnrollment", classEnrollmentRoutes);
+
+app.use("/clinicVisit", clinicVisitRoutes);
+
+app.use("/log", viewLogRoutes);
 
 app.use("/auth", authRoutes);
 

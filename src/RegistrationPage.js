@@ -388,11 +388,44 @@ const RegistrationPage = () => {
                               label="Role"
                               {...field}
                             >
-                              <MenuItem value="School Nurse">
-                                School Nurse
+                              <MenuItem value="Principal">
+                                Principal
+                              </MenuItem>
+                              <MenuItem value="Administrator">
+                                Administrator
+                              </MenuItem>
+                              <MenuItem value="Office Staff">
+                                Office Staff
+                              </MenuItem>
+                              <MenuItem value="IT Staff">
+                                IT Staff
+                              </MenuItem>
+                              <MenuItem value="Doctor">
+                                Doctor
                               </MenuItem>
                               <MenuItem value="District Nurse">
                                 District Nurse
+                              </MenuItem>
+                              <MenuItem value="School Nurse">
+                                School Nurse
+                              </MenuItem>
+                              <MenuItem value="Feeding Program Head">
+                                Feeding Program Head
+                              </MenuItem>
+                              <MenuItem value="Medical Program Head">
+                                Medical Program Head
+                              </MenuItem>
+                              <MenuItem value="Dengue Program Head">
+                                Dengue Program Head
+                              </MenuItem>
+                              <MenuItem value="Deworming Program Head">
+                                Deworming Program Head
+                              </MenuItem>
+                              <MenuItem value="District Nurse">
+                                Dengue Program Head
+                              </MenuItem>
+                              <MenuItem value="District Nurse">
+                                Intern
                               </MenuItem>
                             </Select>
                             <FormHelperText error={!!errors.role}>

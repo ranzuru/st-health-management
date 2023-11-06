@@ -3,6 +3,7 @@ const User = require("../../models/User.js");
 const authenticateMiddleware = require("../../auth/authenticateMiddleware.js"); // Import your middleware
 const router = express.Router();
 const bcrypt = require("bcrypt");
+const { createLog } = require("../recordLogRouter.js");
 
 // Protected route to fetch user settings
 router.get("/user/fetchSettings", authenticateMiddleware, async (req, res) => {
@@ -47,6 +48,7 @@ router.put(
       await User.findByIdAndUpdate(userId, { firstName });
 
       res.status(200).json({ message: "First name updated successfully" });
+      await createLog('Settings', 'UPDATE', `${userId}`, req.userData.userId);
     } catch (error) {
       console.error("Error updating first name:", error);
       res.status(500).json({ error: "An error occurred" });
@@ -64,6 +66,7 @@ router.put("/user/updateLastName", authenticateMiddleware, async (req, res) => {
     await User.findByIdAndUpdate(userId, { lastName });
 
     res.status(200).json({ message: "Last name updated successfully" });
+    await createLog('Settings', 'UPDATE', `${lastName}`, req.userData.userId);
   } catch (error) {
     console.error("Error updating last name:", error);
     res.status(500).json({ error: "An error occurred" });
@@ -122,6 +125,7 @@ router.put("/user/updatePassword", authenticateMiddleware, async (req, res) => {
     await User.findByIdAndUpdate(userId, { password: hashedPassword });
 
     res.status(200).json({ message: "Password updated successfully" });
+    await createLog('Settings', 'UPDATE', `${hashedPassword}`, req.userData.userId);
   } catch (error) {
     // DEBUGGING LINE: Log any errors
     console.error("Error updating password:", error);

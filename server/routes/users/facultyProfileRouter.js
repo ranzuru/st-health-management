@@ -4,6 +4,7 @@ const FacultyCheckup = require("../../models/FacultyCheckupSchema");
 const FacultyProfile = require("../../models/FacultyProfileSchema");
 const ClassProfile = require("../../models/ClassProfileSchema");
 const authenticateMiddleware = require("../../auth/authenticateMiddleware.js");
+const { createLog } = require("../recordLogRouter.js");
 
 // Create a new faculty profile
 router.post(
@@ -22,6 +23,7 @@ router.post(
       const facultyProfile = new FacultyProfile(req.body);
       const savedProfile = await facultyProfile.save();
       res.status(201).json({ faculty: savedProfile });
+      await createLog('Faculty Profile', 'CREATE', `${savedProfile}`, req.userData.userId);
     } catch (error) {
       res.status(400).json({ error: error.message });
     }
@@ -66,6 +68,20 @@ router.get("/fetch/:status", authenticateMiddleware, async (req, res) => {
   }
 });
 
+// Get a list of all faculty profiles
+router.get("/fetchFacultyProfiles", authenticateMiddleware, async (req, res) => {
+  try {
+    const faculty = await FacultyProfile.find();
+
+    if (!faculty) {
+      return res.status(404).json({ message: "Faculty profile/s not found" });
+    }
+    res.status(200).json(faculty);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Get a single faculty profile by employeeId
 router.get(
   "/facultyProfiles/:employeeId",
@@ -100,6 +116,7 @@ router.put(
         return res.status(404).json({ message: "Faculty profile not found" });
       }
       res.status(200).json({ faculty: facultyProfile });
+      await createLog('Faculty Profile', 'UPDATE', `${facultyProfile}`, req.userData.userId);
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
@@ -147,6 +164,7 @@ router.put(
       res
         .status(200)
         .json({ message: "Faculty profile and related checkups deactivated" });
+        await createLog('Faculty Profile', 'DELETE', `${facultyProfile}`, req.userData.userId);
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
@@ -179,6 +197,7 @@ router.put(
       res
         .status(200)
         .json({ message: "Faculty archived successfully", faculty });
+        await createLog('Faculty Profile', 'UPDATE', `${faculty}`, req.userData.userId);
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
@@ -211,6 +230,7 @@ router.put(
       res
         .status(200)
         .json({ message: "Faculty reinstated successfully", faculty });
+        await createLog('Faculty Profile', 'UPDATE', `${faculty}`, req.userData.userId);
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
@@ -233,6 +253,7 @@ router.delete(
       }
 
       res.status(200).json({ message: "Faculty deleted successfully" });
+      await createLog('Faculty Profile', 'DELETE', `${deleteResult}`, req.userData.userId);
     } catch (error) {
       res.status(500).json({ error: error.message });
     }

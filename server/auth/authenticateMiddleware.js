@@ -21,6 +21,8 @@ const authenticateMiddleware = async (req, res, next) => {
       return res.status(401).json({ error: "User does not exist" });
     }
     req.user = user.toObject();
+    // RETRIEVE USER DATA FOR LOGGING
+    req.userData = { userId: decodedToken.userId };
     next();
   } catch (error) {
     if (error.name === "TokenExpiredError") {
@@ -42,6 +44,8 @@ const authenticateMiddleware = async (req, res, next) => {
 
         res.setHeader("x-new-access-token", newAccessToken);
         req.user = (await User.findById(decodedRefreshToken.userId)).toObject();
+        // RETRIEVE USER DATA FOR LOGGING
+        req.userData = { userId: decodedRefreshToken.userId };
         // Potentially issue a new refresh token here
 
         next();

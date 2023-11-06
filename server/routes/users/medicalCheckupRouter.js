@@ -5,6 +5,7 @@ const NutritionalStatus = require("../../models/NutritionalStatusSchema");
 const ClassEnrollment = require("../../models/ClassEnrollment");
 const router = express.Router();
 const authenticateMiddleware = require("../../auth/authenticateMiddleware.js");
+const { createLog } = require("../recordLogRouter.js");
 
 // Create a new medical checkup
 router.post("/create", authenticateMiddleware, async (req, res) => {
@@ -36,7 +37,7 @@ router.post("/create", authenticateMiddleware, async (req, res) => {
       checkupType,
     });
     await newCheckup.save();
-
+    await createLog('Student Medical', 'CREATE', `${newCheckup}`, req.userData.userId);
     const populatedCheckup = await MedicalCheckup.findById(newCheckup._id)
       .populate({
         path: "classEnrollment",
@@ -133,6 +134,7 @@ router.put("/update/:lrn", authenticateMiddleware, async (req, res) => {
       .populate("nutritionalStatus");
 
     res.status(200).json(updatedMedicalCheckup);
+    await createLog('Student Medical', 'UPDATE', `${updatedMedicalCheckup}`, req.userData.userId);
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -146,6 +148,7 @@ router.delete("/delete/:id", authenticateMiddleware, async (req, res) => {
     if (!checkup) return res.status(404).json({ error: "Checkup not found" });
 
     res.status(200).json({ message: "Checkup deleted" });
+    await createLog('Student Medical', 'DELETE', `${checkup}`, req.userData.userId);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

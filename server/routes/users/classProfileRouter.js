@@ -3,6 +3,7 @@ const router = express.Router();
 const ClassProfile = require("../../models/ClassProfileSchema"); // Adjust the path as needed
 const FacultyProfile = require("../../models/FacultyProfileSchema"); // Adjust the path as needed
 const authenticateMiddleware = require("../../auth/authenticateMiddleware.js");
+const { createLog } = require("../recordLogRouter.js");
 
 // Create a new ClassProfile with a reference to a FacultyProfile using employeeId
 router.post("/createClassProfile", authenticateMiddleware, async (req, res) => {
@@ -38,6 +39,7 @@ router.post("/createClassProfile", authenticateMiddleware, async (req, res) => {
     });
 
     await classProfile.save();
+    await createLog('Class Profile', 'CREATE', `${classProfile}`, req.userData.userId);
     const populatedClassProfile = await ClassProfile.findById(
       classProfile._id
     ).populate("faculty");
@@ -150,6 +152,7 @@ router.put(
       }
 
       res.json({ classProfile });
+      await createLog('Class Profile', 'UPDATE', `${classProfile}`, req.userData.userId);
     } catch (error) {
       console.error(error.message);
       res.status(500).json({ error: error.message });
@@ -170,6 +173,7 @@ router.delete(
       }
 
       res.json({ message: "ClassProfile deleted" });
+      await createLog('Class Profile', 'DELETE', `${classProfile}`, req.userData.userId);
     } catch (error) {
       console.error(error.message);
       res.status(500).json({ error: "Something went wrong" });

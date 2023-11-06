@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const authenticateMiddleware = require("../../auth/authenticateMiddleware.js");
 const AcademicYear = require("../../models/AcademicYearSchema");
+const { createLog } = require("../recordLogRouter.js");
 
 // Helper function for handling errors
 const handleError = (error, res) => {
@@ -31,6 +32,7 @@ router.post("/create", authenticateMiddleware, async (req, res) => {
 
     await newAcademicYear.save();
     res.status(201).json({ newAcademicYear });
+    await createLog('Academic Year', 'CREATE', `${newAcademicYear}`, req.userData.userId);
   } catch (error) {
     handleError(error, res);
   }
@@ -84,6 +86,7 @@ router.put("/update/:id", authenticateMiddleware, async (req, res) => {
     if (!academicYear)
       return res.status(404).json({ error: "AcademicYear not found" });
     res.json({ academicYear });
+    await createLog('Academic Year', 'UPDATE', `${academicYear}`, req.userData.userId);
   } catch (error) {
     handleError(error, res);
   }
@@ -96,6 +99,7 @@ router.delete("/delete/:id", authenticateMiddleware, async (req, res) => {
     if (!academicYear)
       return res.status(404).json({ error: "AcademicYear not found" });
     res.json({ message: "AcademicYear deleted" });
+    await createLog('Academic Year', 'DELETE', `${academicYear}`, req.userData.userId);
   } catch (error) {
     handleError(error, res);
   }

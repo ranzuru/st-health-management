@@ -14,14 +14,12 @@ import ManageUsers from "./navbar/ManageUsers";
 import StudentsProfile from "./navbar/StudentsProfile";
 import FacultyProfile from "./navbar/FacultyProfile";
 import ClassProfile from "./navbar/ClassProfile";
-import ClinicPrograms from "./navbar/ClinicPrograms";
+import ClinicVisitNavBar from "./navbar/ClinicVisit";
 import DengueMonitoring from "./navbar/DengueMonitoring";
 import MedicalCheckup from "./navbar/MedicalCheckup";
 import FacultyCheckup from "./navbar/FacultyCheckup";
 import DewormingMonitoring from "./navbar/DewormingMonitoring";
 import FeedingProgram from "./navbar/FeedingProgram";
-import ClinicRecords from "./navbar/ClinicRecords";
-import MedicineInventory from "./navbar/MedicineInventory";
 import Events from "./navbar/Events";
 import Analytics from "./navbar/Analytics";
 import DengueMonitoringAnalytics from "./navbar/DengueMonitoringAnalytics";
@@ -32,6 +30,10 @@ import ClinicVisitorsAnalytics from "./navbar/ClinicVisitorsAnalytics";
 import FeedingProgramAnalytics from "./navbar/FeedingProgramAnalytics";
 import AcademicYear from "./navbar/AcademicYear";
 import ClassEnrollment from "./navbar/ClassEnrollment";
+import MedicineInNavBar from "./navbar/MedicineIn";
+import MedicineItemNavBar from "./navbar/MedicineItem";
+import MedicineDisposalNavBar from "./navbar/MedicineDisposal";
+import MedicineAdjustmentNavBar from "./navbar/MedicineAdjustment";
 import Logs from "./navbar/Logs";
 import Settings from "./navbar/Settings";
 import Sidebar from "./components/Sidebar";
@@ -93,17 +95,19 @@ function AppLayout() {
             <Route path="/class-profile" element={<ClassProfile />} />
             <Route path="/academicYear-profile" element={<AcademicYear />} />
             <Route path="/class-enrollment" element={<ClassEnrollment />} />
-            <Route path="/clinic-programs" element={<ClinicPrograms />} />
+            <Route path="/clinic-visit" element={<ClinicVisitNavBar />} />
             <Route path="/dengue-monitoring" element={<DengueMonitoring />} />
             <Route path="/medical-checkup" element={<MedicalCheckup />} />
             <Route path="/faculty-checkup" element={<FacultyCheckup />} />
+            <Route path="/medicine-item" element={<MedicineItemNavBar />} />
+            <Route path="/medicine-adjustment" element={<MedicineAdjustmentNavBar />} />
+            <Route path="/medicine-in" element={<MedicineInNavBar />} />
+            <Route path="/medicine-disposal" element={<MedicineDisposalNavBar />} />
             <Route
               path="/deworming-monitoring"
               element={<DewormingMonitoring />}
             />
             <Route path="/feeding-program" element={<FeedingProgram />} />
-            <Route path="/clinic-records" element={<ClinicRecords />} />
-            <Route path="/medicine-inventory" element={<MedicineInventory />} />
             <Route path="/events" element={<Events />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route

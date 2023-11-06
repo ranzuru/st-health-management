@@ -8,6 +8,7 @@ const authenticateMiddleware = require("../../auth/authenticateMiddleware.js");
 const exportClassEnrollmentData = require("../../custom/exportEnrollment.js");
 const importClassEnrollments = require("../../custom/importEnrollment.js");
 const multer = require("multer");
+const { createLog } = require("../recordLogRouter.js");
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
@@ -36,7 +37,7 @@ router.post("/create", authenticateMiddleware, async (req, res) => {
     });
 
     await newEnrollment.save();
-
+    await createLog('Class Assignment', 'CREATE', `${newEnrollment}`, req.userData.userId);
     // Populate and return the newly created enrollment
     const populatedEnrollment = await ClassEnrollment.findById(
       newEnrollment._id
@@ -174,7 +175,7 @@ router.put("/update/:lrn", authenticateMiddleware, async (req, res) => {
 
     Object.assign(enrollmentToUpdate, enrollmentData);
     await enrollmentToUpdate.save();
-
+    await createLog('Class Assignment', 'UPDATE', `${enrollmentToUpdate}`, req.userData.userId);
     const populatedEnrollment = await ClassEnrollment.findById(
       enrollmentToUpdate._id
     )
@@ -208,6 +209,7 @@ router.put("/softDelete/:id", authenticateMiddleware, async (req, res) => {
     enrollment.status = "Inactive";
     await enrollment.save();
     res.status(200).json({ message: "Soft deleted successfully", enrollment });
+    await createLog('Class Assignment', 'DELETE', `${enrollment}`, req.userData.userId);
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -242,6 +244,7 @@ router.put(
         message: "Class enrollment archived successfully",
         enrollment,
       });
+      await createLog('Class Assignment', 'UPDATE', `${enrollment}`, req.userData.userId);
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
@@ -278,6 +281,7 @@ router.put(
         message: "Class enrollment reinstated successfully",
         enrollment,
       });
+      await createLog('Class Assignment', 'UPDATE', `${enrollment}`, req.userData.userId);
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
@@ -326,7 +330,7 @@ router.post("/import", upload.single("file"), async (req, res) => {
         errors: errors,
       });
     }
-
+    await createLog('Class Assignment', 'CREATE', `${enrollments}`, req.userData.userId);
     // If no errors, send a success response
     return res.status(201).json({
       message: "Enrollments imported successfully",

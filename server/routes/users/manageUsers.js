@@ -3,6 +3,7 @@ const router = express.Router();
 const User = require("../../models/User.js"); // Import your User model
 const authenticateMiddleware = require("../../auth/authenticateMiddleware.js");
 const roleMiddleware = require("../../auth/roleMiddleware.js");
+const { createLog } = require("../recordLogRouter.js");
 
 // Define the fields you want to select, including firstName and lastName
 const selectedFields = [
@@ -68,6 +69,7 @@ router.put(
 
       // Send the updated user as a JSON response
       res.status(200).json(updatedUser);
+      await createLog('User Approval', 'UPDATE', `${updatedUser}`, req.userData.userId);
     } catch (error) {
       console.error("Error approving user:", error);
       res
@@ -96,6 +98,7 @@ router.delete(
 
       // Send a success message as a JSON response
       res.status(200).json({ message: "User deleted successfully" });
+      await createLog('User Approval', 'DELETE', `${deletedUser}`, req.userData.userId);
     } catch (error) {
       console.error("Error deleting user:", error);
       res

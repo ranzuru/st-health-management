@@ -3,6 +3,7 @@ const router = express.Router();
 const Event = require("../../models/EventSchema.js"); // Import your Event model
 const moment = require("moment-timezone");
 const authenticateMiddleware = require("../../auth/authenticateMiddleware.js");
+const { createLog } = require("../recordLogRouter.js");
 
 router.use(authenticateMiddleware);
 
@@ -18,6 +19,7 @@ router.post("/createEvent", async (req, res) => {
     });
     const savedEvent = await event.save();
     res.status(201).json(savedEvent);
+    await createLog('Event', 'CREATE', `${savedEvent}`, req.userData.userId);
   } catch (error) {
     console.error("Error creating event:", error);
     res.status(500).json({ error: "Unable to create event" });
@@ -74,6 +76,7 @@ router.put("/updateEvent/:eventId", async (req, res) => {
       return res.status(404).json({ error: "Event not found" });
     }
     res.json(updatedEvent);
+    await createLog('Event', 'UPDATE', `${updatedEvent}`, req.userData.userId);
   } catch (error) {
     console.error("Error updating event:", error);
     res.status(500).json({ error: "Unable to update event" });
@@ -88,6 +91,7 @@ router.delete("/deleteEvent/:eventId", async (req, res) => {
       return res.status(404).json({ error: "Event not found" });
     }
     res.json(deletedEvent);
+    await createLog('Event', 'DELETE', `${deletedEvent}`, req.userData.userId);
   } catch (error) {
     console.error("Error deleting event:", error);
     res.status(500).json({ error: "Unable to delete event" });

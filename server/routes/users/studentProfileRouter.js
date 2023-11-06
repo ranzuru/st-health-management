@@ -5,7 +5,7 @@ const authenticateMiddleware = require("../../auth/authenticateMiddleware.js");
 const validateStudent = require("../../middleware/validateStudent");
 const exportStudentProfile = require("../../custom/exportStudentProfile.js");
 const importStudents = require("../../custom/importStudentProfile.js");
-
+const { createLog } = require("../recordLogRouter.js");
 const multer = require("multer");
 
 const storage = multer.memoryStorage();
@@ -25,6 +25,8 @@ router.post(
       });
 
       await newStudent.save();
+      // LOG DATA AFTER SUCCESSFUL PROCESS
+    await createLog('Student Profile', 'CREATE', `${newStudent}`, req.userData.userId);
       res.status(201).json({ newStudent });
     } catch (error) {
       res.status(400).json({ error: error.message });
@@ -82,6 +84,7 @@ router.put("/update/:lrn", authenticateMiddleware, async (req, res) => {
       return res.status(404).json({ error: "Student not found" });
 
     res.status(200).json({ updatedStudent });
+    await createLog('Student Profile', 'UPDATE', `${updatedStudent}`, req.userData.userId);
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -105,6 +108,7 @@ router.put("/deleteStudent/:lrn", authenticateMiddleware, async (req, res) => {
     student.status = "Inactive";
     await student.save();
     res.status(200).json({ message: "Student marked as Inactive", student });
+    await createLog('Student Profile', 'DELETE', `${student}`, req.userData.userId);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -127,6 +131,7 @@ router.put("/archiveStudent/:lrn", authenticateMiddleware, async (req, res) => {
     student.status = "Archived";
     await student.save();
     res.status(200).json({ message: "Student archived successfully", student });
+    await createLog('Student Profile', 'UPDATE', `${student}`, req.userData.userId);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -154,6 +159,7 @@ router.put(
       res
         .status(200)
         .json({ message: "Student reinstated successfully", student });
+        await createLog('Student Profile', 'UPDATE', `${student}`, req.userData.userId);
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
@@ -176,6 +182,7 @@ router.delete(
       }
 
       res.status(200).json({ message: "Student deleted successfully" });
+      await createLog('Student Profile', 'DELETE', `${deleteResult}`, req.userData.userId);
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
@@ -243,7 +250,7 @@ router.post(
           });
         }
       }
-
+      await createLog('Student Profile', 'IMPORT', `${studentProfiles}`, req.userData.userId);
       return res.status(201).json({
         message: "Data imported successfully",
         importedCount: studentProfiles.length,

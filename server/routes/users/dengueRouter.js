@@ -7,7 +7,7 @@ const authenticateMiddleware = require("../../auth/authenticateMiddleware.js");
 const exportDengueMonitoringData = require("../../custom/exportDengue.js");
 const multer = require("multer");
 const ExcelJS = require("exceljs");
-
+const { createLog } = require("../recordLogRouter.js");
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 const Joi = require("joi");
@@ -51,7 +51,7 @@ router.post("/create", authenticateMiddleware, async (req, res) => {
     });
 
     await newDengueRecord.save();
-
+    await createLog('Dengue', 'CREATE', `${newDengueRecord}`, req.userData.userId);
     // Populate the Dengue record with ClassEnrollment and further details
     const populatedDengueRecord = await DengueMonitoring.findById(
       newDengueRecord._id
@@ -166,6 +166,7 @@ router.put("/update/:lrn", authenticateMiddleware, async (req, res) => {
     });
 
     res.status(200).json(updatedDengueRecord);
+    await createLog('Dengue', 'UPDATE', `${updatedDengueRecord}`, req.userData.userId);
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -235,6 +236,7 @@ router.put("/delete/:recordId", authenticateMiddleware, async (req, res) => {
       message: "Dengue monitoring record marked as Inactive",
       dengueRecord,
     });
+    await createLog('Dengue', 'DELETE', `${dengueRecord}`, req.userData.userId);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -261,6 +263,7 @@ router.put("/reinstate/:recordId", authenticateMiddleware, async (req, res) => {
       message: "Dengue monitoring record reinstated to Active",
       dengueRecord,
     });
+    await createLog('Dengue', 'UPDATE', `${dengueRecord}`, req.userData.userId);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -382,7 +385,7 @@ router.post(
           dateOfDischarge: rowData["Date of Discharge"],
           classEnrollment: classEnrollment._id,
         });
-
+        await createLog('Dengue', 'CREATE', `${newDengueRecord}`, req.userData.userId);
         dengueRecords.push(newDengueRecord);
       }
 

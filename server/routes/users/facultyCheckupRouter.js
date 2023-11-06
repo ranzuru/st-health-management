@@ -5,11 +5,12 @@ const ClassProfile = require("../../models/ClassProfileSchema");
 const AcademicYear = require("../../models/AcademicYearSchema.js");
 const router = express.Router();
 const authenticateMiddleware = require("../../auth/authenticateMiddleware.js");
+const { createLog } = require("../recordLogRouter.js");
 
 // Create a new faculty checkup
 router.post("/create", authenticateMiddleware, async (req, res) => {
   try {
-    const { employeeId, schoolYear, ...medicalData } = req.body;
+    const { employeeId, schoolYear, ...MedicalData } = req.body;
 
     const faculty = await FacultyProfile.findOne({ employeeId });
     if (!faculty) return res.status(400).json({ error: "Invalid Faculty ID" });
@@ -30,12 +31,12 @@ router.post("/create", authenticateMiddleware, async (req, res) => {
     }
 
     const newCheckup = new FacultyCheckup({
-      ...medicalData,
+      ...MedicalData,
       facultyProfile: faculty._id,
       academicYear: academic._id,
     });
     await newCheckup.save();
-
+    await createLog('Faculty Medical', 'CREATE', `${newCheckup}`, req.userData.userId);
     const populatedCheckup = await FacultyCheckup.findById(newCheckup._id)
       .populate("facultyProfile")
       .populate("academicYear")
@@ -122,6 +123,7 @@ router.put("/update/:employeeId", authenticateMiddleware, async (req, res) => {
       .populate("academicYear");
 
     res.status(200).json(updatedFacultyCheckup);
+    await createLog('Faculty Medical', 'UPDATE', `${updatedFacultyCheckup}`, req.userData.userId);
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -133,6 +135,7 @@ router.delete("/delete/:id", authenticateMiddleware, async (req, res) => {
     const checkup = await FacultyCheckup.findByIdAndDelete(req.params.id);
     if (!checkup) return res.status(404).json({ error: "Checkup not found" });
     res.status(200).json({ message: "Checkup deleted" });
+    await createLog('Faculty Medical', 'DELETE', `${checkup}`, req.userData.userId);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

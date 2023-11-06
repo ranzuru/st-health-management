@@ -15,7 +15,7 @@ router.post("/login", authController.login);
 router.post(
   "/internalRegister",
   authenticateMiddleware,
-  roleMiddleware("Admin"),
+  roleMiddleware("Administrator"),
   authController.internalRegister
 );
 

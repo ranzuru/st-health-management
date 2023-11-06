@@ -506,11 +506,51 @@ const FacultyProfileForm = (props) => {
                     <FormControl fullWidth margin="normal">
                       <InputLabel id="role-label">Role</InputLabel>
                       <Select labelId="role-label" label="Role" {...field}>
-                        <MenuItem value="Adviser">Adviser</MenuItem>
-                        <MenuItem value="Subject teacher">
-                          Subject teacher
-                        </MenuItem>
-                        <MenuItem value="Other">Other</MenuItem>
+                        <MenuItem value="Principal">
+                                Principal
+                              </MenuItem>
+                              <MenuItem value="Office Staff">
+                                Office Staff
+                              </MenuItem>
+                              <MenuItem value="IT Staff">
+                                IT Staff
+                              </MenuItem>
+                              <MenuItem value="Doctor">
+                                Doctor
+                              </MenuItem>
+                              <MenuItem value="District Nurse">
+                                District Nurse
+                              </MenuItem>
+                              <MenuItem value="School Nurse">
+                                School Nurse
+                              </MenuItem>
+                              <MenuItem value="Feeding Program Head">
+                                Feeding Program Head
+                              </MenuItem>
+                              <MenuItem value="Medical Program Head">
+                                Medical Program Head
+                              </MenuItem>
+                              <MenuItem value="Dengue Program Head">
+                                Dengue Program Head
+                              </MenuItem>
+                              <MenuItem value="Deworming Program Head">
+                                Deworming Program Head
+                              </MenuItem>
+                              <MenuItem value="District Nurse">
+                                Dengue Program Head
+                              </MenuItem>
+                              <MenuItem value="Teacher">
+                                Teacher
+                              </MenuItem>
+                              <MenuItem value="Canteen Staff">
+                                Canteen Staff
+                              </MenuItem>
+                              <MenuItem value="Janitorial Staff">
+                              Janitorial Staff
+                              </MenuItem>
+                              <MenuItem value="Security Staff">
+                              Security Staff
+                              </MenuItem>
                       </Select>
                     </FormControl>
                   )}

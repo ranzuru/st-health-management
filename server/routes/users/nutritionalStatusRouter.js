@@ -5,6 +5,7 @@ const ClassEnrollment = require("../../models/ClassEnrollment");
 const MedicalCheckup = require("../../models/MedicalCheckupSchema.js");
 const router = express.Router();
 const authenticateMiddleware = require("../../auth/authenticateMiddleware.js");
+const { createLog } = require("../recordLogRouter.js");
 
 // Create
 router.post("/create", authenticateMiddleware, async (req, res) => {
@@ -42,7 +43,7 @@ router.post("/create", authenticateMiddleware, async (req, res) => {
     });
 
     await newRecord.save();
-
+    await createLog('Nutritional Status', 'CREATE', `${newRecord}`, req.userData.userId);
     const latestPostStatus = await NutritionalStatus.findOne({
       classEnrollment: classEnrollment._id,
       measurementType: "POST",
@@ -166,7 +167,7 @@ router.put(
           ],
         })
         .exec();
-
+        await createLog('Nutritional Status', 'UPDATE', `${updatedData}`, req.userData.userId);
       if (!updatedRecord) {
         return res
           .status(404)
@@ -292,6 +293,7 @@ router.delete("/delete/:id", authenticateMiddleware, async (req, res) => {
     await NutritionalStatus.findByIdAndDelete(req.params.id);
 
     res.status(200).json({ message: "Record deleted" });
+    await createLog('Nutritional Status', 'DELETE', `${deletedRecord}`, req.userData.userId);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

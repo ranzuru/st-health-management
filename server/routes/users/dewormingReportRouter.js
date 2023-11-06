@@ -4,6 +4,7 @@ const MedicalCheckup = require("../../models/MedicalCheckupSchema");
 const AcademicYear = require("../../models/AcademicYearSchema");
 const ClassEnrollment = require("../../models/ClassEnrollment");
 const authenticateMiddleware = require("../../auth/authenticateMiddleware.js");
+const { createLog } = require("../recordLogRouter.js");
 
 router.get("/dewormingData", authenticateMiddleware, async (req, res) => {
   try {

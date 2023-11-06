@@ -124,12 +124,12 @@ const ClassProfileForm = (props) => {
           // Filter faculty profiles to include only advisers
           const advisers = response.data.filter(
             (faculty) =>
-              faculty.role === "Adviser" && faculty.status === "Active"
+              faculty.status === "Active"
           );
           // Map advisers to options for the dropdown
           const options = advisers.map((adviser) => ({
             value: adviser.employeeId, // Use the unique identifier for the value
-            label: `${adviser.firstName} ${adviser.lastName}`, // Display name
+            label: `[${adviser.role}] ${adviser.firstName} ${adviser.lastName}`, // Display name
           }));
           setFacultyOptions(options);
         }
