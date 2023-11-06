@@ -374,7 +374,7 @@ const ClinicVisitForm = (props) => {
               {...register("patient_id")}
               fullWidth
               required={watch("patient_type") !== "Other"}
-              disabled={isUpdate}
+              disabled={isUpdate || watch("patient_type") === "Other"}
               error={!!errors.patient_id}
               helperText={errors.patient_id?.message}
             />
@@ -387,7 +387,7 @@ const ClinicVisitForm = (props) => {
               {...register("patient_name")}
               fullWidth
               required={watch("patient_type") === "Other"}
-              disabled={isUpdate}
+              disabled={isUpdate || watch("patient_type") !== "Other"}
               error={!!errors.patient_name}
               helperText={errors.patient_name?.message}
             />
