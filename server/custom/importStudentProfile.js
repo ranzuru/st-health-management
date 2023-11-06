@@ -1,9 +1,12 @@
-const studentValidationSchema = require("../schema/studentValidationSchema");
+const {
+  studentValidationSchema,
+  mapHeaderToSchemaKey,
+} = require("../schema/studentValidationSchema");
 const StudentProfile = require("../models/StudentProfileSchema");
 const { parseExcelToJson } = require("../utils/importDataToExcel");
 
 const importStudents = async (fileBuffer) => {
-  const data = await parseExcelToJson(fileBuffer);
+  const data = await parseExcelToJson(fileBuffer, mapHeaderToSchemaKey);
 
   const studentProfiles = [];
   const errors = [];

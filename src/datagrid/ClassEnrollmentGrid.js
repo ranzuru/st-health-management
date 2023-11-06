@@ -19,6 +19,7 @@ import axiosInstance from "../config/axios-instance";
 import StatusCell from "../components/StatusCell.js";
 import CustomGridToolbar from "../utils/CustomGridToolbar";
 import ClassEnrollmentDialog from "../constants/classEnrollmentInfoDialog.js";
+import CustomSnackbar from "../components/CustomSnackbar.js";
 
 const ClassEnrollmentGrid = () => {
   const [enrolledRecords, setEnrolledRecords] = useState([]);
@@ -31,6 +32,20 @@ const ClassEnrollmentGrid = () => {
   const [currentType, setCurrentType] = useState("Active");
   const [isInfoDialogOpen, setInfoDialogOpen] = useState(false);
   const [selectedRecordInfo, setSelectedRecordInfo] = useState(null);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarData, setSnackbarData] = useState({
+    message: "",
+    severity: "success",
+  });
+
+  const showSnackbar = (message, severity) => {
+    setSnackbarData({ message, severity });
+    setSnackbarOpen(true);
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbarOpen(false);
+  };
 
   const handleSearchChange = (event) => {
     setSearchValue(event.target.value);
@@ -246,6 +261,59 @@ const ClassEnrollmentGrid = () => {
     setInfoDialogOpen(true);
   };
 
+  const handleImport = async (event) => {
+    const file = event.target.files[0];
+    const formData = new FormData();
+    formData.append("file", file);
+
+    if (file.size > 5 * 1024 * 1024) {
+      showSnackbar("File size exceeds 5MB", "error");
+      return;
+    }
+
+    setIsLoading(true); // Start loading spinner
+
+    try {
+      const response = await axiosInstance.post(
+        "classEnrollment/import",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      if (response.data.errors && response.data.errors.length > 0) {
+        const errorMessages = response.data.errors
+          .map((error) => `LRN ${error.lrn}: ${error.errors.join(", ")}`)
+          .join("; ");
+        showSnackbar(`Import issues: ${errorMessages}`, "error");
+      } else {
+        showSnackbar("Data imported successfully!", "success");
+        refreshEnrollment();
+      }
+    } catch (error) {
+      if (
+        error.response?.status >= 400 &&
+        error.response?.status < 500 &&
+        error.response?.data?.errors
+      ) {
+        const errorMessages = error.response.data.errors
+          .map((error) => `LRN ${error.lrn}: ${error.errors.join(", ")}`)
+          .join("; ");
+
+        showSnackbar(`Import issues: ${errorMessages}`, "error");
+      } else {
+        const errorMessage =
+          error.response?.data?.message ||
+          "An unexpected error occurred during import.";
+        showSnackbar(errorMessage, "error");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleExport = async () => {
     try {
       const response = await axiosInstance.get(
@@ -294,6 +362,12 @@ const ClassEnrollmentGrid = () => {
 
   return (
     <>
+      <CustomSnackbar
+        open={snackbarOpen}
+        handleClose={handleCloseSnackbar}
+        severity={snackbarData.severity}
+        message={snackbarData.message}
+      />
       <ClassEnrollmentDialog
         open={isInfoDialogOpen}
         onClose={handleInfoDialogClose}
@@ -340,7 +414,12 @@ const ClassEnrollmentGrid = () => {
             columns={columns}
             getRowId={(row) => row.id}
             slots={{
-              toolbar: () => <CustomGridToolbar onExport={handleExport} />,
+              toolbar: () => (
+                <CustomGridToolbar
+                  onExport={handleExport}
+                  handleImport={handleImport}
+                />
+              ),
             }}
             initialState={{
               pagination: {

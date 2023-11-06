@@ -6,7 +6,11 @@ const AcademicYear = require("../../models/AcademicYearSchema");
 const router = express.Router();
 const authenticateMiddleware = require("../../auth/authenticateMiddleware.js");
 const exportClassEnrollmentData = require("../../custom/exportEnrollment.js");
+const importClassEnrollments = require("../../custom/importEnrollment.js");
+const multer = require("multer");
 
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
 router.post("/create", authenticateMiddleware, async (req, res) => {
   try {
     const { lrn, grade, section, schoolYear, ...enrollmentData } = req.body;
@@ -301,6 +305,36 @@ router.get("/export/:status?", async (req, res) => {
     // Error handling
     console.error("Failed to export Dengue Monitoring data:", error);
     res.status(500).send("Error when trying to export data");
+  }
+});
+
+router.post("/import", upload.single("file"), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).send({ message: "No file provided" });
+  }
+
+  try {
+    const { enrollments, errors } = await importClassEnrollments(
+      req.file.buffer
+    );
+
+    // Check if there were any errors during the import
+    if (errors.length > 0) {
+      // Respond with a 422 Unprocessable Entity, sending back the errors
+      return res.status(422).json({
+        message: "Some records could not be imported due to errors",
+        errors: errors,
+      });
+    }
+
+    // If no errors, send a success response
+    return res.status(201).json({
+      message: "Enrollments imported successfully",
+      enrollments: enrollments,
+    });
+  } catch (error) {
+    // Generic error handling for any other errors not caught by the import function
+    res.status(500).send({ message: "Server error", error: error.message });
   }
 });
 
