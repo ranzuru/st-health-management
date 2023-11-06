@@ -18,8 +18,8 @@ const DengueBarChart = () => {
   const extractSchoolYears = (data) => {
     const uniqueYears = new Set();
     data.forEach((item) => {
-      const startYear = item.syStartYear;
-      const endYear = item.syEndYear;
+      const startYear = parseInt(item.schoolYear.substring(0, 4));
+      const endYear = parseInt(item.schoolYear.slice(-4));
       const schoolYear = `${startYear} - ${endYear}`;
       uniqueYears.add(schoolYear);
     });
@@ -192,7 +192,13 @@ const DengueBarChart = () => {
           axiosInstance.get("/dengueProfile/get")
         ]);
 
-        const sortedSchoolYears = schoolYearResponse.data.sort(
+        const schoolYearsData = schoolYearResponse.data.map((year) => ({
+          ...year,
+          syStartYear: parseInt(year.schoolYear.substring(0, 4)), // Convert to integer
+          syEndYear: parseInt(year.schoolYear.slice(-4)), // Convert to integer
+        }));
+  
+        const sortedSchoolYears = schoolYearsData.sort(
           (a, b) => a.syStartYear - b.syStartYear || a.syEndYear - b.syEndYear
         );
         setSchoolYears(sortedSchoolYears.reverse());

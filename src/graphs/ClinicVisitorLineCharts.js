@@ -30,13 +30,13 @@ const ClinicVisitorLineChart = () => {
   useEffect(() => {
     const fetchSchoolYears = async () => {
       try {
-        const response = await axiosInstance.get("schoolYear/get");
+        const response = await axiosInstance.get("academicYear/fetch");
         const sortedSchoolYears = response.data.map((data) => ({
           _id: data._id,
-          syStartYear: data.syStartYear,
-          syEndYear: data.syEndYear,
-          syStartMonth: data.syStartMonth,
-          syEndMonth: data.syEndMonth
+          syStartYear: parseInt(data.schoolYear.substring(0, 4)),
+          syEndYear: parseInt(data.schoolYear.slice(-4)),
+          syStartMonth: data.monthFrom,
+          syEndMonth: data.monthTo
         })).sort((a, b) => b.syStartYear - a.syStartYear || b.syEndYear - a.syEndYear);
 
       setSchoolYears(sortedSchoolYears);
