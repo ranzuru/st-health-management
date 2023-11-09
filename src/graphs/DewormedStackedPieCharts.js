@@ -232,7 +232,7 @@ const PieChart = () => {
       return `${selectedMonthText} in the School Year ${schoolYearText}, the ${label} had the largest number of record/s, with ${value} count/s to those who are ${selected4pText} and ${selectedDewText} in ${selectedGradeText}.`;
     } else {
       const highestTypeLabels = highest4p.map((item) => item.label).join(", ");
-      return `In the month of ${selectedMonthText} in the School Year ${schoolYearText}, the reasons ${highestTypeLabels} had the largest number of record/s, with ${maxCount} count/s to those who are ${selected4pText} and ${selectedDewText} in ${selectedGradeText}.`;
+      return `In the month of ${selectedMonthText} in the School Year ${schoolYearText}, the ${highestTypeLabels} had the largest number of record/s, with ${maxCount} count/s to those who are ${selected4pText} and ${selectedDewText} in ${selectedGradeText}.`;
     }
   };
   

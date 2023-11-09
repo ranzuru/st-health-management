@@ -211,7 +211,7 @@ const PieChart = () => {
       return `${selectedMonthText} in the School Year ${schoolYearText}, the BMI Classification ${label} had the largest number of Nutritional Status (NS) record/s, with ${value} count/s in ${selectedTypeText} in ${selectedGradeText}.`;
     } else {
       const highestTypeLabels = highestTypes.map((item) => item.label).join(", ");
-      return `In the month of ${selectedMonthText} in the School Year ${schoolYearText}, the reasons ${highestTypeLabels} had the largest number of Nutritional Status (NS) record/s, with ${maxCount} count/s in ${selectedTypeText} in ${selectedGradeText}.`;
+      return `In the month of ${selectedMonthText} in the School Year ${schoolYearText}, the BMI Classification ${highestTypeLabels} had the largest number of Nutritional Status (NS) record/s, with ${maxCount} count/s in ${selectedTypeText} in ${selectedGradeText}.`;
     }
   };
   
