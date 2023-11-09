@@ -35,22 +35,22 @@ const PieChart = () => {
     const aggregatedData = {};
 
     rawData.forEach((item) => {
-      const reason = item.classEnrollment.student.gender.toUpperCase(); // Assuming the reason property exists in your data
-      if (!aggregatedData[reason]) {
-        aggregatedData[reason] = {
-          id: reason,
-          label: reason,
+      const distinctChartData = item.classEnrollment.student.gender.toUpperCase();
+      if (!aggregatedData[distinctChartData]) {
+        aggregatedData[distinctChartData] = {
+          id: distinctChartData,
+          label: distinctChartData,
           value: 1,
         };
       } else {
-        aggregatedData[reason].value += 1;
+        aggregatedData[distinctChartData].value += 1;
       }
     });
 
     return Object.values(aggregatedData);
   }, []);
 
-  const fetchDataByYearAndMonth = (selectedYear, selectedMonth, selectedType) => {
+  const specifiedDateData = (selectedYear, selectedMonth, selectedType) => {
     if (selectedYear) {
       const [startYear, endYear] = selectedYear.split(" - ").map(Number);
   
@@ -67,92 +67,54 @@ const PieChart = () => {
       const selectedMonthIndex = months.indexOf(selectedMonth);
   
       const filteredData = originalData.filter((item) => {
-        const issueDate = new Date(item.dateOfOnset);
-        const issueDateYear = issueDate.getFullYear();
-        const issueDateMonth = issueDate.getMonth();
-  
-        if (
-          (issueDateYear === startYear && issueDateMonth >= startMonthIndex && issueDateMonth === selectedMonthIndex) ||
-          (issueDateYear === endYear && issueDateMonth <= endMonthIndex && issueDateMonth === selectedMonthIndex)
-        ) {
-          return true;
+        const basedDate = new Date(item.dateOfOnset);
+        const basedDateYr = basedDate.getFullYear();
+        const basedDateMth = basedDate.getMonth();
+        
+        if (selectedMonth === "All") {
+          if (
+            (basedDateYr === startYear && basedDateMth >= startMonthIndex) ||
+            (basedDateYr === endYear && basedDateMth <= endMonthIndex)
+          ) {
+            return true;
+          }
+        } else {
+          if (
+            (basedDateYr === startYear && basedDateMth >= startMonthIndex && basedDateMth === selectedMonthIndex) ||
+            (basedDateYr === endYear && basedDateMth <= endMonthIndex && basedDateMth === selectedMonthIndex)
+          ) {
+            return true;
+          }
         }
   
         return false;
       });
   
-      const filteredDataByType = selectedType === "All" ? filteredData : filteredData.filter((item) => item.classEnrollment.classProfile.section === selectedType);
-      const aggregatedData = aggregateDataByReason(filteredDataByType);
+      const typeFilter = selectedType === "All" ? filteredData : filteredData.filter((item) => item.classEnrollment.classProfile.section === selectedType);
+      const aggregatedData = aggregateDataByReason(typeFilter);
       setData(aggregatedData);
     }
   };
   
-  const fetchDataByYear = (selectedYear, selectedType) => {
-    if (selectedYear) {
-      const [startYear, endYear] = selectedYear.split(" - ").map(Number);
   
-      const startMonth = schoolYears.find((year) => year.syStartYear === startYear)?.syStartMonth || 1;
-      const endMonth = schoolYears.find((year) => year.syEndYear === endYear)?.syEndMonth || 12;
-  
-      if (!startMonth || !endMonth) {
-        console.error("Start month or end month not found for the selected school year.");
-        return;
-      }
-  
-      const startMonthIndex = months.indexOf(startMonth);
-      const endMonthIndex = months.indexOf(endMonth);
-  
-      const filteredData = originalData.filter((item) => {
-        const issueDate = new Date(item.dateOfOnset);
-        const issueDateYear = issueDate.getFullYear();
-        const issueDateMonth = issueDate.getMonth();
-  
-        if (
-          (issueDateYear === startYear && issueDateMonth >= startMonthIndex) ||
-          (issueDateYear === endYear && issueDateMonth <= endMonthIndex)
-        ) {
-          return true;
-        }
-  
-        return false;
-      });
-  
-      const filteredDataByType = selectedType === "All" ? filteredData : filteredData.filter((item) => item.classEnrollment.classProfile.section === selectedType);
-      const aggregatedData = aggregateDataByReason(filteredDataByType);
-      setData(aggregatedData);
-    }
-  };
-
   const handleSchoolYearChange = (event) => {
     const year = event.target.value;
     setSelectedSchoolYear(year);
   
-    if (selectedMonth === "All") {
-      fetchDataByYear(year, selectedType);
-    } else {
-      fetchDataByYearAndMonth(year, selectedMonth, selectedType);
-    }
+    specifiedDateData(year, selectedMonth, selectedType);
   };
   
   const handleMonthChange = (event) => {
     const month = event.target.value;
     setSelectedMonth(month);
   
-    if (month === "All") {
-      fetchDataByYear(selectedSchoolYear, selectedType);
-    } else {
-      fetchDataByYearAndMonth(selectedSchoolYear, month, selectedType);
-    };
+    specifiedDateData(selectedSchoolYear, month, selectedType);
   };
   
   const handleTypeChange = (event, newValue) => {
     setSelectedType(newValue);
   
-    if (selectedMonth === "All") {
-      fetchDataByYear(selectedSchoolYear, newValue);
-    } else {
-      fetchDataByYearAndMonth(selectedSchoolYear, selectedMonth, newValue);
-    }
+    specifiedDateData(selectedSchoolYear, selectedMonth, newValue);
   };
 
   const summary = () => {
@@ -167,18 +129,17 @@ const PieChart = () => {
     const highestTypes = data.filter((item) => item.value === maxCount);
   
     const schoolYearText = selectedSchoolYear || "Selected School Year";
-    const selectedMonthText = selectedMonth === "All" ? "In all months of " : `In the month of ${selectedMonth}`;
+    const selectedMonthText = selectedMonth === "All" ? "all months" : `the month of ${selectedMonth}`;
     const selectedTypeText = `the section ${selectedType}`;
   
     if (highestTypes.length === 1) {
       const { label, value } = highestTypes[0];
-      return `${selectedMonthText} the School Year ${schoolYearText}, the gender ${label} had the largest number of dengue record/s, with ${value} count/s in ${selectedTypeText}.`;
+      return `In the School Year ${schoolYearText}, ${selectedMonthText} registering the highest number of record(s) is ${label}, reflecting ${value} dengue infection/s. This surge predominantly pertains to ${selectedTypeText}, signifying a prominent trend in patient interactions during this period.`;
     } else {
       const highestTypeLabels = highestTypes.map((item) => item.label).join(", ");
-      return `In the month of ${selectedMonthText} in the School Year ${schoolYearText}, the gender ${highestTypeLabels} had the largest number of dengue record/s, with ${maxCount} count/s in ${selectedTypeText}.`;
+      return `In the School Year ${schoolYearText}, ${selectedMonthText} registering the highest number of record(s) are ${highestTypeLabels}, reflecting ${maxCount} dengue infection/s. This surge predominantly pertains to ${selectedTypeText}, signifying a prominent trend in patient interactions during this period.`;
     }
-  };
-  
+  };  
 
   useEffect(() => {
     const fetchData = async () => {
@@ -203,7 +164,7 @@ const PieChart = () => {
 
         if (!selectedSchoolYear && sortedSchoolYears.length > 0) {
           setSelectedSchoolYear(`${sortedSchoolYears[0].syStartYear} - ${sortedSchoolYears[0].syEndYear}`);
-          fetchDataByYear(`${sortedSchoolYears[0].syStartYear} - ${sortedSchoolYears[0].syEndYear}`);
+          specifiedDateData(`${sortedSchoolYears[0].syStartYear} - ${sortedSchoolYears[0].syEndYear}`);
         }
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -220,10 +181,10 @@ const PieChart = () => {
           <Paper elevation={3}>
             <Box p={3}>
               <Typography variant="h4" gutterBottom>
-              Yearly/ Monthly/ Daily Dengue Monitoring Records
+              Dengue Monitoring per Gender Analysis
               </Typography>
               <Typography variant="body1" paragraph>
-                Distinguishes which gender of students has the most and least gender infected by Dengue.
+              It is Pie Chart that provides a focused distinction between Male and Female of Dengue infected student/s, allowing you to filter data by school year, month, and section.
               </Typography>
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={4}>

@@ -3,7 +3,7 @@ import { ResponsivePie } from "@nivo/pie";
 import { Paper, Box, Typography, Container, Grid, FormControl, InputLabel, Select, MenuItem } from "@mui/material";
 import axiosInstance from "../config/axios-instance.js";
 
-const ClinicVisitorPieChart = () => {
+const PieChart = () => {
   const [data, setData] = useState([]);
   const [selectedSchoolYear, setSelectedSchoolYear] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("All");
@@ -15,171 +15,26 @@ const ClinicVisitorPieChart = () => {
     "July", "August", "September", "October", "November", "December"
   ];
 
-  const extractSchoolYears = (data) => {
-    const uniqueYears = new Set();
-    data.forEach((item) => {
-      const startYear = parseInt(item.schoolYear.substring(0, 4));
-      const endYear = parseInt(item.schoolYear.slice(-4));
-      const schoolYear = `${startYear} - ${endYear}`;
-      uniqueYears.add(schoolYear);
-    });
-    return Array.from(uniqueYears);
-  };
-
-  const extractTypes = () => {
-    const uniqueTypes = [...new Set(originalData.map((item) => item.patient_type))];
-    return uniqueTypes;
-  };
-
-  const aggregateDataByReason = useCallback((rawData) => {
-    const aggregatedData = {};
-
-    rawData.forEach((item) => {
-      const reason = item.reason.toUpperCase(); // Assuming the reason property exists in your data
-      if (!aggregatedData[reason]) {
-        aggregatedData[reason] = {
-          id: reason,
-          label: reason,
-          value: 1,
-        };
-      } else {
-        aggregatedData[reason].value += 1;
-      }
-    });
-
-    return Object.values(aggregatedData);
-  }, []);
-
-  const fetchDataByYearAndMonth = (selectedYear, selectedMonth, selectedType) => {
-    if (selectedYear) {
-      const [startYear, endYear] = selectedYear.split(" - ").map(Number);
-  
-      const startMonth = schoolYears.find((year) => year.syStartYear === startYear)?.syStartMonth || 1;
-      const endMonth = schoolYears.find((year) => year.syEndYear === endYear)?.syEndMonth || 12;
-  
-      if (!startMonth || !endMonth) {
-        console.error("Start month or end month not found for the selected school year.");
-        return;
-      }
-  
-      const startMonthIndex = months.indexOf(startMonth);
-      const endMonthIndex = months.indexOf(endMonth);
-      const selectedMonthIndex = months.indexOf(selectedMonth);
-  
-      const filteredData = originalData.filter((item) => {
-        const issueDate = new Date(item.issueDate);
-        const issueDateYear = issueDate.getFullYear();
-        const issueDateMonth = issueDate.getMonth();
-  
-        if (
-          (issueDateYear === startYear && issueDateMonth >= startMonthIndex && issueDateMonth === selectedMonthIndex) ||
-          (issueDateYear === endYear && issueDateMonth <= endMonthIndex && issueDateMonth === selectedMonthIndex)
-        ) {
-          return true;
-        }
-  
-        return false;
-      });
-  
-      const filteredDataByType = selectedType === "All" ? filteredData : filteredData.filter((item) => item.patient_type === selectedType);
-      const aggregatedData = aggregateDataByReason(filteredDataByType);
-      setData(aggregatedData);
-    }
-  };
-  
-  const fetchDataByYear = (selectedYear, selectedType) => {
-    if (selectedYear) {
-      const [startYear, endYear] = selectedYear.split(" - ").map(Number);
-  
-      const startMonth = schoolYears.find((year) => year.syStartYear === startYear)?.syStartMonth || 1;
-      const endMonth = schoolYears.find((year) => year.syEndYear === endYear)?.syEndMonth || 12;
-  
-      if (!startMonth || !endMonth) {
-        console.error("Start month or end month not found for the selected school year.");
-        return;
-      }
-  
-      const startMonthIndex = months.indexOf(startMonth);
-      const endMonthIndex = months.indexOf(endMonth);
-  
-      const filteredData = originalData.filter((item) => {
-        const issueDate = new Date(item.issueDate);
-        const issueDateYear = issueDate.getFullYear();
-        const issueDateMonth = issueDate.getMonth();
-  
-        if (
-          (issueDateYear === startYear && issueDateMonth >= startMonthIndex) ||
-          (issueDateYear === endYear && issueDateMonth <= endMonthIndex)
-        ) {
-          return true;
-        }
-  
-        return false;
-      });
-  
-      const filteredDataByType = selectedType === "All" ? filteredData : filteredData.filter((item) => item.patient_type === selectedType);
-      const aggregatedData = aggregateDataByReason(filteredDataByType);
-      setData(aggregatedData);
-    }
-  };
-
   const handleSchoolYearChange = (event) => {
     const year = event.target.value;
     setSelectedSchoolYear(year);
   
-    if (selectedMonth === "All") {
-      fetchDataByYear(year, selectedType);
-    } else {
-      fetchDataByYearAndMonth(year, selectedMonth, selectedType);
-    }
+    specifiedDateData(year, selectedMonth, selectedType);
   };
   
   const handleMonthChange = (event) => {
     const month = event.target.value;
     setSelectedMonth(month);
   
-    if (month === "All") {
-      fetchDataByYear(selectedSchoolYear, selectedType);
-    } else {
-      fetchDataByYearAndMonth(selectedSchoolYear, month, selectedType);
-    };
+    specifiedDateData(selectedSchoolYear, month, selectedType);
   };
   
   const handleTypeChange = (event) => {
     const type = event.target.value;
     setSelectedType(type);
   
-    if (selectedMonth === "All") {
-      fetchDataByYear(selectedSchoolYear, type);
-    } else {
-      fetchDataByYearAndMonth(selectedSchoolYear, selectedMonth, type);
-    }
+    specifiedDateData(selectedSchoolYear, selectedMonth, type);
   };
-
-  const summary = () => {
-    if (data.length === 0) {
-      return "No data available for the selected school year.";
-    }
-  
-    // Find the maximum value among all reasons (types)
-    const maxCount = Math.max(...data.map((item) => item.value));
-  
-    // Filter reasons (types) that have the maximum count
-    const highestTypes = data.filter((item) => item.value === maxCount);
-  
-    const schoolYearText = selectedSchoolYear || "Selected School Year";
-    const selectedMonthText = selectedMonth === "All" ? "In all months of " : `In the month of ${selectedMonth}`;
-    const selectedTypeText = selectedType === "All" ? "all sorts of patients" : `the ${selectedType} type of patients`;
-  
-    if (highestTypes.length === 1) {
-      const { label, value } = highestTypes[0];
-      return `${selectedMonthText} in the School Year ${schoolYearText}, the reason ${label} had the largest number of clinic visit/s, with ${value} count/s in ${selectedTypeText}.`;
-    } else {
-      const highestTypeLabels = highestTypes.map((item) => item.label).join(", ");
-      return `In the month of ${selectedMonthText} in the School Year ${schoolYearText}, the reasons ${highestTypeLabels} had the largest number of clinic visit/s, with ${maxCount} count/s in ${selectedTypeText}.`;
-    }
-  };
-  
 
   useEffect(() => {
     const fetchData = async () => {
@@ -204,7 +59,7 @@ const ClinicVisitorPieChart = () => {
 
         if (!selectedSchoolYear && sortedSchoolYears.length > 0) {
           setSelectedSchoolYear(`${sortedSchoolYears[0].syStartYear} - ${sortedSchoolYears[0].syEndYear}`);
-          fetchDataByYear(`${sortedSchoolYears[0].syStartYear} - ${sortedSchoolYears[0].syEndYear}`);
+          specifiedDateData(`${sortedSchoolYears[0].syStartYear} - ${sortedSchoolYears[0].syEndYear}`);
         }
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -214,6 +69,100 @@ const ClinicVisitorPieChart = () => {
     fetchData();
   }, [selectedSchoolYear]);
 
+  const extractTypes = () => {
+    const uniqueTypes = [...new Set(originalData.map((item) => item.patient_type))];
+    return uniqueTypes;
+  };
+
+  const aggregateDataByReason = useCallback((rawData) => {
+    const aggregatedData = {};
+
+    rawData.forEach((item) => {
+      const distinctChartData = item.reason.toUpperCase();
+      if (!aggregatedData[distinctChartData]) {
+        aggregatedData[distinctChartData] = {
+          id: distinctChartData,
+          label: distinctChartData,
+          value: 1,
+        };
+      } else {
+        aggregatedData[distinctChartData].value += 1;
+      }
+    });
+
+    return Object.values(aggregatedData);
+  }, []);
+
+  const specifiedDateData = (selectedYear, selectedMonth, selectedType) => {
+    if (selectedYear) {
+      const [startYear, endYear] = selectedYear.split(" - ").map(Number);
+  
+      const startMonth = schoolYears.find((year) => year.syStartYear === startYear)?.syStartMonth || 1;
+      const endMonth = schoolYears.find((year) => year.syEndYear === endYear)?.syEndMonth || 12;
+  
+      if (!startMonth || !endMonth) {
+        console.error("Start month or end month not found for the selected school year.");
+        return;
+      }
+  
+      const startMonthIndex = months.indexOf(startMonth);
+      const endMonthIndex = months.indexOf(endMonth);
+      const selectedMonthIndex = months.indexOf(selectedMonth);
+  
+      const filteredData = originalData.filter((item) => {
+        const basedDate = new Date(item.issueDate);
+        const basedDateYr = basedDate.getFullYear();
+        const basedDateMth = basedDate.getMonth();
+        
+        if (selectedMonth === "All") {
+          if (
+            (basedDateYr === startYear && basedDateMth >= startMonthIndex) ||
+            (basedDateYr === endYear && basedDateMth <= endMonthIndex)
+          ) {
+            return true;
+          }
+        } else {
+          if (
+            (basedDateYr === startYear && basedDateMth >= startMonthIndex && basedDateMth === selectedMonthIndex) ||
+            (basedDateYr === endYear && basedDateMth <= endMonthIndex && basedDateMth === selectedMonthIndex)
+          ) {
+            return true;
+          }
+        }
+  
+        return false;
+      });
+  
+      const typeFilter = selectedType === "All" ? filteredData : filteredData.filter((item) => item.patient_type === selectedType);
+      const aggregatedData = aggregateDataByReason(typeFilter);
+      setData(aggregatedData);
+    }
+  };
+
+  const summary = () => {
+    if (data.length === 0) {
+      return "No data available for the selected school year.";
+    }
+  
+    // Find the maximum value among all reasons (types)
+    const maxCount = Math.max(...data.map((item) => item.value));
+  
+    // Filter reasons (types) that have the maximum count
+    const highestTypes = data.filter((item) => item.value === maxCount);
+  
+    const schoolYearText = selectedSchoolYear || "Selected School Year";
+    const selectedMonthText = selectedMonth === "All" ? "all months" : `the month of ${selectedMonth}`;
+    const selectedTypeText = selectedType === "All" ? "all sorts of" : `the ${selectedType}`;
+  
+    if (highestTypes.length === 1) {
+      const { label, value } = highestTypes[0];
+      return `In the School Year ${schoolYearText}, ${selectedMonthText} registering the highest number of record(s) is ${label}, reflecting ${value} clinic visit/s. This surge predominantly pertains to ${selectedTypeText} type, signifying a prominent trend in patient interactions during this period.`;
+    } else {
+      const highestTypeLabels = highestTypes.map((item) => item.label).join(", ");
+      return `In the School Year ${schoolYearText}, ${selectedMonthText} registering the highest number of record(s) are ${highestTypeLabels}, reflecting ${maxCount} clinic visit/s. This surge predominantly pertains to ${selectedTypeText} type, signifying a prominent trend in patient interactions during this period.`;
+    }
+  };
+
   return (
     <Container maxWidth="md">
       <Grid container spacing={0}>
@@ -221,10 +170,10 @@ const ClinicVisitorPieChart = () => {
           <Paper elevation={3}>
             <Box p={3}>
               <Typography variant="h4" gutterBottom>
-                Overall (per School Year)/ Monthly Clinic Visit Reason/s
+              Clinic Visit Patient Reason Analysis
               </Typography>
               <Typography variant="body1" paragraph>
-                Distinguishes why students/ faculty/ others are visiting the clinic.
+              It is Pie Chart that provides a focused distinction of clinic patient reason/s, allowing you to filter data by school year, month, and patient type.
               </Typography>
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={4}>
@@ -337,4 +286,4 @@ const ClinicVisitorPieChart = () => {
   );
 };
 
-export default ClinicVisitorPieChart;
+export default PieChart;

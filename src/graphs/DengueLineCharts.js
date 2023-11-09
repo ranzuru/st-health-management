@@ -14,53 +14,139 @@ import {
 import axiosInstance from "../config/axios-instance.js";
 
 const LineChart = () => {
-  const [schoolYears, setSchoolYears] = useState([]);
-  const [selectedSchoolYear, setSelectedSchoolYear] = useState("");
-  const [data, setData] = useState([]);
-  const [uniqueTypes, setUniqueTypes] = useState([]);
-  const monthNames = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"
-  ];
-  const [selectedMonth, setSelectedMonth] = useState("All");
+  const [clinicData, setClinicData] = useState([]);
+  const [sy, setSy] = useState([]);
+  const [selectedSy, setSelectedSy] = useState("");
+  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const [selectedMonth, setSelectedMth] = useState("All");
+  const [types, setTypes] = useState([]);
   const [selectedType, setSelectedType] = useState("All");
   const [xAxisFormat, setXAxisFormat] = useState("Month");
 
-
   useEffect(() => {
-    const fetchSchoolYears = async () => {
+    const getSyData = async () => {
       try {
         const response = await axiosInstance.get("academicYear/fetch");
-        const sortedSchoolYears = response.data.map((data) => ({
+        const sortedRes = response.data.map((data) => ({
           _id: data._id,
-          syStartYear: parseInt(data.schoolYear.substring(0, 4)),
-          syEndYear: parseInt(data.schoolYear.slice(-4)),
-          syStartMonth: data.monthFrom,
-          syEndMonth: data.monthTo
-        })).sort((a, b) => b.syStartYear - a.syStartYear || b.syEndYear - a.syEndYear);
+          startYr: parseInt(data.schoolYear.substring(0, 4)),
+          endYr: parseInt(data.schoolYear.slice(-4)),
+          startMth: data.monthFrom,
+          endMth: data.monthTo
+        })).sort((a, b) => b.startYr - a.startYr || b.endYr - a.endYr);
 
-      setSchoolYears(sortedSchoolYears);
-      setSelectedSchoolYear(sortedSchoolYears[0]?._id || "");
+      setSy(sortedRes);
+      setSelectedSy(sortedRes[0]?._id || "");
       } catch (error) {
         console.error("Error fetching school years:", error);
       }
     };
 
-    fetchSchoolYears();
+    getSyData();
   }, []);
 
   useEffect(() => {
-    fetchData();
+    const fetchData = async () => {
+      try {
+        const response = await axiosInstance.get("dengueMonitoring/fetch");
+        const adjustedResponse = response.data.map((data) => {
+          const type = data.classEnrollment.classProfile.grade;
+          return {
+            ...data,
+            type
+          };
+        });
     
-  }, [selectedSchoolYear, selectedMonth, selectedType]);
+        const types = [...new Set(adjustedResponse.map(data => data.type))];
+        setTypes(types);
+  
+        // Get the start year and end year from the selected school year
+        const selectedYearStart = sy.find(data => data._id === selectedSy)?.startYr || new Date().getFullYear();
+        const selectedYearEnd = sy.find(data => data._id === selectedSy)?.endYr || new Date().getFullYear();
+  
+        // Assuming the default start month is January (1) and end month is December (12).
+        const selectedStartMonth = sy.find(data => data._id === selectedSy)?.startMth || 1; 
+        const selectedEndMonth = sy.find(data => data._id === selectedSy)?.endMth || 12;
+  
+        // Setting the month index
+        const startMonthIndex = monthNames.indexOf(selectedStartMonth) + 1;
+        const endMonthIndex = monthNames.indexOf(selectedEndMonth) + 1;
+        const selectedMonthIndex = monthNames.indexOf(selectedMonth) + 1;
+  
+        // Create a variable to store the filter type
+        const filterType = selectedType === "All" ? "All" : selectedType;
+    
+        const dateSpecifiedData = types.map(type => {
+          const clinicVisitData = adjustedResponse
+            .filter(data => filterType === "All" ? data.type === type : data.type === filterType)
+            .reduce((acc, data) => {
+              const basedDate = new Date(data.dateOfOnset);
+              const year = basedDate.getFullYear();
+              const month = basedDate.getMonth() + 1;
+              const day = basedDate.getDate();
+              const monthKey = `${year}-${month.toString().padStart(2, '0')}`;
+              const dayKey = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
 
-  const handleSchoolYearChange = (event) => {
-    setSelectedSchoolYear(event.target.value);
+              if (selectedMonth === "All") {
+                acc[monthKey] = (acc[monthKey] || 0) + 1;
+              } else {
+                if (month === selectedMonthIndex && year >= selectedYearStart && year <= selectedYearEnd) {
+                  acc[dayKey] = (acc[dayKey] || 0) + 1;
+                }
+              }
+              
+              return acc;
+            }, {});
+      
+          const dateFormat = [];
+      
+          for (let year = selectedYearStart; year <= selectedYearEnd; year++) {
+            const startMonth = year === selectedYearStart ? startMonthIndex : 1;
+            const endMonth = year === selectedYearEnd ? endMonthIndex : 12;
+      
+            for (let month = startMonth; month <= endMonth; month++) {
+
+              if (selectedMonth === "All") {
+                const monthKey = `${year}-${month.toString().padStart(2, '0')}`;
+                dateFormat.push({
+                x: monthKey,
+                y: clinicVisitData[monthKey] || 0,
+              });
+              } else {
+                if (month === selectedMonthIndex) {
+                  for (let day = 1; day <= new Date(year, month, 0).getDate(); day++) {
+                    const dayKey = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+                    dateFormat.push({
+                      x: dayKey,
+                      y: clinicVisitData[dayKey] || 0,
+                    });
+                  }
+                }
+              }
+            }
+          }
+      
+          return {
+            id: type,
+            data: dateFormat,
+          };
+        });
+      
+        setClinicData(dateSpecifiedData);       
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    };
+
+    fetchData(); 
+  }, [selectedSy, selectedMonth, selectedType]);
+
+  const handleSyChange = (event) => {
+    setSelectedSy(event.target.value);
   };
 
-  const handleMonthChange = (event) => {
-    setSelectedMonth(event.target.value);
-     // Update xAxisFormat based on the selected month
+  const handleMthChange = (event) => {
+    setSelectedMth(event.target.value);
      setXAxisFormat(event.target.value === "All" ? "Month" : "Day");
   };
 
@@ -69,14 +155,14 @@ const LineChart = () => {
   };
 
   const summary = () => {
-    if (data.length === 0) {
+    if (clinicData.length === 0) {
       return "No data available.";
     }
 
     // Define a variable for the school year label
-  const schoolYearLabel = schoolYears.find((year) => year._id === selectedSchoolYear);
+  const schoolYearLabel = sy.find((year) => year._id === selectedSy);
   const schoolYearText = schoolYearLabel
-    ? `${schoolYearLabel.syStartYear} - ${schoolYearLabel.syEndYear}`
+    ? `${schoolYearLabel.startYr} - ${schoolYearLabel.endYr}`
     : "Selected School Year";
   
     function generateMessage(monthData, typeData, schoolYearText, selectedMonth, selectedType) {
@@ -90,230 +176,64 @@ const LineChart = () => {
       const dateLabel = isAllMonth ? "month" : "day";
       const typeLabel = isAllType ? "all grades" : `the ${selectedType}`;
     
-      const dateList = dateInfo.length === 1 ? dateInfo[0] : dateInfo.join(', ');
+      const dateList = dateInfo.length === 1 ? `is ${dateInfo[0]}` : `are ${dateInfo.join(', ')}`;
       return isAllMonth
-        ? `The ${dateLabel}${dateInfo.length > 1 ? 's' : ''} of ${dateList} in the School Year ${schoolYearText} had the largest number of dengue record/s, with ${monthData.count} count/s in ${typeLabel}.`
-        : `The ${dateLabel}${dateInfo.length > 1 ? 's' : ''} of ${selectedMonth} ${dateList} in the School Year ${schoolYearText} had the most dengue record/s, with ${monthData.count} count/s in ${typeLabel}.`;
+        ? `In the School Year ${schoolYearText}, the ${dateLabel} registering the highest number of record(s) ${dateList}, reflecting ${monthData.count} Dengue infection/s. This surge predominantly pertains to the ${typeLabel}, signifying a prominent trend in patient interactions during this period.`
+        : `In the School Year ${schoolYearText}, the ${dateLabel} registering the highest number of record(s) ${dateList}, reflecting ${monthData.count} Dengue infection/s. This surge predominantly pertains to the ${typeLabel}, signifying a prominent trend in patient interactions during this period.`;
     }
     
-    const monthData = selectedMonth === "All" ? calculateHighestMonthData(selectedType) : calculateHighestDayData(selectedType);
-    return generateMessage(monthData, selectedType, schoolYearText, selectedMonth, selectedType);
-    
+    const monthData = highestDateData(selectedType);
+    return generateMessage(monthData, selectedType, schoolYearText, selectedMonth, selectedType); 
   };
 
-  // Update the calculateHighestDayData function to collect all days with the highest count for a specific type.
-const calculateHighestDayData = (selectedType) => {
-  if (data.length === 0) {
+const highestDateData = (selectedType) => {
+  if (clinicData.length === 0) {
     return null;
   }
 
-  const dayCounts = {};
-  data.forEach((typeData) => {
+  const count = {};
+  clinicData.forEach((typeData) => {
     if (selectedType === "All" || typeData.id === selectedType) {
       typeData.data.forEach((dataPoint) => {
-        const monthYearDay = dataPoint.x;
-        dayCounts[monthYearDay] = (dayCounts[monthYearDay] || 0) + dataPoint.y;
-      });
-    }
-  });
-
-  let highestCount = 0;
-  const highestDays = [];
-
-  for (const monthYearDay in dayCounts) {
-    if (dayCounts[monthYearDay] > highestCount) {
-      highestDays.length = 0; // Clear previous highest days
-      highestDays.push(monthYearDay);
-      highestCount = dayCounts[monthYearDay];
-    } else if (dayCounts[monthYearDay] === highestCount) {
-      highestDays.push(monthYearDay);
-    }
-  }
-
-  return { days: highestDays, count: highestCount };
-};
-  
-
-const calculateHighestMonthData = (selectedType) => {
-  if (data.length === 0) {
-    return null;
-  }
-
-  const monthCounts = {};
-  data.forEach((typeData) => {
-    if (selectedType === "All" || typeData.id === selectedType) {
-      typeData.data.forEach((dataPoint) => {
-        const monthYear = dataPoint.x.split('-').slice(0, 2).join('-');
-        monthCounts[monthYear] = (monthCounts[monthYear] || 0) + dataPoint.y;
-      });
-    }
-  });
-
-  let highestCount = 0;
-  const highestMonths = [];
-
-  for (const monthYear in monthCounts) {
-    if (monthCounts[monthYear] > highestCount) {
-      highestMonths.length = 0; // Clear previous highest months
-      highestMonths.push(monthYear);
-      highestCount = monthCounts[monthYear];
-    } else if (monthCounts[monthYear] === highestCount) {
-      highestMonths.push(monthYear);
-    }
-  }
-
-  // Map the numerical months to month names
-  const formattedMonths = highestMonths.map((monthYear) => {
-    const [year, month] = monthYear.split('-');
-    const monthIndex = parseInt(month) - 1;
-    return `${monthNames[monthIndex]}`;
-  });
-
-  return { months: formattedMonths, count: highestCount };
-};
-
-  const fetchData = async () => {
-    try {
-      const response = await axiosInstance.get("dengueMonitoring/fetch");
-      const adjustedResponse = response.data.map((data) => {
-        const type = data.classEnrollment.classProfile.grade;
-        return {
-          ...data,
-          type
-        };
-      });
-  
-      const types = [...new Set(adjustedResponse.map(data => data.type))];
-      setUniqueTypes(types);
-
-      // Get the start year and end year from the selected school year
-      const selectedYearStart = schoolYears.find(year => year._id === selectedSchoolYear)?.syStartYear || new Date().getFullYear();
-      const selectedYearEnd = schoolYears.find(year => year._id === selectedSchoolYear)?.syEndYear || new Date().getFullYear();
-
-      // Assuming the default start month is January (1) and end month is December (12).
-      const selectedStartMonth = schoolYears.find(year => year._id === selectedSchoolYear)?.syStartMonth || 1; 
-      const selectedEndMonth = schoolYears.find(year => year._id === selectedSchoolYear)?.syEndMonth || 12;
-
-      // Setting the month index
-      const startMonthIndex = monthNames.indexOf(selectedStartMonth) + 1;
-      const endMonthIndex = monthNames.indexOf(selectedEndMonth) + 1;
-      const selectedMonthIndex = monthNames.indexOf(selectedMonth) + 1;
-
-      // Extract the current year
-      const currentYear = new Date().getFullYear();
-
-      // Create a variable to store the filter type
-      const filterType = selectedType === "All" ? "All" : selectedType;
-  
-        // Display data by Month
-        if (selectedMonth === "All") {
-          const monthData = types.map(type => {
-            const clinicVisitData = adjustedResponse
-            .filter(data => filterType === "All" ? data.type === type : data.type === filterType)
-              .reduce((acc, data) => {
-                const issueDate = new Date(data.dateOfOnset);
-                const year = issueDate.getFullYear();
-                const month = issueDate.getMonth() + 1;
-
-                const monthYearKey = `${year}-${month.toString().padStart(2, '0')}`;
-                acc[monthYearKey] = acc[monthYearKey] || 0;
-                acc[monthYearKey] += 1;
-                return acc;
-              }, {});
-
-              const schoolYearMonths = [];
-  
-            for (let year = selectedYearStart; year <= selectedYearEnd; year++) {
-
-              const startMonth = year === selectedYearStart ? startMonthIndex : 1;
-              const endMonth = year === selectedYearEnd ? endMonthIndex : 12;
-              for (let month = startMonth; month <= endMonth; month++) {
-                const monthYearKey = `${year}-${month.toString().padStart(2, '0')}`;
-                schoolYearMonths.push({
-                  x: monthYearKey,
-                  y: clinicVisitData[monthYearKey] || 0
-                });
-              }
-            }
-  
-            return {
-              id: type,
-              data: schoolYearMonths,
-            };
-          });
-  
-          setData(monthData);
         
-        // Display data by Days of a Specific Month
-        } else {
-          const dayData = types.map(type => {
-            const clinicVisitData = adjustedResponse
-            .filter(data => filterType === "All" ? data.type === type : data.type === filterType)
-              .reduce((acc, data) => {
-                const issueDate = new Date(data.dateOfOnset);
-                const year = issueDate.getFullYear();
-                const month = issueDate.getMonth() + 1;
-          
-                const day = issueDate.getDate(); // Get the day of the month.
-          
-                if (month === selectedMonthIndex && year >= selectedYearStart && year <= selectedYearEnd) {
-                  const dayYearKey = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-                  acc[dayYearKey] = acc[dayYearKey] || 0;
-                  acc[dayYearKey] += 1;
-                }
-                return acc;
-              }, {});
-          
-            const schoolYearDays = [];
-          
-            for (let year = selectedYearStart; year <= selectedYearEnd; year++) {
-              if (year === selectedYearStart) {
-                var startMonth = startMonthIndex;
-              } else if (year === selectedYearEnd) {
-                var endMonth = endMonthIndex;
-              } else {
-                var startMonth = 1;
-                var endMonth = 12;
-              }
-          
-              if (year === selectedYearStart) {
-                startMonth = startMonthIndex;
-              } else {
-                startMonth = 1;
-              }
-              if (year === selectedYearEnd) {
-                endMonth = endMonthIndex;
-              } else {
-                endMonth = 12;
-              }
-          
-              if (year >= selectedYearStart && year <= selectedYearEnd) {
-                for (let month = startMonth; month <= endMonth; month++) {
-                  if (month === selectedMonthIndex) {
-                    for (let day = 1; day <= new Date(year, month, 0).getDate(); day++) {
-                      const monthYearDayKey = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-                      schoolYearDays.push({
-                        x: monthYearDayKey,
-                        y: clinicVisitData[monthYearDayKey] || 0
-                      });
-                    }
-                  }
-                }
-              }
-            }
-          
-            return {
-              id: type,
-              data: schoolYearDays,
-            };
-          });
-          
-          setData(dayData);
+        let formattedDate = dataPoint.x;
+
+        if (selectedMonth === "All"){
+          formattedDate = dataPoint.x.split('-').slice(0, 2).join('-');
         }
-    } catch (error) {
-      console.error("Error fetching data:", error);
+
+        count[formattedDate] = (count[formattedDate] || 0) + dataPoint.y;
+      });
     }
-  };
+  });
+
+  let highestCount = 0;
+  const highestDate = [];
+
+  for (const date in count) {
+    if (count[date] > highestCount) {
+      highestDate.length = 0;
+      highestDate.push(date);
+      highestCount = count[date];
+    } else if (count[date] === highestCount) {
+      highestDate.push(date);
+    }
+  }
+
+  if (selectedMonth === "All"){
+      const formattedMonths = highestDate.map((monthYear) => {
+      const [year, month] = monthYear.split('-');
+      const index = parseInt(month) - 1;
+      return `${monthNames[index]}`;
+    });
+
+    return { months: formattedMonths, count: highestCount };
+  } else {
+
+  }
+  
+  return { days: highestDate, count: highestCount };  
+};
 
   return (
     <Container maxWidth="md">
@@ -322,10 +242,10 @@ const calculateHighestMonthData = (selectedType) => {
           <Paper elevation={3}>
             <Box p={3}>
               <Typography variant="h4" gutterBottom>
-                Yearly/ Monthly/ Daily Dengue Monitoring Records
+                Dengue Monitoring By Grade Analysis
               </Typography>
               <Typography variant="body1" paragraph>
-                Tracks frequency of Dengue infected students flagging unusually high or low counts.
+              It is Multiline Chart that provides a focused identifying of Dengue infected student trends on each grade, allowing you to filter data by school year, month, and grade.
               </Typography>
               <Grid container spacing={2}>
                 <Grid item xs={4}>
@@ -334,16 +254,16 @@ const calculateHighestMonthData = (selectedType) => {
                     <Select
                       labelId="school-year-label"
                       id="school-year-select"
-                      value={selectedSchoolYear}
-                      onChange={handleSchoolYearChange}
+                      value={selectedSy}
+                      onChange={handleSyChange}
                       label="Select School Year"
                     >
                       <MenuItem value="" disabled>
                         Select School Year
                       </MenuItem>
-                      {schoolYears.map((year) => (
-                        <MenuItem key={year._id} value={year._id}>
-                          {`${year.syStartYear} - ${year.syEndYear}`}
+                      {sy.map((data) => (
+                        <MenuItem key={data._id} value={data._id}>
+                          {`${data.startYr} - ${data.endYr}`}
                         </MenuItem>
                       ))}
                     </Select>
@@ -356,7 +276,7 @@ const calculateHighestMonthData = (selectedType) => {
                       labelId="month-label"
                       id="month-select"
                       value={selectedMonth}
-                      onChange={handleMonthChange}
+                      onChange={handleMthChange}
                       label="Select Month"
                     >
                       <MenuItem value="All">All Months</MenuItem>
@@ -379,7 +299,7 @@ const calculateHighestMonthData = (selectedType) => {
                       label="Select Grade"
                     >
                       <MenuItem value="All">All Grades</MenuItem>
-                      {uniqueTypes.map((month, index) => (
+                      {types.map((month, index) => (
                         <MenuItem key={index} value={month}>
                           {month}
                         </MenuItem>
@@ -391,7 +311,7 @@ const calculateHighestMonthData = (selectedType) => {
               <Box className="flex justify-center items-center">
                 <div style={{ height: "500px", width: "800px" }}>
                   <ResponsiveLine
-                    data={data}
+                    data={clinicData}
                     margin={{ top: 50, right: 40, bottom: 70, left: 90 }}
                     xScale={{
                       type: "point",
@@ -446,7 +366,7 @@ const calculateHighestMonthData = (selectedType) => {
                     pointLabelYOffset={-12}
                     useMesh={true}
                     legends={
-                      selectedType === "All" // Check if "All Types" is selected
+                      selectedType === "All"
                         ? [
                             {
                               anchor: "top",
@@ -490,7 +410,7 @@ const calculateHighestMonthData = (selectedType) => {
                         );
                       }
                     
-                      const matchingLegends = data.filter((data) =>
+                      const matchingLegends = clinicData.filter((data) =>
                         data.data.some((d) => d.x === xValue && d.y === yValue)
                       );
                       

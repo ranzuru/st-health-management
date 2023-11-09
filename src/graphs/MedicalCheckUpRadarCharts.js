@@ -282,10 +282,10 @@ const PieChart = () => {
   
     if (highestTypes.length === 1) {
       const { label, value } = highestTypes[0];
-      return `${selectedMonthText} in the School Year ${schoolYearText}, the evaluation ${label.toUpperCase()} in ${selectedCategory.toLocaleUpperCase()} category had the largest number of student medical record/s, with ${value} count/s among ${selectedTypeText} in section ${selectedGradeText}.`;
+      return `In the School Year ${schoolYearText}, in ${selectedMonthText} and in ${selectedGradeText} section registering the highest number of record(s) is ${label} in ${selectedCategory} assessment category, reflecting ${value} count/s. This surge predominantly pertains to the ${selectedTypeText}, signifying a prominent trend in patient interactions during this period.`;
     } else {
       const highestTypeLabels = highestTypes.map((item) => item.label).join(", ");
-      return `In the month of ${selectedMonthText} in the School Year ${schoolYearText}, the evaluation ${highestTypeLabels} had the largest number of student medical record/s, with ${maxCount} count/s among ${selectedTypeText} in section ${selectedGradeText}.`;
+      return `In the School Year ${schoolYearText}, in ${selectedMonthText} and in ${selectedGradeText} section registering the highest number of record(s) are ${highestTypeLabels} in ${selectedCategory} assessment category, reflecting ${maxCount} count/s. This surge predominantly pertains to the ${selectedTypeText}, signifying a prominent trend in patient interactions during this period.`;
     }
   };
   
@@ -344,10 +344,10 @@ const PieChart = () => {
           <Paper elevation={3}>
             <Box p={3}>
               <Typography variant="h4" gutterBottom>
-                Yearly/ Monthly/ Daily Feeding Program Monitoring
+                Student Medical per Assessment Analysis
               </Typography>
               <Typography variant="body1" paragraph>
-              Tracks frequency of BMI Classification flagging unusually high or low counts, as well as how effective is the Feeding Program.
+              It is Pie Chart that provides a focused examination of evaluation on each grade, allowing you to filter data by school year, month, and being de-wormed.
 
               </Typography>
               <Grid container spacing={2}>

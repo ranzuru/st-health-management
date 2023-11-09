@@ -2,7 +2,6 @@ import React from "react";
 import { Typography } from "@mui/material";
 import DewormedStackedPieCharts from "../graphs/DewormedStackedPieCharts";
 import DewormedMultiLineCharts from "../graphs/DewormedMultiLineCharts";
-import DewormedGroupBarChart from "../graphs/DewormedGroupBarCharts";
 
 const DewormedMonitoringAnalytics = () => {
   return (
@@ -24,9 +23,6 @@ const DewormedMonitoringAnalytics = () => {
       <div className="flex flex-col items-center justify-center h-full p-4">
       <div className="flex items-center justify-center w-full mt-6">
           <DewormedMultiLineCharts /> {/* Add this line */}
-        </div>
-        <div className="flex items-center justify-center w-full mt-6">
-          <DewormedGroupBarChart /> {/* Add this line */}
         </div>
         <div className="flex items-center justify-center w-full mt-6">
           <DewormedStackedPieCharts />
