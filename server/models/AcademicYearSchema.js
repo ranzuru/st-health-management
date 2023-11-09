@@ -3,9 +3,9 @@ const mongoose = require("mongoose");
 const academicYearSchema = new mongoose.Schema(
   {
     schoolYear: {
-      type: String, // Updated datatype
+      type: String,
       required: true,
-      match: /^\d{4}-\d{4}$/, // Regular expression to ensure valid format
+      match: /^\d{4}-\d{4}$/,
     },
     monthFrom: {
       type: String,

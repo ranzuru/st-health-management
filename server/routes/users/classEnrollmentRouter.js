@@ -213,6 +213,15 @@ router.put("/softDelete/:id", authenticateMiddleware, async (req, res) => {
   }
 });
 
+router.get("/count", async (req, res) => {
+  try {
+    const count = await ClassEnrollment.countDocuments({ status: "Active" });
+    res.json({ count });
+  } catch (error) {
+    res.status(500).send("Server Error");
+  }
+});
+
 router.put(
   "/archiveClassEnrollment/:enrollmentId",
   authenticateMiddleware,
