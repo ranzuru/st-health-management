@@ -2,7 +2,7 @@ import React from "react";
 import { Typography } from "@mui/material";
 import DengueLineCharts from "../graphs/DengueLineCharts";
 import DengueHeatmapCharts from "../graphs/DengueHeatmapCharts";
-import DengueGroupBarCharts from "../graphs/DengueGroupBarCharts";
+import DengueBarCharts from "../graphs/DengueGroupBarCharts";
 
 const DengueMonitoringAnalytics = () => {
   return (
@@ -26,11 +26,12 @@ const DengueMonitoringAnalytics = () => {
           <DengueLineCharts />
         </div>
         <div className="flex items-center justify-center w-full mt-6">
-          <DengueHeatmapCharts />
+          <DengueBarCharts />
         </div>
         <div className="flex items-center justify-center w-full mt-6">
-          <DengueGroupBarCharts />
+          <DengueHeatmapCharts />
         </div>
+        
       </div>
     </div>
   );

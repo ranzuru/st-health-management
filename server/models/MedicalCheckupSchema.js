@@ -21,6 +21,7 @@ const medicalCheckupSchema = new mongoose.Schema(
     visionScreeningRight: { type: String, required: true },
     auditoryScreeningLeft: { type: String, required: true },
     auditoryScreeningRight: { type: String, required: true },
+    
     skinScreening: { type: String, required: true },
     scalpScreening: { type: String, required: true },
     eyesScreening: { type: String, required: true },

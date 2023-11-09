@@ -1,7 +1,8 @@
 import React from "react";
 import { Typography } from "@mui/material";
-import MedicalCheckupsBarChart from "../graphs/MedicalCheckUpBarChart";
+
 import MedicalCheckUpRadarCharts from "../graphs/MedicalCheckUpRadarCharts";
+import LineChart from "../graphs/MedicalLineChart";
 
 const MedicalCheckUpAnalytics = () => {
   return (
@@ -17,12 +18,12 @@ const MedicalCheckUpAnalytics = () => {
             pl: 2,
           }}
         >
-          Medical Check-Up Analytics
+          Student Medical Analytics
         </Typography>
       </div>
       <div className="flex flex-col items-center justify-center h-full p-4">
-        <div className="flex items-center justify-center w-full">
-          <MedicalCheckupsBarChart />
+      <div className="flex items-center justify-center w-full">
+          <LineChart />
         </div>
         <div className="flex items-center justify-center w-full mt-6">
           <MedicalCheckUpRadarCharts /> {/* Add this line */}

@@ -216,7 +216,7 @@ const ClassEnrollmentForm = (props) => {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (lrnInput.length > 2) {
+      if (lrnInput.length > 0) {
         setLoading(true);
         try {
           const response = await axiosInstance.get(

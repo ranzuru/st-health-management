@@ -224,7 +224,7 @@ const NutritionalStatusForm = (props) => {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (lrnInput.length > 2) {
+      if (lrnInput.length > 0) {
         // Change to any number suitable to start a search
         setLoading(true);
         try {

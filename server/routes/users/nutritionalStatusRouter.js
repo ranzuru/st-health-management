@@ -129,6 +129,29 @@ router.get("/fetch/:type", authenticateMiddleware, async (req, res) => {
   }
 });
 
+// Read
+router.get("/fetchFeedYes/", authenticateMiddleware, async (req, res) => {
+  try {
+    const records = await NutritionalStatus.find({beneficiaryOfSBFP: true}).populate({
+      path: "classEnrollment",
+      populate: [
+        {
+          path: "student",
+        },
+        {
+          path: "classProfile",
+        },
+        {
+          path: "academicYear",
+        },
+      ],
+    });
+    res.status(200).json(records);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Update
 router.put(
   "/update/:lrn/:measurementType",

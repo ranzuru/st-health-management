@@ -23,7 +23,7 @@ const selectedFields = [
 router.get(
   "/userFetch",
   authenticateMiddleware,
-  roleMiddleware("Admin"),
+  roleMiddleware("Administrator"),
   async (req, res) => {
     try {
       // Fetch users from MongoDB with selected fields
@@ -50,7 +50,7 @@ router.get(
 router.put(
   "/approveUser/:id",
   authenticateMiddleware,
-  roleMiddleware("Admin"),
+  roleMiddleware("Administrator"),
   async (req, res) => {
     const userId = req.params.id;
 
@@ -83,7 +83,7 @@ router.put(
 router.delete(
   "/deleteUser/:id",
   authenticateMiddleware,
-  roleMiddleware("Admin"),
+  roleMiddleware("Administrator"),
   async (req, res) => {
     const userId = req.params.id;
 

@@ -15,7 +15,7 @@ details: {
 },
 userId: {
   type: String,
-  required: true,
+  default: "",
 },
 }, {timestamps: true});
 

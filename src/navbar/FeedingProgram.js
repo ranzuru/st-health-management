@@ -7,7 +7,7 @@ const FeedingProgram = () => {
   return (
     <div className="flex flex-col">
       <div className="flex-grow overflow-hidden">
-        <Header title="Feeding Program" />
+        <Header title="Nutritional Status" />
         <div className="flex flex-col items-center justify-center h-full p-4">
           <div className="flex items-center justify-center mb-10">
             <NutritionalStatusPreGrid />

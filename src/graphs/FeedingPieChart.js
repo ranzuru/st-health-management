@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { ResponsivePie } from "@nivo/pie";
-import { Paper, Box, Typography, Container, Grid, FormControl, InputLabel, Select, MenuItem } from "@mui/material";
+import { Paper, Box, Typography, Container, Grid, FormControl, InputLabel, Select, MenuItem, Autocomplete } from "@mui/material";
 import axiosInstance from "../config/axios-instance.js";
 
-const ClinicVisitorPieChart = () => {
+const PieChart = () => {
   const [data, setData] = useState([]);
   const [selectedSchoolYear, setSelectedSchoolYear] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("All");
-  const [selectedType, setSelectedType] = useState("All");
+  const [selectedGrade, setSelectedGrade] = useState("All");
+  const [selectedType, setSelectedType] = useState("");
   const [originalData, setOriginalData] = useState([]);
   const [schoolYears, setSchoolYears] = useState([]);
   const months = [
@@ -27,15 +28,20 @@ const ClinicVisitorPieChart = () => {
   };
 
   const extractTypes = () => {
-    const uniqueTypes = [...new Set(originalData.map((item) => item.patient_type))];
+    const uniqueTypes = [...new Set(originalData.map((item) => item.measurementType))];
     return uniqueTypes;
+  };
+
+  const extractGrades = () => {
+    const uniqueGrade = [...new Set(originalData.map((item) => item.classEnrollment.classProfile.grade))];
+    return uniqueGrade;
   };
 
   const aggregateDataByReason = useCallback((rawData) => {
     const aggregatedData = {};
 
     rawData.forEach((item) => {
-      const reason = item.reason.toUpperCase(); // Assuming the reason property exists in your data
+      const reason = item.BMIClassification.toUpperCase(); // Assuming the reason property exists in your data
       if (!aggregatedData[reason]) {
         aggregatedData[reason] = {
           id: reason,
@@ -67,7 +73,7 @@ const ClinicVisitorPieChart = () => {
       const selectedMonthIndex = months.indexOf(selectedMonth);
   
       const filteredData = originalData.filter((item) => {
-        const issueDate = new Date(item.issueDate);
+        const issueDate = new Date(item.dateMeasured);
         const issueDateYear = issueDate.getFullYear();
         const issueDateMonth = issueDate.getMonth();
   
@@ -81,13 +87,21 @@ const ClinicVisitorPieChart = () => {
         return false;
       });
   
-      const filteredDataByType = selectedType === "All" ? filteredData : filteredData.filter((item) => item.patient_type === selectedType);
-      const aggregatedData = aggregateDataByReason(filteredDataByType);
+      let typeFilter = filteredData;
+      let gradeFilter;
+
+      typeFilter = filteredData.filter((item) => item.measurementType === selectedType);
+      gradeFilter = typeFilter
+      if (selectedGrade !== "All") {
+        gradeFilter = typeFilter.filter((item) => item.classEnrollment.classProfile.grade === selectedGrade);     
+      }
+      
+      const aggregatedData = aggregateDataByReason(gradeFilter);
       setData(aggregatedData);
     }
   };
   
-  const fetchDataByYear = (selectedYear, selectedType) => {
+  const fetchDataByYear = (selectedYear, selectedType, selectedGrade) => {
     if (selectedYear) {
       const [startYear, endYear] = selectedYear.split(" - ").map(Number);
   
@@ -103,7 +117,7 @@ const ClinicVisitorPieChart = () => {
       const endMonthIndex = months.indexOf(endMonth);
   
       const filteredData = originalData.filter((item) => {
-        const issueDate = new Date(item.issueDate);
+        const issueDate = new Date(item.dateMeasured);
         const issueDateYear = issueDate.getFullYear();
         const issueDateMonth = issueDate.getMonth();
   
@@ -116,9 +130,17 @@ const ClinicVisitorPieChart = () => {
   
         return false;
       });
-  
-      const filteredDataByType = selectedType === "All" ? filteredData : filteredData.filter((item) => item.patient_type === selectedType);
-      const aggregatedData = aggregateDataByReason(filteredDataByType);
+      
+      let typeFilter = filteredData;
+      let gradeFilter;
+
+      typeFilter = filteredData.filter((item) => item.measurementType === selectedType);
+      gradeFilter = typeFilter
+      if (selectedGrade !== "All") {
+        gradeFilter = typeFilter.filter((item) => item.classEnrollment.classProfile.grade === selectedGrade);     
+      }
+      
+      const aggregatedData = aggregateDataByReason(gradeFilter);
       setData(aggregatedData);
     }
   };
@@ -139,9 +161,9 @@ const ClinicVisitorPieChart = () => {
     setSelectedMonth(month);
   
     if (month === "All") {
-      fetchDataByYear(selectedSchoolYear, selectedType);
+      fetchDataByYear(selectedSchoolYear, selectedType, selectedGrade);
     } else {
-      fetchDataByYearAndMonth(selectedSchoolYear, month, selectedType);
+      fetchDataByYearAndMonth(selectedSchoolYear, month, selectedType, selectedGrade);
     };
   };
   
@@ -150,15 +172,27 @@ const ClinicVisitorPieChart = () => {
     setSelectedType(type);
   
     if (selectedMonth === "All") {
-      fetchDataByYear(selectedSchoolYear, type);
+      fetchDataByYear(selectedSchoolYear, type, selectedGrade);
     } else {
-      fetchDataByYearAndMonth(selectedSchoolYear, selectedMonth, type);
+      fetchDataByYearAndMonth(selectedSchoolYear, selectedMonth, type, selectedGrade);
     }
   };
 
+  const handleGradeChange = (event) => {
+    const grade = event.target.value;
+    setSelectedGrade(grade);
+  
+    if (selectedMonth === "All") {
+      fetchDataByYear(selectedSchoolYear, selectedType, grade,);
+    } else {
+      fetchDataByYearAndMonth(selectedSchoolYear, selectedMonth, selectedType, grade);
+    }
+  };
+  
+
   const summary = () => {
     if (data.length === 0) {
-      return "No data available for the selected school year.";
+      return "No data available.";
     }
   
     // Find the maximum value among all reasons (types)
@@ -169,14 +203,15 @@ const ClinicVisitorPieChart = () => {
   
     const schoolYearText = selectedSchoolYear || "Selected School Year";
     const selectedMonthText = selectedMonth === "All" ? "In all months of " : `In the month of ${selectedMonth}`;
-    const selectedTypeText = selectedType === "All" ? "all sorts of patients" : `the ${selectedType} type of patients`;
+    const selectedTypeText = `the ${selectedType} measurement type`;
+    const selectedGradeText = selectedGrade === "All" ? "all grades " : `${selectedGrade}`;
   
     if (highestTypes.length === 1) {
       const { label, value } = highestTypes[0];
-      return `${selectedMonthText} in the School Year ${schoolYearText}, the reason ${label} had the largest number of clinic visit/s, with ${value} count/s in ${selectedTypeText}.`;
+      return `${selectedMonthText} in the School Year ${schoolYearText}, the BMI Classification ${label} had the largest number of Nutritional Status (NS) record/s, with ${value} count/s in ${selectedTypeText} in ${selectedGradeText}.`;
     } else {
       const highestTypeLabels = highestTypes.map((item) => item.label).join(", ");
-      return `In the month of ${selectedMonthText} in the School Year ${schoolYearText}, the reasons ${highestTypeLabels} had the largest number of clinic visit/s, with ${maxCount} count/s in ${selectedTypeText}.`;
+      return `In the month of ${selectedMonthText} in the School Year ${schoolYearText}, the reasons ${highestTypeLabels} had the largest number of Nutritional Status (NS) record/s, with ${maxCount} count/s in ${selectedTypeText} in ${selectedGradeText}.`;
     }
   };
   
@@ -186,7 +221,7 @@ const ClinicVisitorPieChart = () => {
       try {
         const [schoolYearResponse, checkupResponse] = await Promise.all([
           axiosInstance.get("/academicYear/fetch"),
-          axiosInstance.get("/clinicVisit/get")
+          axiosInstance.get("/nutritionalStatus/fetchFeedYes")
         ]);
    
         const schoolYearsData = schoolYearResponse.data.map((year) => ({
@@ -221,13 +256,14 @@ const ClinicVisitorPieChart = () => {
           <Paper elevation={3}>
             <Box p={3}>
               <Typography variant="h4" gutterBottom>
-                Overall (per School Year)/ Monthly Clinic Visit Reason/s
+                Yearly/ Monthly/ Daily Feeding Program Monitoring
               </Typography>
               <Typography variant="body1" paragraph>
-                Distinguishes why students/ faculty/ others are visiting the clinic.
+              Tracks frequency of BMI Classification flagging unusually high or low counts, as well as how effective is the Feeding Program.
+
               </Typography>
               <Grid container spacing={2}>
-                <Grid item xs={12} sm={4}>
+                <Grid item xs={12} sm={3}>
                   <FormControl variant="outlined" fullWidth>
                     <InputLabel id="school-year-label">Select School Year</InputLabel>
                     <Select
@@ -246,7 +282,7 @@ const ClinicVisitorPieChart = () => {
                     </Select>
                   </FormControl>
                 </Grid>
-                <Grid item xs={12} sm={4}>
+                <Grid item xs={12} sm={3}>
                   <FormControl variant="outlined" fullWidth>
                     <InputLabel id="month-label">Select Month</InputLabel>
                     <Select
@@ -268,20 +304,37 @@ const ClinicVisitorPieChart = () => {
                     </Select>
                   </FormControl>
                 </Grid>
-                <Grid item xs={12} sm={4}>
+                <Grid item xs={12} sm={3}>
                   <FormControl variant="outlined" fullWidth>
-                    <InputLabel id="type-label">Select Type</InputLabel>
+                    <InputLabel id="grade-label">Select Grade</InputLabel>
+                    <Select
+                      labelId="grade-label"
+                      id="grade-select"
+                      value={selectedGrade}
+                      onChange={handleGradeChange}
+                      label="Select Grade"
+                      style={{ minWidth: "200px" }}
+                    >
+                      <MenuItem value="All">All Grades</MenuItem>
+                      {extractGrades().map((grade, index) => (
+                        <MenuItem key={index} value={grade}>
+                          {grade}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={3}>
+                  <FormControl variant="outlined" fullWidth>
+                    <InputLabel id="type-label">Measurement Type</InputLabel>
                     <Select
                       labelId="type-label"
                       id="type-select"
                       value={selectedType}
                       onChange={handleTypeChange}
-                      label="Select Type"
+                      label="Measurement Type"
                       style={{ minWidth: "200px" }}
                     >
-                      <MenuItem value="All">
-                        All Types
-                      </MenuItem>
                       {extractTypes().map((month, index) => (
                         <MenuItem key={index} value={month}>
                           {month}
@@ -290,6 +343,7 @@ const ClinicVisitorPieChart = () => {
                     </Select>
                   </FormControl>
                 </Grid>
+                
               </Grid>
               <Box className="flex justify-center items-center">
                 <div style={{ height: "500px", width: "800px" }}>
@@ -312,10 +366,12 @@ const ClinicVisitorPieChart = () => {
                     theme={{ labels: { text: { fontSize: 15 } }}}
                     tooltip={({ datum }) => (
                       <div style={{ background: "white", padding: "15px", border: "2px solid black", boxShadow: "0px 0px 5px rgba(0, 0, 0, 0.2)" }}>
-                        Reason: <strong>{datum.id}</strong>
+                        Classification: <strong>{datum.id}</strong>
                         <br />
                         <br />
-                        Type: <strong>{selectedType}</strong>
+                        Measurement: <strong>{selectedType}</strong>
+                        <br />
+                        Grade: <strong>{selectedGrade}</strong>
                         <br />
                         Count: <strong>{datum.value}</strong>
                       </div>
@@ -337,4 +393,4 @@ const ClinicVisitorPieChart = () => {
   );
 };
 
-export default ClinicVisitorPieChart;
+export default PieChart;

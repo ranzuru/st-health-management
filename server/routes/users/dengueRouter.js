@@ -112,6 +112,33 @@ router.get("/fetch/:status", authenticateMiddleware, async (req, res) => {
   }
 });
 
+// Fetch all dengue monitoring records
+router.get("/fetch", authenticateMiddleware, async (req, res) => {
+  
+  try {
+    const records = await DengueMonitoring.find()
+      .populate({
+        path: "classEnrollment",
+        populate: [
+          {
+            path: "student",
+          },
+          {
+            path: "classProfile",
+          },
+          {
+            path: "academicYear",
+          },
+        ],
+      })
+      .exec();
+
+    res.status(200).json(records);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Update a dengue monitoring record by LRN
 router.put("/update/:lrn", authenticateMiddleware, async (req, res) => {
   try {

@@ -88,12 +88,12 @@ const LineChart = () => {
       const isAllType = selectedType === "All";
       const dateInfo = isAllMonth ? monthData.months : monthData.days.map(day => day.slice(-2));
       const dateLabel = isAllMonth ? "month" : "day";
-      const typeLabel = isAllType ? "all grades" : `the ${selectedType}`;
+      const typeLabel = isAllType ? "all grades" : ` ${selectedType}`;
     
       const dateList = dateInfo.length === 1 ? dateInfo[0] : dateInfo.join(', ');
       return isAllMonth
-        ? `The ${dateLabel}${dateInfo.length > 1 ? 's' : ''} of ${dateList} in the School Year ${schoolYearText} had the largest number of dengue record/s, with ${monthData.count} count/s in ${typeLabel}.`
-        : `The ${dateLabel}${dateInfo.length > 1 ? 's' : ''} of ${selectedMonth} ${dateList} in the School Year ${schoolYearText} had the most dengue record/s, with ${monthData.count} count/s in ${typeLabel}.`;
+        ? `The ${dateLabel}${dateInfo.length > 1 ? 's' : ''} of ${dateList} in the School Year ${schoolYearText} had the largest number of medical examination/s, with ${monthData.count} count/s in ${typeLabel}.`
+        : `The ${dateLabel}${dateInfo.length > 1 ? 's' : ''} of ${selectedMonth} ${dateList} in the School Year ${schoolYearText} had the most medical examination/s, with ${monthData.count} count/s in ${typeLabel}.`;
     }
     
     const monthData = selectedMonth === "All" ? calculateHighestMonthData(selectedType) : calculateHighestDayData(selectedType);
@@ -174,7 +174,7 @@ const calculateHighestMonthData = (selectedType) => {
 
   const fetchData = async () => {
     try {
-      const response = await axiosInstance.get("dengueMonitoring/fetch");
+      const response = await axiosInstance.get("medicalCheckup/fetch");
       const adjustedResponse = response.data.map((data) => {
         const type = data.classEnrollment.classProfile.grade;
         return {
@@ -211,7 +211,7 @@ const calculateHighestMonthData = (selectedType) => {
             const clinicVisitData = adjustedResponse
             .filter(data => filterType === "All" ? data.type === type : data.type === filterType)
               .reduce((acc, data) => {
-                const issueDate = new Date(data.dateOfOnset);
+                const issueDate = new Date(data.dateOfExamination);
                 const year = issueDate.getFullYear();
                 const month = issueDate.getMonth() + 1;
 
@@ -250,7 +250,7 @@ const calculateHighestMonthData = (selectedType) => {
             const clinicVisitData = adjustedResponse
             .filter(data => filterType === "All" ? data.type === type : data.type === filterType)
               .reduce((acc, data) => {
-                const issueDate = new Date(data.dateOfOnset);
+                const issueDate = new Date(data.dateOfExamination);
                 const year = issueDate.getFullYear();
                 const month = issueDate.getMonth() + 1;
           
@@ -322,10 +322,10 @@ const calculateHighestMonthData = (selectedType) => {
           <Paper elevation={3}>
             <Box p={3}>
               <Typography variant="h4" gutterBottom>
-                Yearly/ Monthly/ Daily Dengue Monitoring Records
+                Yearly/ Monthly/ Daily Student Medical
               </Typography>
               <Typography variant="body1" paragraph>
-                Tracks frequency of Dengue infected students flagging unusually high or low counts.
+                Tracks how many medical in each grade has been engaged.
               </Typography>
               <Grid container spacing={2}>
                 <Grid item xs={4}>

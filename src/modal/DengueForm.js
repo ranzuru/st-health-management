@@ -61,9 +61,9 @@ const DengueForm = (props) => {
 
   const validationSchema = yup.object().shape({
     lrn: yup.string(),
-    dateOfOnset: yup.date().nullable(),
+    dateOfOnset: yup.date().required("Date of Onset is required"),
     dateOfAdmission: yup.date().nullable(),
-    hospitalAdmission: yup.string().required("Hospital Admission is required"),
+    hospitalAdmission: yup.string().nullable(),
     dateOfDischarge: yup.date().nullable(),
   });
 
@@ -204,7 +204,7 @@ const DengueForm = (props) => {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (lrnInput.length > 2) {
+      if (lrnInput.length > 0) {
         setLoading(true);
         try {
           const response = await axiosInstance.get(
@@ -502,6 +502,7 @@ const DengueForm = (props) => {
                       <DatePicker
                         {...field}
                         label="Date On Set"
+                        required
                         maxDate={new Date()}
                         slotProps={{
                           textField: {

@@ -2,6 +2,7 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User.js");
+const { createLog } = require("../routes/recordLogRouter.js");
 
 exports.register = async (req, res) => {
   try {
@@ -41,7 +42,7 @@ exports.register = async (req, res) => {
       role,
     });
     await newUser.save();
-
+    await createLog('Registration - External', 'CREATE', `${newUser}`, "");
     res.status(201).json({ message: "User registered successfully" });
   } catch (error) {
     res.status(500).json({ error: "An error occurred" });
@@ -114,7 +115,7 @@ exports.internalRegister = async (req, res) => {
     });
 
     await newUser.save();
-
+    await createLog('Registration - Internal', 'CREATE', `${newUser}`, req.userData.userId);
     res
       .status(201)
       .json({ message: "User registered successfully internally" });
@@ -172,8 +173,9 @@ exports.login = async (req, res) => {
       role: user.role, // assuming 'role' is a field in your User model
       // Add any other necessary fields, but exclude password for security reasons.
     };
-
+    
     res.status(200).json({ token, refreshToken, user: userResponse });
+    await createLog('Login', 'RETRIEVE', `${user}`, "");
   } catch (error) {
     res
       .status(500)

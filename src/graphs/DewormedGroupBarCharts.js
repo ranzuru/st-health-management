@@ -1,18 +1,230 @@
-import { ResponsiveBar } from "@nivo/bar";
-import Paper from "@mui/material/Paper";
-import Box from "@mui/material/Box";
-import { Container, Typography, Grid } from "@mui/material";
+import React, { useState, useEffect, useCallback } from "react";
+import { ResponsiveBar } from "@nivo/bar"; // Import the bar chart component
+import { Paper, Box, Typography, Container, Grid, FormControl, InputLabel, Select, MenuItem } from "@mui/material";
+import axiosInstance from "../config/axios-instance.js";
 
-const DewormedGroupBarChart = () => {
-  const data = [
-    {
-      Status: "Enrolled",
-      "Dewormed-4Ps": 1500, // Dewormed and 4Ps
-      "Dewormed-Non-4Ps": 500, // Dewormed but not 4Ps
-      "Not Dewormed-4Ps": 300, // Not Dewormed and 4Ps
-      "Not Dewormed-Non-4Ps": 200, // Not Dewormed and not 4Ps
-    },
+const DengueBarChart = () => {
+  const [data, setData] = useState([]); // Data for the bar chart
+  const [selectedSchoolYear, setSelectedSchoolYear] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState("All");
+  const [selectedType, setSelectedType] = useState("");
+  const [originalData, setOriginalData] = useState([]);
+  const [schoolYears, setSchoolYears] = useState([]);
+  const months = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
   ];
+
+  const extractSchoolYears = (data) => {
+    const uniqueYears = new Set();
+    data.forEach((item) => {
+      const startYear = parseInt(item.schoolYear.substring(0, 4));
+      const endYear = parseInt(item.schoolYear.slice(-4));
+      const schoolYear = `${startYear} - ${endYear}`;
+      uniqueYears.add(schoolYear);
+    });
+    return Array.from(uniqueYears);
+  };
+
+  const extractTypes = () => {
+    const uniqueTypes = [...new Set(originalData.map((item) => item.deworming))];
+    return uniqueTypes;
+  };
+
+  const aggregateDataByReason = useCallback((rawData, groupByGender) => {
+    const aggregatedData = {};
+  
+    rawData.forEach((item) => {
+      const reason = item.classEnrollment.classProfile.grade.toUpperCase();
+      const groupKey = reason;
+  
+      if (!aggregatedData[groupKey]) {
+        aggregatedData[groupKey] = {
+          id: groupKey,
+          label: reason,
+          value: 1,
+        };
+      } else {
+        aggregatedData[groupKey].value += 1;
+      }
+    });
+  
+    return Object.values(aggregatedData);
+  }, []);
+  
+
+  const fetchDataByYearAndMonth = (selectedYear, selectedMonth, selectedType) => {
+    if (selectedYear) {
+      const [startYear, endYear] = selectedYear.split(" - ").map(Number);
+
+      const startMonth = schoolYears.find((year) => year.syStartYear === startYear)?.syStartMonth || 1;
+      const endMonth = schoolYears.find((year) => year.syEndYear === endYear)?.syEndMonth || 12;
+
+      if (!startMonth || !endMonth) {
+        console.error("Start month or end month not found for the selected school year.");
+        return;
+      }
+
+      const startMonthIndex = months.indexOf(startMonth);
+      const endMonthIndex = months.indexOf(endMonth);
+      const selectedMonthIndex = months.indexOf(selectedMonth);
+
+      const filteredData = originalData.filter((item) => {
+        const issueDate = new Date(item.dateOfExamination);
+        const issueDateYear = issueDate.getFullYear();
+        const issueDateMonth = issueDate.getMonth();
+
+        if (
+          (issueDateYear === startYear && issueDateMonth >= startMonthIndex && issueDateMonth === selectedMonthIndex) ||
+          (issueDateYear === endYear && issueDateMonth <= endMonthIndex && issueDateMonth === selectedMonthIndex)
+        ) {
+          return true;
+        }
+
+        return false;
+      });
+
+      const filteredDataByType = selectedType === "All" ? filteredData : filteredData.filter((item) => item.deworming === selectedType);
+      const aggregatedData = aggregateDataByReason(filteredDataByType);
+      setData(aggregatedData);
+    }
+  };
+
+  const fetchDataByYear = (selectedYear, selectedType) => {
+    if (selectedYear) {
+      const [startYear, endYear] = selectedYear.split(" - ").map(Number);
+
+      const startMonth = schoolYears.find((year) => year.syStartYear === startYear)?.syStartMonth || 1;
+      const endMonth = schoolYears.find((year) => year.syEndYear === endYear)?.syEndMonth || 12;
+
+      if (!startMonth || !endMonth) {
+        console.error("Start month or end month not found for the selected school year.");
+        return;
+      }
+
+      const startMonthIndex = months.indexOf(startMonth);
+      const endMonthIndex = months.indexOf(endMonth);
+
+      const filteredData = originalData.filter((item) => {
+        const issueDate = new Date(item.dateOfExamination);
+        const issueDateYear = issueDate.getFullYear();
+        const issueDateMonth = issueDate.getMonth();
+
+        if (
+          (issueDateYear === startYear && issueDateMonth >= startMonthIndex) ||
+          (issueDateYear === endYear && issueDateMonth <= endMonthIndex)
+        ) {
+          return true;
+        }
+
+        return false;
+      });
+
+      const filteredDataByType = selectedType === "All" ? filteredData : filteredData.filter((item) => item.deworming === selectedType);
+      const aggregatedData = aggregateDataByReason(filteredDataByType);
+      setData(aggregatedData);
+    }
+  };
+
+  const handleSchoolYearChange = (event) => {
+    const year = event.target.value;
+    setSelectedSchoolYear(year);
+
+    if (selectedMonth === "All") {
+      fetchDataByYear(year, selectedType);
+    } else {
+      fetchDataByYearAndMonth(year, selectedMonth, selectedType);
+    }
+  };
+
+  const handleMonthChange = (event) => {
+    const month = event.target.value;
+    setSelectedMonth(month);
+
+    if (month === "All") {
+      fetchDataByYear(selectedSchoolYear, selectedType);
+    } else {
+      fetchDataByYearAndMonth(selectedSchoolYear, month, selectedType);
+    };
+  };
+
+  const handleTypeChange = (event) => {
+    const type = event.target.value;
+    setSelectedType(type);
+
+    if (selectedMonth === "All") {
+      fetchDataByYear(selectedSchoolYear, type);
+    } else {
+      fetchDataByYearAndMonth(selectedSchoolYear, selectedMonth, type);
+    }
+  };
+
+  const summary = () => {
+    if (data.length === 0) {
+      return "No data available for the selected school year.";
+    }
+
+    // Find the maximum value among all reasons (types)
+    const maxCount = Math.max(...data.map((item) => item.value));
+
+    // Filter reasons (types) that have the maximum count
+    const highestTypes = data.filter((item) => item.value === maxCount);
+
+    const schoolYearText = selectedSchoolYear || "Selected School Year";
+    const selectedMonthText = selectedMonth === "All" ? "In all months of " : `In the month of ${selectedMonth} in`;
+    const selectedTypeText = selectedType === "No" ? "not de-wormed" : `de-wormed`;
+
+    if (highestTypes.length === 1) {
+      const { label, value } = highestTypes[0];
+      return `${selectedMonthText} the School Year ${schoolYearText}, the ${label} had the largest number of de-worming record/s, with ${value} count/s to those who are ${selectedTypeText}.`;
+    } else {
+      const highestTypeLabels = highestTypes.map((item) => item.label).join(", ");
+      return `In the month of ${selectedMonthText} in the School Year ${schoolYearText}, the ${highestTypeLabels} had the largest number of de-worming record/s, with ${maxCount} count/s to those who are ${selectedTypeText}.`;
+    }
+  };
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [schoolYearResponse, checkupResponse] = await Promise.all([
+          axiosInstance.get("/academicYear/fetch"),
+          axiosInstance.get("/medicalCheckup/fetch")
+        ]);
+
+        const schoolYearsData = schoolYearResponse.data.map((year) => ({
+          ...year,
+          syStartYear: parseInt(year.schoolYear.substring(0, 4)), // Convert to integer
+          syEndYear: parseInt(year.schoolYear.slice(-4)), // Convert to integer
+        }));
+  
+        const sortedSchoolYears = schoolYearsData.sort(
+          (a, b) => a.syStartYear - b.syStartYear || a.syEndYear - b.syEndYear
+        );
+        setSchoolYears(sortedSchoolYears.reverse());
+          
+        const transformedCheckupData = checkupResponse.data.map((item) => {
+          const dewormingValue = item.deworming ? "Yes" : "No";
+        
+          return {
+            ...item,
+            deworming: dewormingValue,
+          };
+        });
+        
+        setOriginalData(transformedCheckupData);
+
+        if (!selectedSchoolYear && sortedSchoolYears.length > 0) {
+          setSelectedSchoolYear(`${sortedSchoolYears[0].syStartYear} - ${sortedSchoolYears[0].syEndYear}`);
+          fetchDataByYear(`${sortedSchoolYears[0].syStartYear} - ${sortedSchoolYears[0].syEndYear}`);
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    };
+
+    fetchData();
+  }, [selectedSchoolYear]);
+
   return (
     <Container maxWidth="md">
       <Grid container spacing={0}>
@@ -20,62 +232,112 @@ const DewormedGroupBarChart = () => {
           <Paper elevation={3}>
             <Box p={3}>
               <Typography variant="h4" gutterBottom>
-                Combined Bar Chart (Enrolled vs Dewormed)
+                Yearly/ Monthly Mass De-worming Monitoring
               </Typography>
               <Typography variant="body1" paragraph>
-                A grouped bar chart could represent the number of enrolled
-                students and dewormed students by grade level or gender. This
-                would provide a snapshot comparison.
+                Distinguishes which grade has the most and least students de-wormed.
               </Typography>
-              <Box p={3} style={{ height: "400px" }}>
-                <div style={{ width: "100%", height: "100%" }}>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={4}>
+                  <FormControl variant="outlined" fullWidth>
+                    <InputLabel id="school-year-label">Select School Year</InputLabel>
+                    <Select
+                      labelId="school-year-label"
+                      id="school-year-select"
+                      value={selectedSchoolYear}
+                      onChange={handleSchoolYearChange}
+                      label="Select School Year"
+                      style={{ minWidth: "200px" }}
+                    >
+                      {schoolYears.map((year) => (
+                        <MenuItem key={year._id} value={`${year.syStartYear} - ${year.syEndYear}`}>
+                          {`${year.syStartYear} - ${year.syEndYear}`}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <FormControl variant="outlined" fullWidth>
+                    <InputLabel id="month-label">Select Month</InputLabel>
+                    <Select
+                      labelId="month-label"
+                      id="month-select"
+                      value={selectedMonth}
+                      onChange={handleMonthChange}
+                      label="Select Month"
+                      style={{ minWidth: "200px" }}
+                    >
+                      <MenuItem value="All">
+                        All Months
+                      </MenuItem>
+                      {months.map((month, index) => (
+                        <MenuItem key={index} value={month}>
+                          {month}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={4} >
+                  <FormControl variant="outlined" fullWidth>
+                    <InputLabel id="grade-label">De-wormed?</InputLabel>
+                    <Select
+                      labelId="grade-label"
+                      id="grade-select"
+                      value={selectedType}
+                      onChange={handleTypeChange}
+                      label="De-wormed?"
+                      style={{ minWidth: "200px" }}
+                    >
+                      {extractTypes().map((month, index) => (
+                        <MenuItem key={index} value={month}>
+                          {month}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+              </Grid>
+              <Box className="flex justify-center items-center">
+                <div style={{ height: "500px", width: "800px" }}>
+                  
                   <ResponsiveBar
                     data={data}
-                    keys={[
-                      "Dewormed-4Ps",
-                      "Dewormed-Non-4Ps",
-                      "Not Dewormed-4Ps",
-                      "Not Dewormed-Non-4Ps",
-                    ]}
-                    indexBy="Status"
-                    margin={{ top: 50, right: 60, bottom: 50, left: 60 }}
+                    keys={['value']}
+                    indexBy="label"
+                    layout="horizontal"
+                    margin={{ top: 40, right: 50, bottom: 70, left: 150 }}
                     padding={0.3}
-                    groupMode="stacked"
                     colors={{ scheme: "nivo" }}
-                    axisTop={null}
-                    axisRight={null}
                     axisBottom={{
-                      tickSize: 5,
+                      orient: "bottom",
+                      tickSize: 15,
                       tickPadding: 5,
                       tickRotation: 0,
-                      legend: "Status",
+                      legend: "C O U N T",
+                      legendOffset: 50,
                       legendPosition: "middle",
-                      legendOffset: 32,
                     }}
                     axisLeft={{
-                      tickSize: 5,
+                      orient: "left",
+                      tickSize: 10,
                       tickPadding: 5,
                       tickRotation: 0,
-                      legend: "Count",
+                      legend: "S E C T I O N",
+                      legendOffset: -120,
                       legendPosition: "middle",
-                      legendOffset: -40,
                     }}
-                    legends={[
-                      {
-                        dataFrom: "keys",
-                        anchor: "top-right", // Set the anchor to top-right or top-left
-                        direction: "column", // Change the direction to row for horizontal layout
-                        justify: false,
-                        translateX: 0, // Set this to zero or adjust as needed
-                        translateY: -40, // Move it up by -40 units
-                        itemsSpacing: 10,
-                        itemWidth: 100,
-                        itemHeight: 20,
-                        itemDirection: "left-to-right",
-                        itemOpacity: 0.85,
-                        symbolSize: 20,
-                      },
-                    ]}
+                    tooltip={({ label, value }) => (
+                      <div style={{ background: "white", padding: "10px", border: "2px solid black", boxShadow: "0px 0px 5px rgba(0, 0, 0, 0.2)" }}>
+                        De-wormed: <strong>{selectedType}</strong>
+                        <br />
+                        <br />
+                        Section: <strong>{label.substring(7)}</strong>
+                        <br />
+                        Count: <strong>{value}</strong>
+                      </div>
+                    )}
                   />
                 </div>
               </Box>
@@ -83,9 +345,7 @@ const DewormedGroupBarChart = () => {
             <Box p={3}>
               <Typography variant="h6">Summary:</Typography>
               <Typography variant="body1" paragraph>
-                In March of 2021, Grade 6 from Section C reported 99 dengue
-                cases, marking a 7.61% increase from 92 cases in 2020. Most
-                cases were among females aged 11-15 years.
+                {summary()}
               </Typography>
             </Box>
           </Paper>
@@ -95,4 +355,4 @@ const DewormedGroupBarChart = () => {
   );
 };
 
-export default DewormedGroupBarChart;
+export default DengueBarChart;

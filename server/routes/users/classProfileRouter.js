@@ -61,7 +61,7 @@ router.get("/fetchClassProfile", authenticateMiddleware, async (req, res) => {
   try {
     const classProfiles = await ClassProfile.find().populate({
       path: "faculty",
-      match: { role: "Adviser" },
+      // match: { role: "Adviser" },
       select: "employeeId firstName lastName",
       transform: (doc) => ({
         _id: doc.employeeId,

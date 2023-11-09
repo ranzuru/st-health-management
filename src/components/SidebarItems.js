@@ -12,20 +12,22 @@ import {
   PersonAddOutlined,
 } from "@mui/icons-material";
 import SpaOutlinedIcon from "@mui/icons-material/SpaOutlined";
-
+ 
 export const sidebarItems = [
+  
+
   {
     type: "link",
     to: "/app/dashboard",
     primary: "Dashboard",
     icon: DashboardOutlined,
-    roles: ["Administrator", "School Nurse", "District Nurse"], // who can see this?
+    roles: ["Administrator", "Principal", "IT Staff", "Office Staff", "Doctor", "District Nurse", "School Nurse", "Feeding Program Head", "Medical Program Head", "Dengue Program Head", "Deworming Program Head", "Intern"], // who can see this?
   },
   {
     type: "submenu",
     primary: "User",
     icon: ManageAccountsOutlined,
-    roles: ["Administrator"],
+    roles: ["Administrator", "Principal", "IT Staff"],
     submenuLinks: [
       { to: "/app/user-approval", primary: "Approval" },
       { to: "/app/manage-users", primary: "Management" },
@@ -35,7 +37,7 @@ export const sidebarItems = [
     type: "submenu",
     primary: "Profile",
     icon: SupervisorAccountOutlined,
-    roles: ["Administrator", "School Nurse"],
+    roles: ["Administrator", "Principal", "IT Staff", "Office Staff", "Doctor", "District Nurse", "School Nurse", "Feeding Program Head", "Medical Program Head", "Dengue Program Head", "Deworming Program Head", "Intern"],
     submenuLinks: [
       { to: "/app/students-profile", primary: "Student" },
       { to: "/app/faculty-profile", primary: "Faculty" },
@@ -48,18 +50,18 @@ export const sidebarItems = [
     to: "/app/class-enrollment",
     primary: "Assignment",
     icon: PersonAddOutlined,
-    roles: ["Administrator", "School Nurse", "District Nurse"], // who can see this?
+    roles: ["Administrator", "Principal", "Office Staff", "School Nurse", "Feeding Program Head", "Medical Program Head", "Dengue Program Head", "Deworming Program Head",], // who can see this?
   },
   {
     type: "submenu",
     primary: "Clinic Programs",
     icon: SpaOutlinedIcon,
-    roles: ["Administrator", "School Nurse"],
+    roles: ["Administrator", "Principal", "Doctor", "District Nurse", "School Nurse", "Feeding Program Head", "Medical Program Head", "Dengue Program Head", "Deworming Program Head"],
     submenuLinks: [
       { to: "/app/medical-checkup", primary: "Student Medical" },
       { to: "/app/faculty-checkup", primary: "Faculty Medical" },
       { to: "/app/deworming-monitoring", primary: "De-worming Monitoring" },
-      { to: "/app/feeding-program", primary: "Feeding Program" },
+      { to: "/app/feeding-program", primary: "Nutritional Status" },
       { to: "/app/dengue-monitoring", primary: "Dengue Monitoring" },
     ],
   },
@@ -68,13 +70,13 @@ export const sidebarItems = [
     to: "/app/clinic-visit",
     primary: "Clinic Visit",
     icon: AssignmentIndOutlined,
-    roles: ["Administrator", "School Nurse"],
+    roles: ["Administrator", "Principal", "Doctor", "District Nurse", "School Nurse", "Feeding Program Head", "Medical Program Head", "Dengue Program Head", "Deworming Program Head", "Intern"],
   },
   {
     type: "submenu",
     primary: "Medicine Inventory",
     icon: MedicalServicesOutlined,
-    roles: ["Administrator", "School Nurse"],
+    roles: ["Administrator", "Principal", "IT Staff", "Office Staff", "Doctor", "District Nurse", "School Nurse", "Feeding Program Head", "Medical Program Head", "Dengue Program Head", "Deworming Program Head", "Intern"],
     submenuLinks: [
       { to: "/app/medicine-item", primary: "Item" },
       { to: "/app/medicine-in", primary: "In" },
@@ -88,13 +90,13 @@ export const sidebarItems = [
     to: "/app/events",
     primary: "Events",
     icon: EventOutlined,
-    roles: ["Administrator", "School Nurse", "District Nurse"],
+    roles: ["Administrator", "Principal", "IT Staff", "Office Staff", "Doctor", "District Nurse", "School Nurse", "Feeding Program Head", "Medical Program Head", "Dengue Program Head", "Deworming Program Head", "Intern"],
   },
   {
     type: "submenu",
     primary: "Analytics",
     icon: AutoGraphOutlined,
-    roles: ["Administrator", "School Nurse"],
+    roles: ["Administrator", "Principal", "IT Staff", "Office Staff", "Doctor", "District Nurse", "School Nurse", "Feeding Program Head", "Medical Program Head", "Dengue Program Head", "Deworming Program Head", "Intern"],
     submenuLinks: [
       { to: "/app/medical-checkup-analytics", primary: "Student Medical" },
       
@@ -113,21 +115,21 @@ export const sidebarItems = [
     to: "/app/logs",
     primary: "Logs",
     icon: ReceiptLongOutlined,
-    roles: ["Administrator"],
+    roles: ["Administrator", "Principal", "IT Staff", "Office Staff", "Doctor", "District Nurse", "School Nurse", "Feeding Program Head", "Medical Program Head", "Dengue Program Head", "Deworming Program Head", "Intern"],
   },
   {
     type: "link",
     to: "/app/settings",
     primary: "Settings",
     icon: SettingsOutlined,
-    roles: ["Administrator", "School Nurse", "District Nurse"],
+    roles: ["Administrator", "Principal", "IT Staff", "Office Staff", "Doctor", "District Nurse", "School Nurse", "Feeding Program Head", "Medical Program Head", "Dengue Program Head", "Deworming Program Head", "Intern"],
   },
   {
     type: "link",
     to: "/",
     primary: "Logout",
     icon: ExitToAppOutlined,
-    roles: ["Administrator", "School Nurse", "District Nurse"],
+    roles: ["Administrator", "Principal", "IT Staff", "Office Staff", "Doctor", "District Nurse", "School Nurse", "Feeding Program Head", "Medical Program Head", "Dengue Program Head", "Deworming Program Head", "Intern"],
     onClick: "handleLogout",
   },
 ];

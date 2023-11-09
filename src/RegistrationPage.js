@@ -419,10 +419,7 @@ const RegistrationPage = () => {
                                 Dengue Program Head
                               </MenuItem>
                               <MenuItem value="Deworming Program Head">
-                                Deworming Program Head
-                              </MenuItem>
-                              <MenuItem value="District Nurse">
-                                Dengue Program Head
+                                De-worming Program Head
                               </MenuItem>
                               <MenuItem value="District Nurse">
                                 Intern

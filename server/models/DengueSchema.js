@@ -7,9 +7,9 @@ const dengueSchema = new mongoose.Schema(
       ref: "ClassEnrollment",
       required: true,
     },
-    dateOfOnset: { type: Date },
+    dateOfOnset: { type: Date, required: true },
     dateOfAdmission: { type: Date },
-    hospitalAdmission: { type: String, required: true },
+    hospitalAdmission: { type: String,  },
     dateOfDischarge: { type: Date },
     status: {
       type: String,

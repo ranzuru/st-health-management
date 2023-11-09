@@ -370,7 +370,7 @@ const ClinicVisitForm = (props) => {
               <TextField
               autoFocus
               margin="normal"
-              label="Patient ID"
+              label="Patient ID (Stud. LRN/ Empl. ID)"
               {...register("patient_id")}
               fullWidth
               required={watch("patient_type") !== "Other"}

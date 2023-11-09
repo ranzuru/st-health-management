@@ -27,7 +27,7 @@ const DengueBarChart = () => {
   };
 
   const extractTypes = () => {
-    const uniqueTypes = [...new Set(originalData.map((item) => item.class_data.grade))];
+    const uniqueTypes = [...new Set(originalData.map((item) => item.classEnrollment.classProfile.grade))];
     return uniqueTypes;
   };
 
@@ -35,8 +35,8 @@ const DengueBarChart = () => {
     const aggregatedData = {};
   
     rawData.forEach((item) => {
-      const reason = item.class_data.section.toUpperCase(); // Assuming the reason property exists in your data
-      const gender = item.student_data.gender.toUpperCase(); // Assuming the gender property exists in your data
+      const reason = item.classEnrollment.classProfile.section.toUpperCase(); // Assuming the reason property exists in your data
+      const gender = item.classEnrollment.student.gender.toUpperCase(); // Assuming the gender property exists in your data
       const groupKey = reason;
   
       if (!aggregatedData[groupKey]) {
@@ -71,7 +71,7 @@ const DengueBarChart = () => {
       const selectedMonthIndex = months.indexOf(selectedMonth);
 
       const filteredData = originalData.filter((item) => {
-        const issueDate = new Date(item.onsetDate);
+        const issueDate = new Date(item.dateOfOnset);
         const issueDateYear = issueDate.getFullYear();
         const issueDateMonth = issueDate.getMonth();
 
@@ -85,7 +85,7 @@ const DengueBarChart = () => {
         return false;
       });
 
-      const filteredDataByType = selectedType === "All" ? filteredData : filteredData.filter((item) => item.class_data.grade === selectedType);
+      const filteredDataByType = selectedType === "All" ? filteredData : filteredData.filter((item) => item.classEnrollment.classProfile.grade === selectedType);
       const aggregatedData = aggregateDataByReason(filteredDataByType);
       setData(aggregatedData);
     }
@@ -107,7 +107,7 @@ const DengueBarChart = () => {
       const endMonthIndex = months.indexOf(endMonth);
 
       const filteredData = originalData.filter((item) => {
-        const issueDate = new Date(item.onsetDate);
+        const issueDate = new Date(item.dateOfOnset);
         const issueDateYear = issueDate.getFullYear();
         const issueDateMonth = issueDate.getMonth();
 
@@ -121,7 +121,7 @@ const DengueBarChart = () => {
         return false;
       });
 
-      const filteredDataByType = selectedType === "All" ? filteredData : filteredData.filter((item) => item.class_data.grade === selectedType);
+      const filteredDataByType = selectedType === "All" ? filteredData : filteredData.filter((item) => item.classEnrollment.classProfile.grade === selectedType);
       const aggregatedData = aggregateDataByReason(filteredDataByType);
       setData(aggregatedData);
     }
@@ -173,14 +173,14 @@ const DengueBarChart = () => {
 
     const schoolYearText = selectedSchoolYear || "Selected School Year";
     const selectedMonthText = selectedMonth === "All" ? "In all months of " : `In the month of ${selectedMonth} in`;
-    const selectedTypeText = selectedType === "All" ? "all grades" : `all ${selectedType}`;
+    const selectedTypeText = selectedType === "All" ? "all grades" : `the ${selectedType}`;
 
     if (highestTypes.length === 1) {
       const { label, value } = highestTypes[0];
       return `${selectedMonthText} the School Year ${schoolYearText}, section ${label} had the largest number of dengue record/s, with ${value} count/s in ${selectedTypeText}.`;
     } else {
       const highestTypeLabels = highestTypes.map((item) => item.label).join(", ");
-      return `In the month of ${selectedMonthText} in the School Year ${schoolYearText}, the reasons ${highestTypeLabels} had the largest number of dengue record/s, with ${maxCount} count/s in ${selectedTypeText}.`;
+      return `In the month of ${selectedMonthText} in the School Year ${schoolYearText}, the section ${highestTypeLabels} had the largest number of dengue record/s, with ${maxCount} count/s in ${selectedTypeText}.`;
     }
   };
 
@@ -188,8 +188,8 @@ const DengueBarChart = () => {
     const fetchData = async () => {
       try {
         const [schoolYearResponse, checkupResponse] = await Promise.all([
-          axiosInstance.get("/schoolYear/get"),
-          axiosInstance.get("/dengueProfile/get")
+          axiosInstance.get("/academicYear/fetch"),
+          axiosInstance.get("/dengueMonitoring/fetch")
         ]);
 
         const schoolYearsData = schoolYearResponse.data.map((year) => ({
@@ -224,10 +224,10 @@ const DengueBarChart = () => {
           <Paper elevation={3}>
             <Box p={3}>
               <Typography variant="h4" gutterBottom>
-                Overall (per School Year)/ Monthly Clinic Visit Reason/s
+                Yearly/ Monthly Dengue Monitoring Records
               </Typography>
               <Typography variant="body1" paragraph>
-                Distinguishes why students are visiting the clinic per School Year, Month, and Type.
+                Distinguishes which section has the most and least section infected by Dengue.
               </Typography>
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={4}>

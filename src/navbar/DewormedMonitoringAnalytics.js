@@ -22,14 +22,14 @@ const DewormedMonitoringAnalytics = () => {
         </Typography>
       </div>
       <div className="flex flex-col items-center justify-center h-full p-4">
-        <div className="flex items-center justify-center w-full">
-          <DewormedStackedPieCharts />
-        </div>
-        <div className="flex items-center justify-center w-full mt-6">
+      <div className="flex items-center justify-center w-full mt-6">
           <DewormedMultiLineCharts /> {/* Add this line */}
         </div>
         <div className="flex items-center justify-center w-full mt-6">
           <DewormedGroupBarChart /> {/* Add this line */}
+        </div>
+        <div className="flex items-center justify-center w-full mt-6">
+          <DewormedStackedPieCharts />
         </div>
       </div>
     </div>
