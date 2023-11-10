@@ -13,6 +13,7 @@ import DialogTitle from "@mui/material/DialogTitle";
 import AcademicYearForm from "../modal/AcademicYearForm";
 import axiosInstance from "../config/axios-instance";
 import StatusCell from "../components/StatusCell.js";
+import CustomSnackbar from "../components/CustomSnackbar.js";
 
 const AcademicYearGrid = () => {
   const [formOpen, setFormOpen] = useState(false);
@@ -21,6 +22,20 @@ const AcademicYearGrid = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [academicYearRecords, setAcademicYearRecords] = useState([]);
   const [selectedRecord, setSelectedRecord] = useState(null);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarData, setSnackbarData] = useState({
+    message: "",
+    severity: "success",
+  });
+
+  const showSnackbar = (message, severity) => {
+    setSnackbarData({ message, severity });
+    setSnackbarOpen(true);
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbarOpen(false);
+  };
 
   const handleDialogOpen = (recordId) => {
     setRecordIdToDelete(recordId);
@@ -142,9 +157,19 @@ const AcademicYearGrid = () => {
         (record) => record.id !== recordIdToDelete
       );
       setAcademicYearRecords(updatedRecords);
+      showSnackbar("Academic year successfully deleted.", "success");
     } catch (error) {
-      console.error("Error deleting the record:", error.message);
+      if (error.response && error.response.data && error.response.data.error) {
+        showSnackbar(`Delete Error: ${error.response.data.error}`, "error");
+      } else {
+        showSnackbar(
+          "Failed to delete the academic year. Please try again.",
+          "error"
+        );
+      }
+      console.error("Error deleting the record:", error);
     }
+    setSnackbarOpen(true); // Open the snackbar with the message
     handleDialogClose();
   };
 
@@ -157,73 +182,82 @@ const AcademicYearGrid = () => {
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="w-full max-w-screen-xl mx-auto px-4">
-        <div className="mb-4 flex justify-end items-center">
-          <div className="ml-2">
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={handleModalOpen}
-            >
-              Add Record
-            </Button>
+    <>
+      <CustomSnackbar
+        open={snackbarOpen}
+        handleClose={handleCloseSnackbar}
+        severity={snackbarData.severity}
+        message={snackbarData.message}
+      />
+
+      <div className="flex flex-col h-full">
+        <div className="w-full max-w-screen-xl mx-auto px-4">
+          <div className="mb-4 flex justify-end items-center">
+            <div className="ml-2">
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleModalOpen}
+              >
+                Add Record
+              </Button>
+            </div>
           </div>
-        </div>
-        <DataGrid
-          rows={academicYearRecords}
-          columns={columns}
-          getRowId={(row) => row.id}
-          initialState={{
-            pagination: {
-              paginationModel: {
-                pageSize: 10,
+          <DataGrid
+            rows={academicYearRecords}
+            columns={columns}
+            getRowId={(row) => row.id}
+            initialState={{
+              pagination: {
+                paginationModel: {
+                  pageSize: 10,
+                },
               },
-            },
-          }}
-          sx={{
-            "& .MuiDataGrid-row:nth-of-type(odd)": {
-              backgroundColor: "#f3f4f6",
-            },
-          }}
-          pageSizeOptions={[10]}
-          checkboxSelection
-          disableRowSelectionOnClick
-          loading={isLoading}
-          style={{ height: 650 }}
-        />
-        <AcademicYearForm
-          open={formOpen}
-          addNewAcademicYear={addNewAcademicYear}
-          selectedAcademicYear={selectedRecord}
-          onUpdate={updatedAcademicYear}
-          onClose={() => {
-            setSelectedRecord(null);
-            handleModalClose();
-          }}
-          onCancel={() => {
-            setSelectedRecord(null);
-            handleModalClose();
-          }}
-        />
+            }}
+            sx={{
+              "& .MuiDataGrid-row:nth-of-type(odd)": {
+                backgroundColor: "#f3f4f6",
+              },
+            }}
+            pageSizeOptions={[10]}
+            checkboxSelection
+            disableRowSelectionOnClick
+            loading={isLoading}
+            style={{ height: 650 }}
+          />
+          <AcademicYearForm
+            open={formOpen}
+            addNewAcademicYear={addNewAcademicYear}
+            selectedAcademicYear={selectedRecord}
+            onUpdate={updatedAcademicYear}
+            onClose={() => {
+              setSelectedRecord(null);
+              handleModalClose();
+            }}
+            onCancel={() => {
+              setSelectedRecord(null);
+              handleModalClose();
+            }}
+          />
+        </div>
+        <Dialog open={dialogOpen} onClose={handleDialogClose}>
+          <DialogTitle>Confirm Delete!</DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              Are you sure you want to delete this record?
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleDialogClose} color="primary">
+              Cancel
+            </Button>
+            <Button onClick={handleDelete} color="primary">
+              Confirm
+            </Button>
+          </DialogActions>
+        </Dialog>
       </div>
-      <Dialog open={dialogOpen} onClose={handleDialogClose}>
-        <DialogTitle>Confirm Delete!</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Are you sure you want to delete this record?
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleDialogClose} color="primary">
-            Cancel
-          </Button>
-          <Button onClick={handleDelete} color="primary">
-            Confirm
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </div>
+    </>
   );
 };
 

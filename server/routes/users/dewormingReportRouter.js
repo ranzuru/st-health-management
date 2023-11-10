@@ -92,6 +92,9 @@ async function getDewormedCounts(academicYearId) {
       },
     },
   ]);
+  // Before returning dewormedCounts
+  console.log(dewormedCounts);
+
   return dewormedCounts;
 }
 
@@ -118,8 +121,8 @@ function combineData(enrollmentCounts, dewormedCounts) {
 
 router.get("/validateDeworming", async (req, res) => {
   try {
-    const results = await MedicalCheckup.find({ deworming: true });
-    res.json(results);
+    const count = await MedicalCheckup.countDocuments({ deworming: true });
+    res.json({ dewormedCount: count });
   } catch (error) {
     console.error(error);
     res.status(500).send("Error fetching data");

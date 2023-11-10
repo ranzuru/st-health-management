@@ -17,6 +17,7 @@ const academicYearSchema = new mongoose.Schema(
     },
     status: {
       type: String,
+      enum: ["Active", "Completed", "Planned"],
       required: true,
     },
   },
@@ -24,5 +25,17 @@ const academicYearSchema = new mongoose.Schema(
 );
 
 academicYearSchema.index({ schoolYear: 1 }, { unique: true }); // Updated the index
+
+academicYearSchema.pre("remove", async function (next) {
+  const count = await mongoose
+    .model("ClassEnrollment")
+    .countDocuments({ academicYear: this._id });
+  if (count > 0) {
+    throw new Error(
+      "Cannot delete AcademicYear because it is referenced by ClassEnrollment documents."
+    );
+  }
+  next();
+});
 
 module.exports = mongoose.model("AcademicYear", academicYearSchema);

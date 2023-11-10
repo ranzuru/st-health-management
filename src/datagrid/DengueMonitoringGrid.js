@@ -145,56 +145,6 @@ const DengueMonitoringGrid = () => {
     fetchDengueRecords(currentType);
   };
 
-  const handleImport = async (event) => {
-    const file = event.target.files[0];
-    const formData = new FormData();
-    formData.append("file", file);
-
-    if (file.size > 5 * 1024 * 1024) {
-      showSnackbar("File size exceeds 5MB", "error");
-      return;
-    }
-
-    try {
-      const response = await axiosInstance.post(
-        "dengueMonitoring/import-excel",
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
-
-      if (response.status === 207) {
-        const issues = response.data.errors;
-        showSnackbar(
-          `Partial Import Done. Issues: ${issues.join(", ")}`,
-          "warning"
-        );
-      } else {
-        showSnackbar("Data imported successfully!", "success");
-      }
-
-      fetchDengueRecords();
-    } catch (error) {
-      if (error.response && error.response.status === 207) {
-        const issues = error.response.data.errors;
-        showSnackbar(
-          `Partial Import Done. Issues: ${issues.join(", ")}`,
-          "warning"
-        );
-      } else if (error.response?.data?.errors) {
-        // Total failure but we have validation errors to show
-        const errors = error.response.data.errors;
-        showSnackbar(`Import failed. Issues: ${errors.join(", ")}`, "error");
-      } else {
-        // Unknown error
-        showSnackbar("An error occurred during importing", "error");
-      }
-    }
-  };
-
   const handleEditRecord = (recordId) => {
     const recordToEdit = dengueRecords.find(
       (dengueRecord) => dengueRecord.id === recordId
@@ -339,7 +289,6 @@ const DengueMonitoringGrid = () => {
       const blob = new Blob([response.data], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
-
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
@@ -350,6 +299,37 @@ const DengueMonitoringGrid = () => {
       document.body.removeChild(link);
     } catch (error) {
       console.error("Error during export:", error);
+    }
+  };
+
+  const handleImport = async (event) => {
+    const file = event.target.files[0];
+    const formData = new FormData();
+    formData.append("file", file);
+
+    if (file.size > 5 * 1024 * 1024) {
+      showSnackbar("File size exceeds 5MB", "error");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      await axiosInstance.post("dengueMonitoring/import-dengue", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      setSnackbarData("Data imported successfully!", "success");
+      refreshRecord();
+    } catch (error) {
+      // Setting the snackbar message to the error message from the backend
+      setSnackbarData({
+        message: error.response?.data?.error || "An unexpected error occurred.",
+        severity: "error",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 

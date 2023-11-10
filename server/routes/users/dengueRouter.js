@@ -5,22 +5,11 @@ const StudentProfile = require("../../models/StudentProfileSchema");
 const router = express.Router();
 const authenticateMiddleware = require("../../auth/authenticateMiddleware.js");
 const exportDengueMonitoringData = require("../../custom/exportDengue.js");
+const importDengueRecords = require("../../custom/importDengue.js");
 const multer = require("multer");
-const ExcelJS = require("exceljs");
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
-const Joi = require("joi");
-
-const validationSchema = Joi.object({
-  LRN: Joi.string().required("LRN is required."),
-  "Date of Onset": Joi.date().required("Date of Onset is required."),
-  "Date of Admission": Joi.date().required("Date of Admission is required."),
-  "Hospital Admission": Joi.string().required(
-    "Hospital Admission is required."
-  ),
-  "Date of Discharge": Joi.date().required("Date of Discharge is required."),
-});
 
 // Create a new dengue monitoring record
 router.post("/create", authenticateMiddleware, async (req, res) => {
@@ -291,117 +280,27 @@ router.get("/export/:status?", async (req, res) => {
 });
 
 router.post(
-  "/import-excel",
+  "/import-dengue",
   authenticateMiddleware,
   upload.single("file"),
   async (req, res) => {
-    if (!req.file || !req.file.buffer) {
-      return res.status(400).json({ message: "No file uploaded" });
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded." });
     }
 
-    const fileBuffer = req.file.buffer;
-    const workbook = new ExcelJS.Workbook();
-    const headers = [
-      "LRN",
-      "Date of Onset",
-      "Date of Admission",
-      "Hospital Admission",
-      "Date of Discharge",
-    ];
-
-    const dengueRecords = [];
-    const errors = [];
-    const invalidLRNs = [];
-
     try {
-      await workbook.xlsx.load(fileBuffer);
-      const worksheet = workbook.getWorksheet(1);
+      const { dengueRecords, errors, hasMoreErrors } =
+        await importDengueRecords(req.file.buffer);
 
-      if (!workbook || !worksheet) {
-        return res.status(400).json({ message: "Invalid Excel file format" });
-      }
-
-      const convertStringToDate = (dateString) => {
-        const [year, month, day] = dateString.split("-").map(Number);
-        return new Date(year, month - 1, day); // months are 0-indexed in JS
-      };
-
-      for (const row of worksheet.getRows(2, worksheet.rowCount - 1)) {
-        const rowData = {};
-
-        headers.forEach((header, colIndex) => {
-          const cellValue = row.getCell(colIndex + 1).text;
-
-          if (
-            [
-              "Date of Onset",
-              "Date of Admission",
-              "Date of Discharge",
-            ].includes(header)
-          ) {
-            rowData[header] = convertStringToDate(cellValue);
-          } else {
-            rowData[header] = cellValue;
-          }
-        });
-
-        const { error } = validationSchema.validate(rowData);
-        if (error) {
-          errors.push(
-            `Validation error for LRN ${rowData.LRN}: ${error.details[0].message}`
-          );
-          continue;
-        }
-
-        const studentProfile = await StudentProfile.findOne({
-          lrn: rowData.LRN,
-        });
-
-        if (!studentProfile) {
-          errors.push(`Invalid LRN found: ${rowData.LRN}`);
-          invalidLRNs.push(rowData.LRN);
-          continue;
-        }
-
-        const classEnrollment = await ClassEnrollment.findOne({
-          student: studentProfile._id,
-        });
-
-        if (!classEnrollment) {
-          errors.push(
-            `ClassEnrollment not found or the student is not enrolled: ${rowData.LRN}`
-          );
-          invalidLRNs.push(rowData.LRN);
-          continue;
-        }
-
-        const newDengueRecord = new DengueMonitoring({
-          dateOfOnset: rowData["Date of Onset"],
-          dateOfAdmission: rowData["Date of Admission"],
-          hospitalAdmission: rowData["Hospital Admission"],
-          dateOfDischarge: rowData["Date of Discharge"],
-          classEnrollment: classEnrollment._id,
-        });
-
-        dengueRecords.push(newDengueRecord);
-      }
-
-      if (errors.length > 0 && dengueRecords.length > 0) {
-        await DengueMonitoring.insertMany(dengueRecords);
-        return res
-          .status(207)
-          .json({ message: "Partial data import", errors, invalidLRNs });
-      } else if (errors.length > 0) {
-        return res
-          .status(400)
-          .json({ message: "Data import failed", errors, invalidLRNs });
-      } else {
-        await DengueMonitoring.insertMany(dengueRecords);
-        return res.json({ message: "Data imported successfully" });
-      }
+      // Optionally handle the response data (dengueRecords, errors, hasMoreErrors) as needed
+      res.status(201).json({
+        message: "Import successful",
+        dengueRecordsCount: dengueRecords.length,
+        errors,
+        hasMoreErrors,
+      });
     } catch (error) {
-      console.error("Error while importing Excel:", error.message);
-      res.status(500).json({ message: "Failed to import data" });
+      res.status(500).json({ error: error.message });
     }
   }
 );
