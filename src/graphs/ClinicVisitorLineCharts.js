@@ -73,7 +73,6 @@ const LineChart = () => {
         const endMonthIndex = monthNames.indexOf(selectedEndMonth) + 1;
         const selectedMonthIndex = monthNames.indexOf(selectedMonth) + 1;
   
-        // Create a variable to store the filter type
         const filterType = selectedType === "All" ? "All" : selectedType;
     
         const dateSpecifiedData = types.map(type => {

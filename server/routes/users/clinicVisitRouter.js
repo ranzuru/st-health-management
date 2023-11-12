@@ -4,6 +4,7 @@ const MedicineIn = require("../../models/medicineIn.js");
 const StudentSchema = require("../../models/StudentProfileSchema.js");
 const FacultySchema = require("../../models/FacultyProfileSchema.js");
 const ClinicVisitSchema = require("../../models/clinicVisit.js");
+const AcademicYear = require("../../models/AcademicYearSchema");
 const authenticateMiddleware = require("../../auth/authenticateMiddleware.js");
 const router = express.Router();
 const { createLog } = require("../recordLogRouter.js");
@@ -147,5 +148,46 @@ router.put(
     }
   }
 );
+
+// Get present SY documents
+router.get("/getPresent", authenticateMiddleware, async (req, res) => {
+  try {
+    const sy = await AcademicYear.findOne({ status: "Active" });
+
+    let startYear, endYear, startMonth, endMonth, startDate, endDate;
+    if (sy) {
+      startYear = sy.schoolYear.substring(0, 4);
+      endYear = sy.schoolYear.slice(-4);
+      startMonth = getMonthNumber(sy.monthFrom);
+      endMonth = getMonthNumber(sy.monthTo);
+
+      startDate = new Date(`${startYear}-${startMonth}-01T00:00:00.000Z`);
+      endDate = new Date(`${endYear}-${endMonth}-01T00:00:00.000Z`);
+    } else {
+      console.log('No active/ present academic data found.');
+    }
+    const documents = await ClinicVisitSchema.find(
+      {
+      issueDate: {
+        $gte: startDate,
+        $lte: endDate,
+      }
+    }
+    ).select('_id issueDate');
+    res.json(documents);
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Function to get month number from month name
+function getMonthNumber(monthName) {
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  return (months.indexOf(monthName) + 1).toString().padStart(2, '0');
+}
 
 module.exports = router;

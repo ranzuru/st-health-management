@@ -17,113 +17,27 @@ import axiosInstance from "./config/axios-instance.js";
 
 const Dashboard = () => {
 
-  const [data, setData] = useState([]);
-  const [selectedSchoolYear, setSelectedSchoolYear] = useState("");
-  const [originalData, setOriginalData] = useState([]);
-  const [schoolYears, setSchoolYears] = useState([]);
-  const months = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"
-  ];
+  const [clinicVisitData, setClinicVisitData] = useState([]);
+  const [feedingData, setFeedingData] = useState([]);
 
-  const extractSchoolYears = (data) => {
-    const uniqueYears = new Set();
-    data.forEach((item) => {
-      const startYear = parseInt(item.schoolYear.substring(0, 4));
-      const endYear = parseInt(item.schoolYear.slice(-4));
-      const schoolYear = `${startYear} - ${endYear}`;
-      uniqueYears.add(schoolYear);
-    });
-    return Array.from(uniqueYears);
-  };
-
-  const aggregateDataByReason = useCallback((rawData) => {
-    const aggregatedData = {};
-
-    rawData.forEach((item) => {
-      const reason = item.reason.toUpperCase(); // Assuming the reason property exists in your data
-      if (!aggregatedData[reason]) {
-        aggregatedData[reason] = {
-          id: reason,
-          label: reason,
-          value: 1,
-        };
-      } else {
-        aggregatedData[reason].value += 1;
-      }
-    });
-
-    return Object.values(aggregatedData);
-  }, []);
-
-  const fetchDataByYear = (selectedYear, selectedType) => {
-    if (selectedYear) {
-      const [startYear, endYear] = selectedYear.split(" - ").map(Number);
-  
-      const startMonth = schoolYears.find((year) => year.syStartYear === startYear)?.syStartMonth || 1;
-      const endMonth = schoolYears.find((year) => year.syEndYear === endYear)?.syEndMonth || 12;
-  
-      if (!startMonth || !endMonth) {
-        console.error("Start month or end month not found for the selected school year.");
-        return;
-      }
-  
-      const startMonthIndex = months.indexOf(startMonth);
-      const endMonthIndex = months.indexOf(endMonth);
-  
-      const filteredData = originalData.filter((item) => {
-        const issueDate = new Date(item.issueDate);
-        const issueDateYear = issueDate.getFullYear();
-        const issueDateMonth = issueDate.getMonth();
-  
-        if (
-          (issueDateYear === startYear && issueDateMonth >= startMonthIndex) ||
-          (issueDateYear === endYear && issueDateMonth <= endMonthIndex)
-        ) {
-          return true;
-        }
-  
-        return false;
-      });
-  
-      const filteredDataByType = selectedType === "All" ? filteredData : filteredData.filter((item) => item.patient_type === selectedType);
-      const aggregatedData = aggregateDataByReason(filteredDataByType);
-      setData(aggregatedData);
-    }
-  };
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [schoolYearResponse, checkupResponse] = await Promise.all([
-          axiosInstance.get("/academicYear/fetch"),
-          axiosInstance.get("/clinicVisit/get")
+        const [clinicVisitResponse, feedingResponse] = await Promise.all([
+          axiosInstance.get("/clinicVisit/getPresent"),
+          axiosInstance.get("/nutritionalStatus/getPresent")
         ]);
-   
-        const schoolYearsData = schoolYearResponse.data.map((year) => ({
-          ...year,
-          syStartYear: parseInt(year.schoolYear.substring(0, 4)), // Convert to integer
-          syEndYear: parseInt(year.schoolYear.slice(-4)), // Convert to integer
-        }));
-  
-        const sortedSchoolYears = schoolYearsData.sort(
-          (a, b) => a.syStartYear - b.syStartYear || a.syEndYear - b.syEndYear
-        );
-        setSchoolYears(sortedSchoolYears.reverse());
 
-        setOriginalData(checkupResponse.data);
-
-        if (!selectedSchoolYear && sortedSchoolYears.length > 0) {
-          setSelectedSchoolYear(`${sortedSchoolYears[0].syStartYear} - ${sortedSchoolYears[0].syEndYear}`);
-          fetchDataByYear(`${sortedSchoolYears[0].syStartYear} - ${sortedSchoolYears[0].syEndYear}`);
-        }
+        setClinicVisitData(clinicVisitResponse.data);
+        setFeedingData(feedingResponse.data);
       } catch (error) {
         console.error("Error fetching data:", error);
       }
     };
 
     fetchData();
-  }, [selectedSchoolYear]);
+  }, []);
 
 
   const navigate = useNavigate();
@@ -230,7 +144,7 @@ const Dashboard = () => {
                     />
                     <div className="ml-10 flex flex-col justify-center">
                       <Typography variant="h3" component="div">
-                        250
+                      {clinicVisitData.length}
                       </Typography>
                     </div>
                   </div>
@@ -258,7 +172,7 @@ const Dashboard = () => {
                     />
                     <div className="ml-10 flex flex-col justify-center">
                       <Typography variant="h3" component="div">
-                        150
+                      {feedingData.length}
                       </Typography>
                     </div>
                   </div>
