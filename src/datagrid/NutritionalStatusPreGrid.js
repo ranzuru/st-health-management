@@ -1,23 +1,24 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { DataGrid } from "@mui/x-data-grid";
 import IconButton from "@mui/material/IconButton";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
-import ReportIcon from "@mui/icons-material/Description";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
 import { Tabs, Tab } from "@mui/material";
+import exportDataToExcel from "../utils/exportDataToExcel.js";
 
 // Form for inputs
 import NutritionalStatusForm from "../modal/NutritionalStatusForm";
 // axios imports
 import axiosInstance from "../config/axios-instance";
 import CustomGridToolbar from "../utils/CustomGridToolbar.js";
+import CustomSnackbar from "../components/CustomSnackbar";
 
 const NutritionalStatusPreGrid = () => {
   const [searchValue, setSearchValue] = useState("");
@@ -28,9 +29,27 @@ const NutritionalStatusPreGrid = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [currentType, setCurrentType] = useState("PRE");
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarData, setSnackbarData] = useState({
+    message: "",
+    severity: "success",
+  });
+  const dataGridRef = useRef(null);
+  const [filterModel, setFilterModel] = useState({
+    items: [],
+  });
 
   const handleSearchChange = (event) => {
     setSearchValue(event.target.value);
+  };
+
+  const showSnackbar = (message, severity) => {
+    setSnackbarData({ message, severity });
+    setSnackbarOpen(true);
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbarOpen(false);
   };
 
   const handleDialogOpen = (recordId) => {
@@ -121,6 +140,10 @@ const NutritionalStatusPreGrid = () => {
     setPreRecords((prevCheckups) => [...prevCheckups, newRecord]);
   };
 
+  const refreshNutritionalStatuses = () => {
+    fetchRecord(currentType);
+  };
+
   const columns = [
     { field: "lrn", headerName: "LRN", width: 150 },
     { field: "gender", headerName: "Gender", width: 100 },
@@ -197,6 +220,118 @@ const NutritionalStatusPreGrid = () => {
     );
   };
 
+  const excelHeaders = columns.map((col) => ({
+    title: col.headerName,
+    key: col.field,
+  }));
+
+  const handleExport = () => {
+    const activeFilterModel = filterModel;
+
+    const filteredData = preRecords.filter((record) => {
+      return activeFilterModel.items.every((filterItem) => {
+        if (!filterItem.field) {
+          return true;
+        }
+        let cellValue;
+        if (
+          filterItem.field === "beneficiaryOfSBFP" &&
+          typeof record[filterItem.field] === "boolean"
+        ) {
+          // Directly translate the boolean to 'yes' or 'no'
+          cellValue = record[filterItem.field] ? "yes" : "no";
+        } else {
+          // For other non-boolean fields, convert to string and process
+          cellValue = (record[filterItem.field] ?? "")
+            .toString()
+            .toLowerCase()
+            .trim();
+        }
+
+        const filterValues = Array.isArray(filterItem.value)
+          ? filterItem.value.map((val) => val.toString().toLowerCase().trim())
+          : [filterItem.value.toString().toLowerCase().trim()];
+
+        switch (filterItem.operator) {
+          case "equals":
+            return cellValue === filterValues[0];
+          case "contains":
+            return filterValues.some((value) => cellValue.includes(value));
+          case "startsWith":
+            return filterValues.some((value) => cellValue.startsWith(value));
+          case "endsWith":
+            return filterValues.some((value) => cellValue.endsWith(value));
+          case "isAnyOf":
+            return filterValues.includes(cellValue);
+          default:
+            console.log(
+              `Unknown filter type '${filterItem.operator}', record included by default`
+            );
+            return true;
+        }
+      });
+    });
+
+    const currentDate = new Date();
+    const formattedDate = currentDate.toISOString().slice(0, 10);
+
+    const fileName = `NutritionalStatusRecords_${formattedDate}`;
+
+    exportDataToExcel(filteredData, excelHeaders, fileName, {
+      dateFields: ["birthDate", "dateMeasured"],
+      excludeColumns: ["action"],
+      booleanFields: ["beneficiaryOfSBFP"],
+    });
+  };
+
+  const handleImport = async (event) => {
+    const file = event.target.files[0];
+    const formData = new FormData();
+    formData.append("file", file);
+
+    if (file.size > 5 * 1024 * 1024) {
+      showSnackbar("File size exceeds 5MB", "error");
+      return;
+    }
+
+    setIsLoading(true); // Start loading spinner
+
+    try {
+      const response = await axiosInstance.post(
+        "/nutritionalStatus/importNutritionalStatuses",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      if (response.data.errors && response.data.errors.length > 0) {
+        // Display error messages from the import process
+        const errorMessages = response.data.errors
+          .map((error) => `${error.identifier}: ${error.errors.join(", ")}`)
+          .join("; ");
+        showSnackbar(`Import issues: ${errorMessages}`, "error");
+      } else {
+        // Display success message and refresh the data grid if needed
+        showSnackbar(
+          "Nutritional status records imported successfully!",
+          "success"
+        );
+        refreshNutritionalStatuses(); // Function to refresh the list/grid of nutritional statuses
+      }
+    } catch (error) {
+      console.error("Error during nutritional statuses import:", error);
+      const errorMessage =
+        error.response?.data?.message ||
+        "An unexpected error occurred during import.";
+      showSnackbar(errorMessage, "error");
+    } finally {
+      setIsLoading(false); // Stop loading spinner
+    }
+  };
+
   const handleDelete = async () => {
     try {
       await axiosInstance.delete(
@@ -224,103 +359,113 @@ const NutritionalStatusPreGrid = () => {
     );
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="w-full max-w-screen-xl mx-auto px-8">
-        <div className="mb-4 flex justify-between items-center">
-          <div>
-            <Button variant="contained" color="secondary">
-              <ReportIcon /> Generate Report
-            </Button>
-          </div>
-          <div className="flex items-center">
-            <div className="ml-2">
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={handleModalOpen}
-              >
-                Add Records
-              </Button>
+    <>
+      <CustomSnackbar
+        open={snackbarOpen}
+        handleClose={handleCloseSnackbar}
+        severity={snackbarData.severity}
+        message={snackbarData.message}
+      />
+
+      <div className="flex flex-col h-full">
+        <div className="w-full max-w-screen-xl mx-auto px-8">
+          <div className="mb-4 flex justify-end items-center">
+            <div className="flex items-center">
+              <div className="ml-2">
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={handleModalOpen}
+                >
+                  Add Records
+                </Button>
+              </div>
+              <div className="ml-2">
+                <TextField
+                  label="Search"
+                  variant="outlined"
+                  size="small"
+                  value={searchValue}
+                  onChange={handleSearchChange}
+                />
+              </div>
             </div>
-            <div className="ml-2">
-              <TextField
-                label="Search"
-                variant="outlined"
-                size="small"
-                value={searchValue}
-                onChange={handleSearchChange}
-              />
-            </div>
           </div>
-        </div>
-        <Tabs
-          value={currentType}
-          onChange={(_, newValue) => setCurrentType(newValue)}
-          indicatorColor="primary"
-          textColor="primary"
-          centered
-        >
-          <Tab label="PRE-INTERVENTION" value="PRE" />
-          <Tab label="POST-INTERVENTION" value="POST" />
-        </Tabs>
-        <DataGrid
-          rows={displayedRecords}
-          columns={columns}
-          getRowId={(row) => row.id}
-          slots={{
-            toolbar: CustomGridToolbar,
-          }}
-          initialState={{
-            pagination: {
-              paginationModel: {
-                pageSize: 10,
+          <Tabs
+            value={currentType}
+            onChange={(_, newValue) => setCurrentType(newValue)}
+            indicatorColor="primary"
+            textColor="primary"
+            centered
+          >
+            <Tab label="PRE-INTERVENTION" value="PRE" />
+            <Tab label="POST-INTERVENTION" value="POST" />
+          </Tabs>
+          <DataGrid
+            ref={dataGridRef}
+            rows={displayedRecords}
+            columns={columns}
+            onFilterModelChange={(newModel) => setFilterModel(newModel)}
+            getRowId={(row) => row.id}
+            slots={{
+              toolbar: () => (
+                <CustomGridToolbar
+                  onExport={handleExport}
+                  handleImport={handleImport}
+                />
+              ),
+            }}
+            initialState={{
+              pagination: {
+                paginationModel: {
+                  pageSize: 10,
+                },
               },
-            },
-          }}
-          sx={{
-            "& .MuiDataGrid-row:nth-of-type(odd)": {
-              backgroundColor: "#f3f4f6",
-            },
-          }}
-          pageSizeOptions={[10]}
-          checkboxSelection
-          disableRowSelectionOnClick
-          loading={isLoading}
-          style={{ height: 650 }}
-        />
-        <NutritionalStatusForm
-          open={formOpen}
-          isEditing={!!selectedRecord}
-          onCheckUpdate={updatedRecord}
-          addNewNutritionalStatus={addNewNutritionalStatus}
-          selectedRecord={selectedRecord}
-          onClose={() => {
-            setSelectedRecord();
-            handleModalClose();
-          }}
-          onCancel={() => {
-            setSelectedRecord();
-            handleModalClose();
-          }}
-        />
+            }}
+            sx={{
+              "& .MuiDataGrid-row:nth-of-type(odd)": {
+                backgroundColor: "#f3f4f6",
+              },
+            }}
+            pageSizeOptions={[10]}
+            disableRowSelectionOnClick
+            loading={isLoading}
+            style={{ height: 650 }}
+          />
+          <NutritionalStatusForm
+            open={formOpen}
+            isEditing={!!selectedRecord}
+            onCheckUpdate={updatedRecord}
+            addNewNutritionalStatus={addNewNutritionalStatus}
+            selectedRecord={selectedRecord}
+            onClose={() => {
+              setSelectedRecord();
+              handleModalClose();
+            }}
+            onCancel={() => {
+              setSelectedRecord();
+              handleModalClose();
+            }}
+          />
+        </div>
+        <Dialog open={dialogOpen} onClose={handleDialogClose}>
+          <DialogTitle>Confirm Delete!</DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              Are you sure you want to delete this record?
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleDialogClose} color="primary">
+              Cancel
+            </Button>
+            <Button onClick={handleDelete} color="primary">
+              Confirm
+            </Button>
+          </DialogActions>
+        </Dialog>
       </div>
-      <Dialog open={dialogOpen} onClose={handleDialogClose}>
-        <DialogTitle>Confirm Delete!</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Are you sure you want to delete this record?
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleDialogClose} color="primary">
-            Cancel
-          </Button>
-          <Button onClick={handleDelete} color="primary">
-            Confirm
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </div>
+    </>
   );
 };
 

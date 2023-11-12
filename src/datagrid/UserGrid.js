@@ -18,6 +18,7 @@ import CustomSnackbar from "../components/CustomSnackbar.js";
 import StatusCell from "../components/StatusCell.js";
 import { ReinstateUser } from "../components/Actions/ReinstateUser.js";
 import { HardDeleteUser } from "../components/Actions/HardDeleteUser.js";
+
 const UserGrid = () => {
   const [searchValue, setSearchValue] = useState("");
   const [formOpen, setFormOpen] = useState(false);

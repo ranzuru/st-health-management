@@ -5,6 +5,12 @@ const ClassProfile = require("../../models/ClassProfileSchema");
 const AcademicYear = require("../../models/AcademicYearSchema.js");
 const router = express.Router();
 const authenticateMiddleware = require("../../auth/authenticateMiddleware.js");
+const importFacultyMedical = require("../../custom/importFacultyMedical.js");
+
+const multer = require("multer");
+
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
 
 // Create a new faculty checkup
 router.post("/create", authenticateMiddleware, async (req, res) => {
@@ -47,30 +53,23 @@ router.post("/create", authenticateMiddleware, async (req, res) => {
   }
 });
 
-// Read all faculty checkups
-router.get("/fetch", authenticateMiddleware, async (req, res) => {
+// Read all faculty checkup
+router.get("/fetch/:status", authenticateMiddleware, async (req, res) => {
+  const { status } = req.params;
+
+  if (!["Active", "Archived", "Inactive"].includes(status)) {
+    return res.status(400).json({ error: "Invalid student status." });
+  }
+
   try {
-    const checkups = await FacultyCheckup.find()
+    const records = await FacultyCheckup.find({
+      status: status,
+    })
       .populate("facultyProfile")
       .populate("academicYear")
       .exec();
 
-    // Use Promise.all to fetch all the ClassProfiles related to each facultyProfile
-    const checkupsWithClass = await Promise.all(
-      checkups.map(async (newCheckup) => {
-        const classProfile = await ClassProfile.findOne({
-          faculty: newCheckup.facultyProfile._id,
-        });
-        // Add grade and section to the returned checkup object
-        return {
-          ...newCheckup._doc,
-          grade: classProfile ? classProfile.grade : null,
-          section: classProfile ? classProfile.section : null,
-        };
-      })
-    );
-
-    res.status(200).json(checkupsWithClass);
+    res.status(200).json(records);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -127,8 +126,96 @@ router.put("/update/:employeeId", authenticateMiddleware, async (req, res) => {
   }
 });
 
+router.put("/archive/:recordId", authenticateMiddleware, async (req, res) => {
+  try {
+    const facultyCheckupRecord = await FacultyCheckup.findById(
+      req.params.recordId
+    );
+
+    if (!facultyCheckupRecord) {
+      return res
+        .status(404)
+        .json({ error: "Medical checkup record not found" });
+    }
+
+    // Check if the medical checkup record is already archived
+    if (facultyCheckupRecord.status === "Archived") {
+      return res.status(400).json({ error: "Record is already archived" });
+    }
+
+    facultyCheckupRecord.status = "Archived";
+    await facultyCheckupRecord.save();
+    res.status(200).json({
+      message: "Medical checkup record marked as Archived",
+      facultyCheckupRecord,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.put("/reinstate/:recordId", authenticateMiddleware, async (req, res) => {
+  try {
+    const facultyCheckupRecord = await FacultyCheckup.findById(
+      req.params.recordId
+    );
+
+    if (!facultyCheckupRecord) {
+      return res
+        .status(404)
+        .json({ error: "Medical checkup record not found" });
+    }
+
+    // Check if the medical checkup record is already active
+    if (facultyCheckupRecord.status === "Active") {
+      return res.status(400).json({ error: "Record is already active" });
+    }
+
+    facultyCheckupRecord.status = "Active";
+    await facultyCheckupRecord.save();
+    res.status(200).json({
+      message: "Medical checkup record reinstated to Active status",
+      facultyCheckupRecord,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.put(
+  "/softDelete/:recordId",
+  authenticateMiddleware,
+  async (req, res) => {
+    try {
+      const facultyCheckupRecord = await FacultyCheckup.findById(
+        req.params.recordId
+      );
+
+      if (!facultyCheckupRecord) {
+        return res
+          .status(404)
+          .json({ error: "Medical checkup record not found" });
+      }
+
+      // Check if the medical checkup record is already inactive
+      if (facultyCheckupRecord.status === "Inactive") {
+        return res.status(400).json({ error: "Record is already inactive" });
+      }
+
+      facultyCheckupRecord.status = "Inactive";
+      await facultyCheckupRecord.save();
+      res.status(200).json({
+        message: "Medical checkup record marked as Inactive",
+        facultyCheckupRecord,
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
 // Delete a faculty checkup by ID
-router.delete("/delete/:id", authenticateMiddleware, async (req, res) => {
+router.delete("/hardDelete/:id", authenticateMiddleware, async (req, res) => {
   try {
     const checkup = await FacultyCheckup.findByIdAndDelete(req.params.id);
     if (!checkup) return res.status(404).json({ error: "Checkup not found" });
@@ -175,5 +262,56 @@ router.get(
     }
   }
 );
+
+router.post("/import-medical", upload.single("file"), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).send({ message: "No file provided" });
+  }
+
+  try {
+    const { checkups, errors } = await importFacultyMedical(req.file.buffer);
+    // Check if there were any errors during the import
+    if (errors.length > 0) {
+      return res.status(422).json({
+        message: "Some records could not be imported due to errors",
+        errors: errors,
+      });
+    }
+
+    // If no errors, send a success response
+    return res.status(201).json({
+      message: "Faculty medical records imported successfully",
+      checkups: checkups,
+    });
+  } catch (error) {
+    // Generic error handling
+    res.status(500).send({ message: "Server error", error: error.message });
+  }
+});
+
+router.post("/deleteAll", async (req, res) => {
+  try {
+    const employeeIdsToKeep = [
+      "12313",
+      "12323445",
+      "124231312",
+      "1111111",
+      "2212312",
+      "A1B2",
+      "E1234",
+      "121213344",
+    ];
+
+    const result = await FacultyProfile.deleteMany({
+      employeeId: { $nin: employeeIdsToKeep },
+    });
+
+    console.log(`Deleted ${result.deletedCount} faculty records.`);
+    res.send(`Deleted ${result.deletedCount} faculty records.`);
+  } catch (err) {
+    console.error("Error deleting faculty records:", err);
+    res.status(500).send("An error occurred while deleting faculty records.");
+  }
+});
 
 module.exports = router;

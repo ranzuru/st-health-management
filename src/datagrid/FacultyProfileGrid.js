@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { DataGrid } from "@mui/x-data-grid";
 import IconButton from "@mui/material/IconButton";
 import EditIcon from "@mui/icons-material/Edit";
@@ -20,6 +20,7 @@ import FacultyInfoDialog from "../constants/facultyInfoDialog.js";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import { ReinstateFaculty } from "../components/FacultyActions/ReinstateFaculty.js";
 import { HardDeleteFaculty } from "../components/FacultyActions/HardDeleteFaculty.js";
+import exportDataToExcel from "../utils/exportDataToExcel.js";
 
 const FacultyProfileGrid = () => {
   const [searchValue, setSearchValue] = useState("");
@@ -36,6 +37,10 @@ const FacultyProfileGrid = () => {
   const [snackbarData, setSnackbarData] = useState({
     message: "",
     severity: "success",
+  });
+  const dataGridRef = useRef(null);
+  const [filterModel, setFilterModel] = useState({
+    items: [],
   });
 
   const showSnackbar = (message, severity) => {
@@ -193,11 +198,11 @@ const FacultyProfileGrid = () => {
               <IconButton onClick={() => handleEditFaculty(employeeId)}>
                 <EditIcon />
               </IconButton>
-              <IconButton onClick={() => handleDialogOpen(employeeId)}>
-                <DeleteOutlineIcon />
-              </IconButton>
               <IconButton onClick={() => handleInfoDialogOpen(employeeId)}>
                 <VisibilityOutlinedIcon />
+              </IconButton>
+              <IconButton onClick={() => handleDialogOpen(employeeId)}>
+                <DeleteOutlineIcon />
               </IconButton>
             </div>
           );
@@ -245,6 +250,109 @@ const FacultyProfileGrid = () => {
     const facultyToEdit = faculty.find((faculty) => faculty.employeeId === id);
     setSelectedFaculty(facultyToEdit);
     setFormOpen(true);
+  };
+
+  const excelHeaders = columns.map((col) => ({
+    title: col.headerName,
+    key: col.field,
+  }));
+
+  const handleExport = () => {
+    const activeFilterModel = filterModel;
+
+    const filteredData = faculty.filter((record) => {
+      return activeFilterModel.items.every((filterItem) => {
+        if (!filterItem.field) {
+          return true;
+        }
+        const cellValue = (record[filterItem.field] ?? "")
+          .toString()
+          .toLowerCase()
+          .trim();
+
+        // We expect filterItem.value to be an array for "is any of"
+        const filterValues = Array.isArray(filterItem.value)
+          ? filterItem.value.map((val) => val.toString().toLowerCase().trim())
+          : [filterItem.value.toString().toLowerCase().trim()];
+
+        switch (filterItem.operator) {
+          case "equals":
+            return cellValue === filterValues[0];
+          case "contains":
+            return filterValues.some((value) => cellValue.includes(value));
+          case "startsWith":
+            return filterValues.some((value) => cellValue.startsWith(value));
+          case "endsWith":
+            return filterValues.some((value) => cellValue.endsWith(value));
+          case "isAnyOf":
+            return filterValues.includes(cellValue);
+          default:
+            console.log(
+              `Unknown filter type '${filterItem.operator}', record included by default`
+            );
+            return true;
+        }
+      });
+    });
+
+    exportDataToExcel(filteredData, excelHeaders, "EmployeeRecord", {
+      dateFields: ["birthDate"],
+      excludeColumns: ["action"],
+    });
+  };
+
+  const handleImportFaculty = async (event) => {
+    const file = event.target.files[0];
+    const formData = new FormData();
+    formData.append("file", file);
+
+    if (file.size > 5 * 1024 * 1024) {
+      showSnackbar("File size exceeds 5MB", "error");
+      return;
+    }
+
+    setIsLoading(true); // Start loading spinner
+
+    try {
+      const response = await axiosInstance.post(
+        "facultyProfile/importFaculty",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      if (response.data.errors && response.data.errors.length > 0) {
+        const errorMessages = response.data.errors
+          .map((error) => `${error.identifier}: ${error.errors.join(", ")}`)
+          .join("; ");
+        showSnackbar(`Import issues: ${errorMessages}`, "error");
+      } else {
+        showSnackbar("Faculty profiles imported successfully!", "success");
+        refreshFaculty();
+      }
+    } catch (error) {
+      console.log("Error during faculty import:", error);
+      if (
+        error.response?.status >= 400 &&
+        error.response?.status < 500 &&
+        error.response?.data?.errors
+      ) {
+        const errorMessages = error.response.data.errors
+          .map((error) => `${error.identifier}: ${error.errors.join(", ")}`)
+          .join("; ");
+        showSnackbar(`Import issues: ${errorMessages}`, "error");
+      } else {
+        const errorMessage =
+          error.response?.data?.message ||
+          "An unexpected error occurred during import.";
+        showSnackbar(errorMessage, "error");
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleDelete = () => {
@@ -339,10 +447,17 @@ const FacultyProfileGrid = () => {
             <Tab label="Inactive" value="Inactive" />
           </Tabs>
           <DataGrid
+            ref={dataGridRef}
             rows={filteredFaculty}
             columns={columns}
+            onFilterModelChange={(newModel) => setFilterModel(newModel)}
             slots={{
-              toolbar: CustomGridToolbar,
+              toolbar: () => (
+                <CustomGridToolbar
+                  onExport={handleExport}
+                  handleImport={handleImportFaculty}
+                />
+              ),
             }}
             initialState={{
               pagination: {
@@ -357,7 +472,6 @@ const FacultyProfileGrid = () => {
               },
             }}
             pageSizeOptions={[10]}
-            checkboxSelection
             disableRowSelectionOnClick
             getRowId={(row) => row.employeeId}
             loading={isLoading}

@@ -229,6 +229,32 @@ router.put("/delete/:recordId", authenticateMiddleware, async (req, res) => {
   }
 });
 
+router.put("/archive/:recordId", authenticateMiddleware, async (req, res) => {
+  try {
+    const dengueRecord = await DengueMonitoring.findById(req.params.recordId);
+
+    if (!dengueRecord) {
+      return res
+        .status(404)
+        .json({ error: "Dengue monitoring record not found" });
+    }
+
+    // Check if the Dengue monitoring record is already archived
+    if (dengueRecord.status === "Archived") {
+      return res.status(400).json({ error: "Record already archived" });
+    }
+
+    dengueRecord.status = "Archived";
+    await dengueRecord.save();
+    res.status(200).json({
+      message: "Dengue monitoring record marked as Archived",
+      dengueRecord,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 router.put("/reinstate/:recordId", authenticateMiddleware, async (req, res) => {
   try {
     const dengueRecord = await DengueMonitoring.findById(req.params.recordId);

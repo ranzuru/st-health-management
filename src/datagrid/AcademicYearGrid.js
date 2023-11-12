@@ -220,7 +220,6 @@ const AcademicYearGrid = () => {
               },
             }}
             pageSizeOptions={[10]}
-            checkboxSelection
             disableRowSelectionOnClick
             loading={isLoading}
             style={{ height: 650 }}

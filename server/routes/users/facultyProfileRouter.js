@@ -4,6 +4,11 @@ const FacultyCheckup = require("../../models/FacultyCheckupSchema");
 const FacultyProfile = require("../../models/FacultyProfileSchema");
 const ClassProfile = require("../../models/ClassProfileSchema");
 const authenticateMiddleware = require("../../auth/authenticateMiddleware.js");
+const importFacultyProfile = require("../../custom/importFacultyProfile.js");
+const multer = require("multer");
+
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
 
 // Create a new faculty profile
 router.post(
@@ -238,5 +243,31 @@ router.delete(
     }
   }
 );
+
+router.post("/importFaculty", upload.single("file"), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).send({ message: "No file provided" });
+  }
+
+  try {
+    const { profiles, errors } = await importFacultyProfile(req.file.buffer);
+
+    // Check if there were any errors during the import
+    if (errors.length > 0) {
+      return res.status(422).json({
+        message: "Some faculty profiles could not be imported due to errors",
+        errors: errors,
+      });
+    }
+
+    // If no errors, send a success response
+    return res.status(201).json({
+      message: "Faculty profiles imported successfully",
+      facultyProfiles: profiles,
+    });
+  } catch (error) {
+    res.status(500).send({ message: "Server error", error: error.message });
+  }
+});
 
 module.exports = router;

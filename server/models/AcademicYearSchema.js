@@ -24,8 +24,22 @@ const academicYearSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-academicYearSchema.index({ schoolYear: 1 }, { unique: true }); // Updated the index
+academicYearSchema.index({ status: 1, schoolYear: 1 }, { unique: true }); // Updated the index
 
+// Pre-save hook
+academicYearSchema.pre("save", async function (next) {
+  if (this.status === "Active") {
+    const existingActive = await this.constructor.findOne({ status: "Active" });
+    if (
+      existingActive &&
+      existingActive._id.toString() !== this._id.toString()
+    ) {
+      throw new Error("There can only be one active AcademicYear.");
+    }
+  }
+  next();
+});
+// Pre-remove hook
 academicYearSchema.pre("remove", async function (next) {
   const count = await mongoose
     .model("ClassEnrollment")

@@ -63,7 +63,6 @@ const AddUserDialog = (props) => {
     },
   });
 
-  console.log(errors);
   const handleShowPasswordClick = () => {
     setShowPassword((prevShowPassword) => !prevShowPassword);
   };

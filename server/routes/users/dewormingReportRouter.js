@@ -93,7 +93,6 @@ async function getDewormedCounts(academicYearId) {
     },
   ]);
   // Before returning dewormedCounts
-  console.log(dewormedCounts);
 
   return dewormedCounts;
 }

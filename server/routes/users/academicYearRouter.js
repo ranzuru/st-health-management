@@ -9,6 +9,8 @@ const handleError = (error, res) => {
   console.error("An error occurred:", error.message);
   if (error.name === "MongoError" && error.code === 11000) {
     return res.status(409).json({ error: "Duplicate academic year" });
+  } else if (error.message === "There can only be one active AcademicYear.") {
+    return res.status(400).json({ error: error.message });
   }
   return res.status(500).json({ error: "Something went wrong" });
 };

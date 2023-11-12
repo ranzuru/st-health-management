@@ -238,7 +238,6 @@ const UserApprovalGrid = () => {
                 },
               }}
               pageSizeOptions={[10]}
-              checkboxSelection
               disableRowSelectionOnClick
               getRowId={(row) => row.userId}
               style={{ height: 650 }}

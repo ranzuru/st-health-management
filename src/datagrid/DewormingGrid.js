@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { DataGrid } from "@mui/x-data-grid";
-import Button from "@mui/material/Button";
-import ReportIcon from "@mui/icons-material/Description";
 import axiosInstance from "../config/axios-instance";
 
 const DEFAULT_GRADES = [
@@ -165,11 +163,6 @@ const DewormingGrid = () => {
     <div className="flex flex-col h-full">
       <div className="w-full max-w-screen-xl mx-auto px-8">
         <div className="mb-4 flex justify-between items-center">
-          <div>
-            <Button variant="contained" color="secondary">
-              <ReportIcon /> Generate Report
-            </Button>
-          </div>
           <div className="flex items-center"></div>
         </div>
         <DataGrid

@@ -36,7 +36,7 @@ router.post(
 router.get("/fetch/:status", authenticateMiddleware, async (req, res) => {
   const { status } = req.params;
 
-  if (!["Enrolled", "Archived", "Inactive"].includes(status)) {
+  if (!["Active", "Archived", "Inactive"].includes(status)) {
     return res.status(400).json({ error: "Invalid student status." });
   }
 

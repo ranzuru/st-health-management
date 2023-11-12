@@ -25,7 +25,7 @@ const sendPasswordResetEmail = async (req, res) => {
     });
 
     // Construct the reset link
-    const resetLink = `http://localhost:8080/reset-password?token=${resetToken}`;
+    const resetLink = `http://localhost:3000/reset-password?token=${resetToken}`;
 
     // Create a test account and transporter inside the function
     let testAccount = await nodemailer.createTestAccount();

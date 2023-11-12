@@ -7,6 +7,7 @@ const router = express.Router();
 const authenticateMiddleware = require("../../auth/authenticateMiddleware.js");
 const exportClassEnrollmentData = require("../../custom/exportEnrollment.js");
 const importClassEnrollments = require("../../custom/importEnrollment.js");
+const { translateFiltersToMongoQuery } = require("../../utils/filterUtils.js");
 const multer = require("multer");
 
 const storage = multer.memoryStorage();
@@ -102,7 +103,7 @@ router.get("/search/:partialLrn", authenticateMiddleware, async (req, res) => {
     const partialLrn = req.params.partialLrn;
     const students = await StudentProfile.find({
       lrn: new RegExp(partialLrn, "i"),
-      status: "Enrolled",
+      status: "Active",
     }).select(
       "lrn lastName firstName middleName nameExtension gender age birthDate -_id"
     );
@@ -319,10 +320,16 @@ router.put(
   }
 );
 
-router.get("/export/:status?", async (req, res) => {
+router.get("/export/:status?", authenticateMiddleware, async (req, res) => {
   const { status } = req.params;
+  console.log("Status:", status);
+  const filters = req.query.filters ? JSON.parse(req.query.filters) : null;
+  console.log("Received filters:", filters);
   try {
-    const buffer = await exportClassEnrollmentData(status);
+    const filtersQuery = filters ? translateFiltersToMongoQuery(filters) : {};
+    console.log("Translated filtersQuery:", filtersQuery);
+
+    const buffer = await exportClassEnrollmentData(status, filtersQuery);
 
     // Set the headers to prompt a download with a proper file name.
     res.setHeader(
