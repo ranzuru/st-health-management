@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { DataGrid } from "@mui/x-data-grid";
 import axiosInstance from "../config/axios-instance";
+import ExportOnlyToolbar from "../utils/ExportOnlyToolbar";
 
 const DEFAULT_GRADES = [
   {
@@ -159,6 +160,8 @@ const DewormingGrid = () => {
     },
   ];
 
+  const handleExport = () => {};
+
   return (
     <div className="flex flex-col h-full">
       <div className="w-full max-w-screen-xl mx-auto px-8">
@@ -169,6 +172,9 @@ const DewormingGrid = () => {
           rows={aggregateData}
           columns={aggregateColumns}
           getRowId={(row) => row._id}
+          slots={{
+            toolbar: () => <ExportOnlyToolbar onExport={handleExport} />,
+          }}
           initialState={{
             pagination: {
               paginationModel: {

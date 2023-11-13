@@ -20,6 +20,8 @@ import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import { HardDeleteFacultyMedical } from "../components/Actions/HardDeleteFacultyMedical.js";
 import { ReinstateFacultyMedical } from "../components/Actions/ReinstateFacultyMedical.js";
 import StatusCell from "../components/StatusCell.js";
+import HeaderFacultyMapping from "../headerMapping/facultyMedicalHeader.js";
+import exportDataToExcel from "../utils/exportDataToExcel.js";
 
 const FacultyCheckUpGrid = () => {
   const [medicalCheckups, setMedicalCheckups] = useState([]);
@@ -34,9 +36,9 @@ const FacultyCheckUpGrid = () => {
   const [isInfoDialogOpen, setInfoDialogOpen] = useState(false);
   const [selectedRecordInfo, setSelectedRecordInfo] = useState(null);
   const dataGridRef = useRef(null);
-  // const [filterModel, setFilterModel] = useState({
-  //   items: [],
-  // });
+  const [filterModel, setFilterModel] = useState({
+    items: [],
+  });
   const [snackbarData, setSnackbarData] = useState({
     message: "",
     severity: "success",
@@ -118,7 +120,7 @@ const FacultyCheckUpGrid = () => {
       age: facultyProfile ? facultyProfile.age : "N/A",
       gender: facultyProfile ? facultyProfile.gender : "N/A",
       schoolYear: academicYear ? academicYear.schoolYear : "N/A",
-      ...healthData, // Includes all health-related fields
+      ...healthData,
     };
   };
 
@@ -238,6 +240,74 @@ const FacultyCheckUpGrid = () => {
       },
     },
   ];
+
+  const handleExport = () => {
+    const activeFilterModel = filterModel;
+
+    const filteredData = medicalCheckups.filter((record) => {
+      return activeFilterModel.items.every((filterItem) => {
+        if (!filterItem.field) {
+          return true;
+        }
+
+        const cellValue = (record[filterItem.field] ?? "")
+          .toString()
+          .toLowerCase()
+          .trim();
+
+        const filterValues = Array.isArray(filterItem.value)
+          ? filterItem.value.map((val) => val.toString().toLowerCase().trim())
+          : [filterItem.value.toString().toLowerCase().trim()];
+
+        switch (filterItem.operator) {
+          case "equals":
+            return cellValue === filterValues[0];
+          case "contains":
+            return filterValues.some((value) => cellValue.includes(value));
+          case "startsWith":
+            return filterValues.some((value) => cellValue.startsWith(value));
+          case "endsWith":
+            return filterValues.some((value) => cellValue.endsWith(value));
+          case "isAnyOf":
+            return filterValues.includes(cellValue);
+          default:
+            console.log(
+              `Unknown filter type '${filterItem.operator}', record included by default`
+            );
+            return true;
+        }
+      });
+    });
+
+    // Define excelHeaders based on the fields in transformedRecord
+    const excelHeaders = Object.keys(medicalCheckups[0] || {})
+      .filter(
+        (key) => !["id", "_id", "createdAt", "updatedAt", "__v"].includes(key)
+      )
+      .map((key) => ({
+        title: HeaderFacultyMapping[key] || key,
+        key: key,
+      }));
+
+    let fileName = "FacultyMedicalRecords";
+    if (activeFilterModel.items.length > 0) {
+      // Append filter details to the file name
+      const filterDescriptions = activeFilterModel.items.map((filter) => {
+        if (filter.operator === "isAnyOf" && Array.isArray(filter.value)) {
+          return `${filter.field}_${filter.operator}_${filter.value.join("-")}`;
+        }
+        return `${filter.field}_${filter.operator}_${filter.value}`;
+      });
+      fileName += `_${filterDescriptions.join("_")}`;
+    }
+
+    fileName = fileName.replace(/[^a-z0-9]/gi, "_").toLowerCase();
+
+    exportDataToExcel(filteredData, excelHeaders, fileName, {
+      dateFields: ["dateOfExamination", "birthDate"], // adjust based on transformed data
+      excludeColumns: ["action"], // adjust based on transformed data
+    });
+  };
 
   const handleInfoDialogOpen = (checkupId) => {
     const recordInfo = medicalCheckups.find(
@@ -409,11 +479,11 @@ const FacultyCheckUpGrid = () => {
             rows={FilteredMedicalCheckups}
             columns={columns}
             getRowId={(row) => row.id}
-            // onFilterModelChange={(newModel) => setFilterModel(newModel)}
+            onFilterModelChange={(newModel) => setFilterModel(newModel)}
             slots={{
               toolbar: () => (
                 <CustomGridToolbar
-                  // onExport={handleExport}
+                  onExport={handleExport}
                   handleImport={handleImport}
                 />
               ),
