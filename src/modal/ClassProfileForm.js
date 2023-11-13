@@ -92,13 +92,12 @@ const ClassProfileForm = (props) => {
     const fetchAdvisers = async () => {
       try {
         const response = await axiosInstance.get(
-          "/facultyProfile/fetchFacultyProfiles"
+          "/facultyProfile/fetch/Active"
         );
         if (response.data) {
           // Filter faculty profiles to include only advisers
           const advisers = response.data.filter(
-            (faculty) =>
-              faculty.role === "Adviser" && faculty.status === "Active"
+            (faculty) => faculty.role === "Adviser"
           );
           // Map advisers to options for the dropdown
           const options = advisers.map((adviser) => ({

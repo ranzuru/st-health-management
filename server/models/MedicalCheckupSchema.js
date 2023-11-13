@@ -36,6 +36,11 @@ const medicalCheckupSchema = new mongoose.Schema(
     ironSupplementation: { type: Boolean, required: true },
     deworming: { type: Boolean, required: true },
     menarche: { type: String },
+    status: {
+      type: String,
+      enum: ["Active", "Archived", "Inactive"],
+      default: "Active",
+    },
     remarks: {
       type: String,
     },

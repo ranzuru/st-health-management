@@ -48,7 +48,7 @@ const facultySchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      required: true,
+      enum: ["Active", "Archived", "Inactive"],
       default: "Active",
     },
   },

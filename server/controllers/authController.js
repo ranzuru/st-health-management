@@ -2,6 +2,7 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User.js");
+const { sendOTP, verifyOTP } = require("../controllers/otpController.js");
 
 exports.register = async (req, res) => {
   try {
@@ -97,8 +98,6 @@ exports.internalRegister = async (req, res) => {
       return res.status(400).json({ error: "Email already exists" });
     }
 
-    // Here you can add additional validations or logic specific to internal registration.
-
     // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -152,31 +151,105 @@ exports.login = async (req, res) => {
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
-    // Generate a JWT token
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "1h",
-    });
+    const otpToken = await sendOTP(user.email);
 
-    // Generate a refresh token
-    const refreshToken = jwt.sign(
+    const tempAuthToken = jwt.sign(
       { userId: user._id },
-      process.env.REFRESH_TOKEN_SECRET,
+      process.env.JWT_SECRET,
       {
-        expiresIn: "7d", // Refresh token valid for 7 days
+        expiresIn: "10m", // Short validity for this temp token
       }
     );
 
-    const userResponse = {
-      _id: user._id,
-      email: user.email,
-      role: user.role, // assuming 'role' is a field in your User model
-      // Add any other necessary fields, but exclude password for security reasons.
-    };
-
-    res.status(200).json({ token, refreshToken, user: userResponse });
+    // Send back the tempAuthToken and the OTP token (encrypted user secret)
+    res.status(200).json({ tempAuthToken, otpToken });
   } catch (error) {
     res
       .status(500)
       .json({ error: "An error occurred is", details: error.message });
+  }
+};
+
+exports.resendOtp = async (req, res) => {
+  try {
+    const { tempAuthToken } = req.body; // Use the temporary token to identify the user session
+
+    // Verify the temporary auth token to get the user ID
+    const decoded = jwt.verify(tempAuthToken, process.env.JWT_SECRET);
+    const userId = decoded.userId;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Check if the user is active and approved
+    if (user.status !== "Active" || !user.approved) {
+      return res
+        .status(401)
+        .json({ error: "User is not active or not approved" });
+    }
+
+    // Resend the OTP
+    const otpToken = await sendOTP(user.email); // Assuming sendOTP handles the sending
+
+    // Respond with success message
+    res.status(200).json({ message: "OTP has been resent", otpToken });
+  } catch (error) {
+    if (error.name === "JsonWebTokenError") {
+      return res.status(401).json({ error: "Invalid Token" });
+    }
+    res
+      .status(500)
+      .json({ error: "An error occurred", details: error.message });
+  }
+};
+
+exports.verifyOtp = async (req, res) => {
+  const { tempAuthToken, otpToken, otp } = req.body;
+
+  try {
+    // Verify the temporary auth token to get the user ID
+    const decoded = jwt.verify(tempAuthToken, process.env.JWT_SECRET);
+    const userId = decoded.userId;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Now verify the OTP using your OTPControllers method
+    if (verifyOTP(otpToken, otp)) {
+      // OTP is correct, now generate the final access and refresh tokens
+      const token = jwt.sign({ userId }, process.env.JWT_SECRET, {
+        expiresIn: "1h", // Access token valid for 1 hour
+      });
+      const refreshToken = jwt.sign(
+        { userId },
+        process.env.REFRESH_TOKEN_SECRET,
+        {
+          expiresIn: "7d", // Refresh token valid for 7 days
+        }
+      );
+
+      const userResponse = {
+        _id: user._id,
+        email: user.email,
+        name: user.firstName,
+        role: user.role,
+      };
+
+      // Send the final tokens
+      res.status(200).json({ token, refreshToken, user: userResponse });
+    } else {
+      // OTP verification failed
+      res.status(401).json({ error: "Invalid or expired OTP." });
+    }
+  } catch (error) {
+    // Temporary auth token verification failed or other errors
+    res.status(401).json({
+      error: "Invalid temporary auth token or error in OTP verification.",
+      details: error.message,
+    });
   }
 };

@@ -27,7 +27,7 @@ const StudentInfoDialog = ({
     setIsArchiveConfirmationOpen(false);
   };
   const studentStatusColors = {
-    Enrolled: {
+    Active: {
       bgColor: "#DFF0D8",
       textColor: "#4CAF50",
       borderColor: "#4CAF50",

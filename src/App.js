@@ -36,6 +36,7 @@ import Logs from "./navbar/Logs";
 import Settings from "./navbar/Settings";
 import Sidebar from "./components/Sidebar";
 import PageNotFound from "./pages/pageNotFound";
+import PasswordResetPage from "./pages/PasswordResetPage";
 import { Provider } from "react-redux";
 import store, { persistor } from "./redux/store";
 import ProtectedRoute from "./utils/ProtectedRoutes";
@@ -66,6 +67,7 @@ function App() {
           <Routes>
             <Route path="/" element={<LoginPage />} />
             <Route path="/register" element={<RegistrationPage />} />
+            <Route path="/reset-password" element={<PasswordResetPage />} />
             <Route
               path="/app/*"
               element={<ProtectedRoute component={AppLayout} />}

@@ -32,7 +32,7 @@ const StudentsProfileGrid = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [studentIdToDelete, setStudentIdToDelete] = useState(null);
   const [selectedStudent, setSelectedStudent] = useState(null);
-  const [currentType, setCurrentType] = useState("Enrolled");
+  const [currentType, setCurrentType] = useState("Active");
   const [isInfoDialogOpen, setInfoDialogOpen] = useState(false);
   const [selectedStudentInfo, setSelectedStudentInfo] = useState(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
@@ -65,7 +65,7 @@ const StudentsProfileGrid = () => {
   };
 
   const studentStatusColors = {
-    Enrolled: {
+    Active: {
       bgColor: "#DFF0D8",
       textColor: "#4CAF50",
       borderColor: "#4CAF50",
@@ -116,7 +116,7 @@ const StudentsProfileGrid = () => {
     };
   };
 
-  const fetchStudents = useCallback(async (status = "Enrolled") => {
+  const fetchStudents = useCallback(async (status = "Active") => {
     setIsLoading(true);
     try {
       const response = await axiosInstance.get(
@@ -187,7 +187,7 @@ const StudentsProfileGrid = () => {
         const { lrn } = params.row;
 
         // Show edit and delete only for Enrolled students
-        if (currentType === "Enrolled") {
+        if (currentType === "Active") {
           return (
             <div>
               <IconButton onClick={() => handleEditStudent(lrn)}>
@@ -405,7 +405,7 @@ const StudentsProfileGrid = () => {
             indicatorColor="primary"
             textColor="primary"
           >
-            <Tab label="Enrolled" value="Enrolled" />
+            <Tab label="Active" value="Active" />
             <Tab label="Archived" value="Archived" />
             <Tab label="Inactive" value="Inactive" />
           </Tabs>

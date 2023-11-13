@@ -60,8 +60,8 @@ const studentProfileSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["Enrolled", "Archived", "Inactive"],
-      default: "Enrolled",
+      enum: ["Active", "Archived", "Inactive"],
+      default: "Active",
     },
   },
   { timestamps: true }

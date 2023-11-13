@@ -1,28 +1,38 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
 import Button from "@mui/material/Button";
-import TextField from "@mui/material/TextField";
 import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
 import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
 import PersonAddAltOutlinedIcon from "@mui/icons-material/PersonAddAltOutlined";
-import InputAdornment from "@mui/material/InputAdornment";
-import VisibilityIcon from "@mui/icons-material/Visibility";
-import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
-import { useForm } from "react-hook-form";
-import * as Yup from "yup";
+import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
-import Snackbar from "@mui/material/Snackbar";
-import Alert from "@mui/material/Alert";
+import CustomSnackbar from "../components/CustomSnackbar";
 import axiosInstance from "../config/axios-instance";
 import FormHelperText from "@mui/material/FormHelperText";
+import EditIcon from "@mui/icons-material/Edit";
+import { validationSchema } from "../schemas/manageUserValidation";
+import FormInput from "../components/userComponents/FormInput";
+import {
+  PhoneNumberField,
+  PasswordField,
+  EmailField,
+} from "../components/userComponents/CustomInput";
 
-const AddUserDialog = ({ open, onClose }) => {
+const AddUserDialog = (props) => {
+  const {
+    open = false,
+    onClose,
+    initialData,
+    selectedUser,
+    isEditing,
+    onUpdate,
+  } = props;
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [emailExists, setEmailExists] = useState(false);
@@ -31,38 +41,17 @@ const AddUserDialog = ({ open, onClose }) => {
     message: "",
     severity: "success",
   });
-
-  const validationSchema = Yup.object({
-    firstName: Yup.string().required("First Name is required"),
-    lastName: Yup.string().required("Last Name is required"),
-    phoneNumber: Yup.string()
-      .required("Phone Number is required")
-      .min(10, "Your phone number must be 10 digits"),
-    email: Yup.string()
-      .email("Invalid email")
-      .required("Email is required")
-      .matches(
-        /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}$/,
-        "Invalid email format"
-      ),
-    password: Yup.string()
-      .required("Password is required")
-      .min(6, "must be at least 6 characters"),
-    confirmPassword: Yup.string()
-      .oneOf([Yup.ref("password"), null], "Passwords must match")
-      .required("Confirm Password is required"),
-    gender: Yup.string().required("Gender is required"),
-    role: Yup.string().required("Role is required"),
-  });
+  const currentValidationSchema = validationSchema(isEditing);
 
   const {
-    register,
+    control,
     handleSubmit,
-    formState: { errors },
+    setValue,
     reset,
+    formState: { errors },
   } = useForm({
-    resolver: yupResolver(validationSchema),
-    defaultValues: {
+    resolver: yupResolver(currentValidationSchema),
+    defaultValues: initialData || {
       firstName: "",
       lastName: "",
       phoneNumber: "",
@@ -93,219 +82,161 @@ const AddUserDialog = ({ open, onClose }) => {
     setSnackbarOpen(false);
   };
 
-  const onSubmit = async (data, e) => {
+  const handleCreateUser = async (data) => {
     try {
-      // Make an HTTP POST request to your API endpoint
       await axiosInstance.post("/auth/internalRegister", data);
       showSnackbar("Successfully created an account", "success");
-      onCancel();
+      handleClose();
     } catch (error) {
-      if (error.response && error.response.status === 400) {
-        showSnackbar(error.response.data.error, "error");
-        setEmailExists(true);
-      } else {
-        showSnackbar("An error occurred during registration", "error");
+      handleRequestError(error);
+    }
+  };
+
+  const handleUpdateUser = async (formData) => {
+    if (isEditing) {
+      const { email, phoneNumber, password, ...dataToUpdate } = formData;
+      try {
+        const response = await axiosInstance.put(
+          `/users/updateUser/${selectedUser._id}`,
+          dataToUpdate
+        );
+        showSnackbar("User updated successfully", "success");
+        onUpdate(response.data);
+        handleClose();
+      } catch (error) {
+        console.log("Update Error:", error);
+        handleRequestError(error);
       }
     }
   };
 
-  const onCancel = () => {
-    // Call reset to clear all form fields
+  const handleSaveOrUpdate = (data) => {
+    if (isEditing) {
+      handleUpdateUser(data);
+    } else {
+      handleCreateUser(data);
+    }
+  };
+
+  const handleRequestError = (error) => {
+    let errorMessage = "An error occurred during the request";
+    if (error.response) {
+      errorMessage = error.response.data.error || errorMessage;
+      if (error.response.status === 400 && !isEditing) {
+        setEmailExists(true);
+      }
+    }
+    showSnackbar(errorMessage, "error");
+  };
+
+  const handleClose = () => {
     reset();
     onClose();
     setEmailExists(false);
   };
 
+  useEffect(() => {
+    if (selectedUser && isEditing) {
+      setValue("lastName", selectedUser.lastName || "");
+      setValue("firstName", selectedUser.firstName || "");
+      setValue("gender", selectedUser.gender || "");
+      setValue("role", selectedUser.role || "");
+    }
+  }, [selectedUser, isEditing, setValue]);
+
   return (
     <>
-      <Snackbar
+      <CustomSnackbar
         open={snackbarOpen}
-        autoHideDuration={6000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{
-          vertical: "top", // Position at the top
-          horizontal: "center", // Position at the center horizontally
-        }}
-      >
-        <Alert onClose={handleCloseSnackbar} severity={snackbarData.severity}>
-          {snackbarData.message}
-        </Alert>
-      </Snackbar>
-
-      <Dialog open={open} onClose={onCancel} maxWidth="sm" fullWidth>
-        <DialogTitle>ADD USER</DialogTitle>
-        <form onSubmit={handleSubmit(onSubmit)}>
+        handleClose={handleCloseSnackbar}
+        severity={snackbarData.severity}
+        message={snackbarData.message}
+      />
+      <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+        <DialogTitle>{selectedUser ? "Edit User" : "Add User"}</DialogTitle>
+        <form onSubmit={handleSubmit(handleSaveOrUpdate)}>
           <DialogContent>
             <DialogContentText>
               Please fill in the user details.
             </DialogContentText>
-            <TextField
+            <FormInput
+              control={control}
               name="firstName"
               label="First Name"
-              fullWidth
-              margin="normal"
-              variant="outlined"
-              {...register("firstName")}
-              error={!!errors.firstName} // Show error state if there's a validation error
-              helperText={errors.firstName?.message} // Display the error message
+              error={errors.firstName}
             />
-            <TextField
+            <FormInput
+              control={control}
               name="lastName"
               label="Last Name"
-              fullWidth
-              margin="normal"
-              variant="outlined"
-              {...register("lastName")}
-              error={!!errors.lastName} // Show error state if there's a validation error
-              helperText={errors.lastName?.message} // Display the error message
+              error={errors.lastName}
             />
-            <TextField
-              name="phoneNumber"
-              label="Mobile Number"
-              fullWidth
-              required
-              margin="normal"
-              variant="outlined"
-              {...register("phoneNumber")}
-              onChange={(e) => {
-                // Use slice(0, 10) to keep only the first 10 characters
-                const numericValue = e.target.value
-                  .replace(/\D/g, "")
-                  .slice(0, 10);
-                // Update the input field with the sliced value
-                e.target.value = numericValue;
-              }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">+63</InputAdornment>
-                ),
-                placeholder: "995 215 5436",
-              }}
-              error={!!errors.phoneNumber} // Show error state if there's a validation error
-              helperText={errors.phoneNumber?.message} // Display the error message
+            {!isEditing && (
+              <>
+                <PhoneNumberField control={control} errors={errors} />
+                <EmailField control={control} errors={errors || emailExists} />
+                <PasswordField
+                  name="password"
+                  control={control}
+                  errors={errors}
+                  showPassword={showPassword}
+                  handleShowPasswordClick={handleShowPasswordClick}
+                />
+                <PasswordField
+                  name="confirmPassword"
+                  control={control}
+                  errors={errors}
+                  showPassword={showConfirmPassword}
+                  handleShowPasswordClick={handleShowConfirmPasswordClick}
+                />
+              </>
+            )}
+            <Controller
+              name="gender"
+              control={control}
+              render={({ field }) => (
+                <FormControl required fullWidth margin="normal">
+                  <InputLabel id="gender-label">Gender</InputLabel>
+                  <Select labelId="gender-label" label="Gender" {...field}>
+                    <MenuItem value="Male">Male</MenuItem>
+                    <MenuItem value="Female">Female</MenuItem>
+                  </Select>
+                  <FormHelperText error={!!errors.gender}>
+                    {errors.gender?.message}
+                  </FormHelperText>
+                </FormControl>
+              )}
             />
-            <TextField
-              name="email"
-              label="Email"
-              fullWidth
-              margin="normal"
-              variant="outlined"
-              {...register("email")}
-              error={!!errors.email || emailExists} // Show error state if there's a validation error
-              helperText={
-                errors.email?.message || (emailExists && "Email already exists")
-              }
+            <Controller
+              name="role"
+              control={control}
+              render={({ field }) => (
+                <FormControl required fullWidth margin="normal">
+                  <InputLabel id="role-label">Role</InputLabel>
+                  <Select labelId="role-label" label="Role" {...field}>
+                    <MenuItem value="Admin">Admin</MenuItem>
+                    <MenuItem value="School Nurse">School Nurse</MenuItem>
+                    <MenuItem value="District Nurse">District Nurse</MenuItem>
+                  </Select>
+                  <FormHelperText error={!!errors.role}>
+                    {errors.role?.message}
+                  </FormHelperText>
+                </FormControl>
+              )}
             />
-            <TextField
-              name="password"
-              label="Password"
-              type={showPassword ? "text" : "password"}
-              fullWidth
-              required
-              margin="normal"
-              variant="outlined"
-              {...register("password")}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    {/* Toggle password visibility */}
-                    {showPassword ? (
-                      <VisibilityOffIcon
-                        onClick={handleShowPasswordClick}
-                        style={{ cursor: "pointer" }}
-                      />
-                    ) : (
-                      <VisibilityIcon
-                        onClick={handleShowPasswordClick}
-                        style={{ cursor: "pointer" }}
-                      />
-                    )}
-                  </InputAdornment>
-                ),
-              }}
-              error={!!errors.password} // Show error state if there's a validation error
-              helperText={errors.password?.message} // Display the error message
-            />
-            <TextField
-              name="confirmPassword"
-              label="Confirm Password"
-              type={showConfirmPassword ? "text" : "password"}
-              fullWidth
-              required
-              margin="normal"
-              variant="outlined"
-              {...register("confirmPassword")}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    {/* Toggle password visibility */}
-                    {showConfirmPassword ? (
-                      <VisibilityOffIcon
-                        onClick={handleShowConfirmPasswordClick}
-                        style={{ cursor: "pointer" }}
-                      />
-                    ) : (
-                      <VisibilityIcon
-                        onClick={handleShowConfirmPasswordClick}
-                        style={{ cursor: "pointer" }}
-                      />
-                    )}
-                  </InputAdornment>
-                ),
-              }}
-              error={!!errors.confirmPassword} // Show error state if there's a validation error
-              helperText={errors.confirmPassword?.message} // Display the error message
-            />
-            <FormControl fullWidth variant="outlined" margin="normal" required>
-              <InputLabel>Gender</InputLabel>
-              <Select
-                name="gender"
-                defaultValue=""
-                {...register("gender")}
-                label="Gender"
-                error={!!errors.gender}
-              >
-                <MenuItem value="" disabled>
-                  Select your gender
-                </MenuItem>
-                <MenuItem value="Male">Male</MenuItem>
-                <MenuItem value="Female">Female</MenuItem>
-              </Select>
-              <FormHelperText error={!!errors.gender}>
-                {errors.gender?.message}
-              </FormHelperText>
-            </FormControl>
-            <FormControl fullWidth variant="outlined" margin="normal" required>
-              <InputLabel>Role</InputLabel>
-              <Select
-                name="role"
-                defaultValue=""
-                {...register("role")}
-                label="Role"
-                error={!!errors.role}
-              >
-                <MenuItem value="" disabled>
-                  Select your role
-                </MenuItem>
-                <MenuItem value="Admin">Admin</MenuItem>
-                <MenuItem value="Nurse">School Nurse</MenuItem>
-                <MenuItem value="District Nurse">District Nurse</MenuItem>
-              </Select>
-              <FormHelperText error={!!errors.role}>
-                {errors.role?.message}
-              </FormHelperText>
-            </FormControl>
           </DialogContent>
           <DialogActions>
-            <Button onClick={onCancel} variant="outlined">
+            <Button onClick={handleClose} variant="outlined">
               Cancel
             </Button>
             <Button
               type="submit"
               variant="contained"
-              startIcon={<PersonAddAltOutlinedIcon />}
+              startIcon={
+                isEditing ? <EditIcon /> : <PersonAddAltOutlinedIcon />
+              }
             >
-              Add User
+              {isEditing ? "Update User" : "Add User"}
             </Button>
           </DialogActions>
         </form>

@@ -1,7 +1,6 @@
-
-
-const express = require("express");
 const dotenv = require("dotenv");
+dotenv.config();
+const express = require("express");
 const authenticateMiddleware = require("./auth/authenticateMiddleware.js");
 const authRoutes = require("./auth/Routes.js");
 const connectDB = require("./mongodb/Connect.js");
@@ -19,21 +18,25 @@ const classProfileRoutes = require("./routes/users/classProfileRouter.js");
 const studentProfileRoutes = require("./routes/users/studentProfileRouter.js");
 const medicalCheckupRoutes = require("./routes/users/medicalCheckupRouter.js");
 const dewormingReportRoutes = require("./routes/users/dewormingReportRouter.js");
-const nutritionalStatusRoutes = require("./routes/users/nutritionalStatusRouter.js");
 const facultyMedicalRoutes = require("./routes/users/facultyCheckupRouter.js");
 const dengueMonitoringRoutes = require("./routes/users/dengueRouter.js");
 const academicYearRoutes = require("./routes/users/academicYearRouter.js");
 const classEnrollmentRoutes = require("./routes/users/classEnrollmentRouter.js");
-
+const resetPasswordRoutes = require("./routes/resetPasswordRoutes.js");
+const otpRoutes = require("./routes/otpRoutes.js");
 const cors = require("cors");
-
-
-dotenv.config();
 
 const app = express();
 app.use(express.json({ limit: "50mb" }));
 
-app.use(cors());
+const corsOptions = {
+  origin: "http://localhost:3000", // Replace with your frontend's URL
+  credentials: true, // This is important for cookies
+  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+
+app.use(cors(corsOptions));
 
 app.get("/", (req, res) => {
   res.send("Hello World!");
@@ -73,6 +76,10 @@ app.use("/dengueMonitoring", dengueMonitoringRoutes);
 app.use("/academicYear", academicYearRoutes);
 
 app.use("/classEnrollment", classEnrollmentRoutes);
+
+app.use("/resetPassword", resetPasswordRoutes);
+
+app.use("/otp", otpRoutes);
 
 app.use("/auth", authRoutes);
 

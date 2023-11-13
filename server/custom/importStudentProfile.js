@@ -17,6 +17,9 @@ const importStudents = async (fileBuffer) => {
     if (rowData.nameExtension === "null") {
       rowData.nameExtension = null;
     }
+    if (rowData.is4p) {
+      rowData.is4p = rowData.is4p.toLowerCase() === "yes";
+    }
     try {
       const { value, error } = studentValidationSchema.validate(rowData, {
         abortEarly: false,

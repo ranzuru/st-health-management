@@ -40,6 +40,11 @@ const nutritionalStatusSchema = new mongoose.Schema(
       enum: ["PRE", "POST"],
       required: true,
     },
+    status: {
+      type: String,
+      enum: ["Active", "Archived", "Inactive"],
+      default: "Active",
+    },
     remarks: {
       type: String,
     },

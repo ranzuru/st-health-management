@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { DataGrid } from "@mui/x-data-grid";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
@@ -20,6 +20,7 @@ import StatusCell from "../components/StatusCell.js";
 import CustomGridToolbar from "../utils/CustomGridToolbar";
 import ClassEnrollmentDialog from "../constants/classEnrollmentInfoDialog.js";
 import CustomSnackbar from "../components/CustomSnackbar.js";
+import exportDataToExcel from "../utils/exportDataToExcel.js";
 
 const ClassEnrollmentGrid = () => {
   const [enrolledRecords, setEnrolledRecords] = useState([]);
@@ -33,6 +34,11 @@ const ClassEnrollmentGrid = () => {
   const [isInfoDialogOpen, setInfoDialogOpen] = useState(false);
   const [selectedRecordInfo, setSelectedRecordInfo] = useState(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const dataGridRef = useRef(null);
+  const [filterModel, setFilterModel] = useState({
+    items: [],
+  });
+
   const [snackbarData, setSnackbarData] = useState({
     message: "",
     severity: "success",
@@ -314,28 +320,55 @@ const ClassEnrollmentGrid = () => {
     }
   };
 
-  const handleExport = async () => {
-    try {
-      const response = await axiosInstance.get(
-        `classEnrollment/export/${currentType}`,
-        { responseType: "blob" } // Make sure to set the responseType to 'blob'
-      );
-      // Create a new Blob object with the correct MIME type for an Excel file
-      const blob = new Blob([response.data], {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      });
+  const excelHeaders = columns.map((col) => ({
+    title: col.headerName,
+    key: col.field,
+  }));
 
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      const safeFileName = currentType.replace(/[^a-z0-9-_]/gi, "_");
-      link.setAttribute("download", `classEnrollment${safeFileName}.xlsx`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } catch (error) {
-      console.error("Error during export:", error);
-    }
+  const handleExport = () => {
+    const activeFilterModel = filterModel;
+
+    const filteredData = enrolledRecords.filter((record) => {
+      return activeFilterModel.items.every((filterItem) => {
+        if (!filterItem.field) {
+          console.log("Skipping filter item due to no field specified");
+          return true;
+        }
+        const cellValue = (record[filterItem.field] ?? "")
+          .toString()
+          .toLowerCase()
+          .trim();
+
+        // We expect filterItem.value to be an array for "is any of"
+        const filterValues = Array.isArray(filterItem.value)
+          ? filterItem.value.map((val) => val.toString().toLowerCase().trim())
+          : [filterItem.value.toString().toLowerCase().trim()];
+
+        switch (filterItem.operator) {
+          case "equals":
+            return cellValue === filterValues[0];
+          case "contains":
+            return filterValues.some((value) => cellValue.includes(value));
+          case "startsWith":
+            return filterValues.some((value) => cellValue.startsWith(value));
+          case "endsWith":
+            return filterValues.some((value) => cellValue.endsWith(value));
+          case "isAnyOf":
+            return filterValues.includes(cellValue);
+          default:
+            console.log(
+              `Unknown filter type '${filterItem.operator}', record included by default`
+            );
+            return true;
+        }
+      });
+    });
+
+    // Proceed with the export using the filtered data
+    exportDataToExcel(filteredData, excelHeaders, "Enrollments", {
+      dateFields: ["birthDate"],
+      excludeColumns: ["action"],
+    });
   };
 
   const handleInfoDialogClose = () => {
@@ -410,9 +443,11 @@ const ClassEnrollmentGrid = () => {
             <Tab label="Inactive" value="Inactive" />
           </Tabs>
           <DataGrid
+            ref={dataGridRef}
             rows={filteredEnrollees}
             columns={columns}
             getRowId={(row) => row.id}
+            onFilterModelChange={(newModel) => setFilterModel(newModel)}
             slots={{
               toolbar: () => (
                 <CustomGridToolbar
