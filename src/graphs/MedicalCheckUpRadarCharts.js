@@ -17,17 +17,6 @@ const PieChart = () => {
     "July", "August", "September", "October", "November", "December"
   ];
 
-  const extractSchoolYears = (data) => {
-    const uniqueYears = new Set();
-    data.forEach((item) => {
-      const startYear = parseInt(item.schoolYear.substring(0, 4));
-      const endYear = parseInt(item.schoolYear.slice(-4));
-      const schoolYear = `${startYear} - ${endYear}`;
-      uniqueYears.add(schoolYear);
-    });
-    return Array.from(uniqueYears);
-  };
-
   const extractTypes = () => {
     const uniqueTypes = [...new Set(originalData.map((item) => item.classEnrollment.student.gender))];
     return uniqueTypes;
@@ -40,7 +29,7 @@ const PieChart = () => {
 
   const aggregateDataByReason = useCallback((rawData) => {
     const aggregatedData = {};
-
+    
     rawData.forEach((item) => {
       let dataToAgg;
       if (selectedCategory) {
@@ -75,7 +64,7 @@ const PieChart = () => {
         case "Mouth Issue":
             dataToAgg = item.mouthScreening;
            break;
-        case "neck":
+        case "Neck Issue":
             dataToAgg = item.neckScreening;
            break;
            case "Throat Issue":

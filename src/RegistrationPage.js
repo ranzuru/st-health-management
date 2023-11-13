@@ -421,7 +421,7 @@ const RegistrationPage = () => {
                               <MenuItem value="Deworming Program Head">
                                 De-worming Program Head
                               </MenuItem>
-                              <MenuItem value="District Nurse">
+                              <MenuItem value="Intern">
                                 Intern
                               </MenuItem>
                             </Select>

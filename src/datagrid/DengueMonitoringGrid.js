@@ -118,9 +118,7 @@ const DengueMonitoringGrid = () => {
       address = "N/A",
     } = student;
 
-    const name = `${lastName}, ${firstName}${
-      middleName ? ` ${middleName.charAt(0)}.` : ""
-    } ${nameExtension}`.trim();
+    const name = `${lastName}, ${firstName} ${middleName} ${nameExtension || ""}`;
 
     return {
       id: record._id,
@@ -200,7 +198,7 @@ const DengueMonitoringGrid = () => {
 
   const columns = [
     { field: "lrn", headerName: "LRN", width: 100 },
-    { field: "name", headerName: "Name", width: 200 },
+    { field: "name", headerName: "Name", width: 250 },
     { field: "age", headerName: "Age", width: 150 },
     { field: "gender", headerName: "Gender", width: 150 },
     { field: "grade", headerName: "Grade Level", width: 150 },

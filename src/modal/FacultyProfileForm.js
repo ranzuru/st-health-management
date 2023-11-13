@@ -534,7 +534,7 @@ const FacultyProfileForm = (props) => {
                                 Dengue Program Head
                               </MenuItem>
                               <MenuItem value="Deworming Program Head">
-                                Deworming Program Head
+                                De-worming Program Head
                               </MenuItem>
                               <MenuItem value="District Nurse">
                                 Dengue Program Head

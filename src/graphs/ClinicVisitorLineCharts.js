@@ -56,7 +56,7 @@ const LineChart = () => {
             type
           };
         });
-    
+        
         const types = [...new Set(adjustedResponse.map(data => data.type))];
         setTypes(types);
   
@@ -96,7 +96,7 @@ const LineChart = () => {
               
               return acc;
             }, {});
-      
+            console.log(clinicVisitData)
           const dateFormat = [];
       
           for (let year = selectedYearStart; year <= selectedYearEnd; year++) {
@@ -130,7 +130,6 @@ const LineChart = () => {
             data: dateFormat,
           };
         });
-      
         setClinicData(dateSpecifiedData);       
       } catch (error) {
         console.error("Error fetching data:", error);

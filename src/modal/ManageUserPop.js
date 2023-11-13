@@ -214,9 +214,42 @@ const AddUserDialog = (props) => {
                 <FormControl required fullWidth margin="normal">
                   <InputLabel id="role-label">Role</InputLabel>
                   <Select labelId="role-label" label="Role" {...field}>
-                    <MenuItem value="Admin">Admin</MenuItem>
-                    <MenuItem value="School Nurse">School Nurse</MenuItem>
-                    <MenuItem value="District Nurse">District Nurse</MenuItem>
+                  <MenuItem value="Principal">
+                                Principal
+                              </MenuItem>
+                              <MenuItem value="Administrator">
+                                Administrator
+                              </MenuItem>
+                              <MenuItem value="Office Staff">
+                                Office Staff
+                              </MenuItem>
+                              <MenuItem value="IT Staff">
+                                IT Staff
+                              </MenuItem>
+                              <MenuItem value="Doctor">
+                                Doctor
+                              </MenuItem>
+                              <MenuItem value="District Nurse">
+                                District Nurse
+                              </MenuItem>
+                              <MenuItem value="School Nurse">
+                                School Nurse
+                              </MenuItem>
+                              <MenuItem value="Feeding Program Head">
+                                Feeding Program Head
+                              </MenuItem>
+                              <MenuItem value="Medical Program Head">
+                                Medical Program Head
+                              </MenuItem>
+                              <MenuItem value="Dengue Program Head">
+                                Dengue Program Head
+                              </MenuItem>
+                              <MenuItem value="Deworming Program Head">
+                                De-worming Program Head
+                              </MenuItem>
+                              <MenuItem value="Intern">
+                                Intern
+                              </MenuItem>
                   </Select>
                   <FormHelperText error={!!errors.role}>
                     {errors.role?.message}

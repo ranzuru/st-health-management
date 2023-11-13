@@ -102,6 +102,27 @@ router.get("/fetch/:status", authenticateMiddleware, async (req, res) => {
   }
 });
 
+// Read all medical checkups
+router.get("/fetch", authenticateMiddleware, async (req, res) => {
+  try {
+    const checkups = await MedicalCheckup.find()
+      .populate({
+        path: "classEnrollment",
+        populate: [
+          { path: "student" },
+          { path: "classProfile" },
+          { path: "academicYear" },
+        ],
+      })
+      .populate("nutritionalStatus")
+      .exec();
+
+    res.status(200).json(checkups);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Update a medical checkup by ID
 router.put("/update/:lrn", authenticateMiddleware, async (req, res) => {
   try {
