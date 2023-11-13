@@ -11,7 +11,7 @@ export const RESET_LOGIN_ERROR = "RESET_LOGIN_ERROR";
 // Action Creators
 export const setUser = (user) => ({
   type: SET_USER,
-  payload: user,
+  payload: { user, role: user.role },
 });
 
 export const setToken = (token) => ({
@@ -38,36 +38,77 @@ export const resetLoginError = () => ({
   type: RESET_LOGIN_ERROR,
 });
 
-export const loginUser = (email, password, navigate) => {
-  return async (dispatch) => {
+export const initiateLogin = (email, password) => async (dispatch) => {
+  try {
+    const loginResponse = await axiosInstance.post("/auth/login", {
+      email,
+      password,
+    });
+    const { tempAuthToken, otpToken } = loginResponse.data;
+
+    return { tempAuthToken, otpToken }; // Return these tokens to the component to use later
+  } catch (error) {
+    console.error("Error during initial login:", error);
+    dispatch(
+      loginError(
+        error.response?.data.error ||
+          "An unexpected error occurred during login."
+      )
+    );
+  }
+};
+
+export const verifyOtp =
+  (tempAuthToken, otpToken, otp, navigate) => async (dispatch) => {
     try {
-      const response = await axiosInstance.post("/auth/login", {
-        email,
-        password,
+      const verifyResponse = await axiosInstance.post("/auth/verify-otp", {
+        tempAuthToken,
+        otpToken,
+        otp,
       });
-      if (response.data.token && response.data.refreshToken) {
-        const { token, refreshToken } = response.data;
+
+      if (verifyResponse.data.token && verifyResponse.data.refreshToken) {
+        const { token, refreshToken, user } = verifyResponse.data;
+
         localStorage.setItem("authToken", token);
         localStorage.setItem("refreshToken", refreshToken);
 
-        dispatch(setUser(response.data.user));
+        dispatch(setUser(user));
         dispatch(setToken(token));
-        dispatch(setToken(refreshToken));
-        navigate("/app/dashboard"); // Add this line
+        dispatch(setRefreshToken(refreshToken));
+
+        navigate("/app/dashboard"); // Proceed to navigate after successful OTP verification
       } else {
-        dispatch(loginError("Invalid credentials. Please try again."));
+        dispatch(loginError("Invalid OTP. Please try again."));
       }
     } catch (error) {
-      console.error("Error during login:", error);
-
-      if (error.response && error.response.status === 401) {
-        const backendErrorMessage = error.response.data.error;
-        dispatch(loginError(`Error during login: ${backendErrorMessage}`));
-      } else {
-        dispatch(loginError("An unexpected error occurred. Please try again."));
-      }
+      console.error("Error during OTP verification:", error);
+      dispatch(
+        loginError(
+          error.response?.data.error ||
+            "An unexpected error occurred during OTP verification."
+        )
+      );
     }
   };
+
+export const resendOtp = (tempAuthToken) => async (dispatch) => {
+  try {
+    const response = await axiosInstance.post("/auth/resend-otp", {
+      tempAuthToken,
+    });
+    const { otpToken } = response.data;
+    return { otpToken };
+  } catch (error) {
+    console.error("Error during OTP resend:", error);
+    dispatch(
+      loginError(
+        error.response?.data.error ||
+          "An error occurred while resending the OTP."
+      )
+    );
+    return {};
+  }
 };
 
 // Grouped actions (if you need them grouped)
@@ -76,8 +117,10 @@ const actions = {
   setToken,
   setRefreshToken,
   removeUser,
-  loginUser,
+  initiateLogin,
+  verifyOtp,
   loginError,
+  resendOtp,
   resetLoginError,
 };
 

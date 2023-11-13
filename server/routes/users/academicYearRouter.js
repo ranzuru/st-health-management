@@ -3,12 +3,15 @@ const router = express.Router();
 const authenticateMiddleware = require("../../auth/authenticateMiddleware.js");
 const AcademicYear = require("../../models/AcademicYearSchema");
 const { createLog } = require("../recordLogRouter.js");
+const ClassEnrollment = require("../../models/ClassEnrollment");
 
 // Helper function for handling errors
 const handleError = (error, res) => {
   console.error("An error occurred:", error.message);
   if (error.name === "MongoError" && error.code === 11000) {
     return res.status(409).json({ error: "Duplicate academic year" });
+  } else if (error.message === "There can only be one active AcademicYear.") {
+    return res.status(400).json({ error: error.message });
   }
   return res.status(500).json({ error: "Something went wrong" });
 };
@@ -95,11 +98,24 @@ router.put("/update/:id", authenticateMiddleware, async (req, res) => {
 // Delete an AcademicYear by ID
 router.delete("/delete/:id", authenticateMiddleware, async (req, res) => {
   try {
-    const academicYear = await AcademicYear.findByIdAndRemove(req.params.id);
+    const academicYear = await AcademicYear.findOne({ _id: req.params.id });
+
     if (!academicYear)
       return res.status(404).json({ error: "AcademicYear not found" });
-    res.json({ message: "AcademicYear deleted" });
+
+    const count = await ClassEnrollment.countDocuments({
+      academicYear: academicYear._id,
+    });
+    if (count > 0) {
+      return res.status(400).json({
+        error:
+          "Cannot delete AcademicYear because it is referenced by ClassEnrollment documents.",
+      });
+    }
+
+    await academicYear.deleteOne(); // Use deleteOne() on the instance
     await createLog('Academic Year', 'DELETE', `${academicYear}`, req.userData.userId);
+    res.json({ message: "AcademicYear deleted successfully" });
   } catch (error) {
     handleError(error, res);
   }

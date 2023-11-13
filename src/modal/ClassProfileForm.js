@@ -118,7 +118,7 @@ const ClassProfileForm = (props) => {
     const fetchAdvisers = async () => {
       try {
         const response = await axiosInstance.get(
-          "/facultyProfile/fetchFacultyProfiles"
+          "/facultyProfile/fetch/Active"
         );
         if (response.data) {
           // Filter faculty profiles to include only advisers

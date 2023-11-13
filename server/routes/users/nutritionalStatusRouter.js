@@ -5,8 +5,13 @@ const ClassEnrollment = require("../../models/ClassEnrollment");
 const MedicalCheckup = require("../../models/MedicalCheckupSchema.js");
 const AcademicYear = require("../../models/AcademicYearSchema");
 const router = express.Router();
+const importNutritionalStatuses = require("../../custom/importNutritionalStatus.js");
 const authenticateMiddleware = require("../../auth/authenticateMiddleware.js");
 const { createLog } = require("../recordLogRouter.js");
+const multer = require("multer");
+
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
 
 // Create
 router.post("/create", authenticateMiddleware, async (req, res) => {
@@ -365,5 +370,39 @@ function getMonthNumber(monthName) {
 
   return (months.indexOf(monthName) + 1).toString().padStart(2, '0');
 }
+router.post(
+  "/importNutritionalStatuses",
+  upload.single("file"),
+  async (req, res) => {
+    if (!req.file) {
+      return res.status(400).send({ message: "No file provided" });
+    }
+
+    try {
+      const { nutritionalStatuses, errors } = await importNutritionalStatuses(
+        req.file.buffer
+      );
+
+      // Check if there were any errors during the import
+      if (errors.length > 0) {
+        // Respond with a 422 Unprocessable Entity, sending back the errors
+        return res.status(422).json({
+          message:
+            "Some nutritional status records could not be imported due to errors",
+          errors: errors,
+        });
+      }
+
+      // If no errors, send a success response
+      return res.status(201).json({
+        message: "Nutritional status records imported successfully",
+        nutritionalStatuses: nutritionalStatuses,
+      });
+    } catch (error) {
+      // Generic error handling for any other errors not caught by the import function
+      res.status(500).send({ message: "Server error", error: error.message });
+    }
+  }
+);
 
 module.exports = router;

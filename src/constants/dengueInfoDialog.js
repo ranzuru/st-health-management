@@ -58,7 +58,7 @@ const DengueInfoDialog = ({
 
     try {
       const response = await axiosInstance.put(
-        `studentProfile/archiveStudent/${record.id}`
+        `dengueMonitoring/archive/${record.id}`
       );
 
       if (response.status === 200) {

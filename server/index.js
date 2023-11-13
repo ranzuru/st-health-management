@@ -1,5 +1,6 @@
-const express = require("express");
 const dotenv = require("dotenv");
+dotenv.config();
+const express = require("express");
 const authenticateMiddleware = require("./auth/authenticateMiddleware.js");
 const authRoutes = require("./auth/Routes.js");
 const connectDB = require("./mongodb/Connect.js");
@@ -21,14 +22,21 @@ const clinicVisitRoutes = require("./routes/users/clinicVisitRouter.js");
 const viewLogRoutes = require("./routes/viewLogRouter.js");
 
 
+const resetPasswordRoutes = require("./routes/resetPasswordRoutes.js");
+const otpRoutes = require("./routes/otpRoutes.js");
 const cors = require("cors");
-
-dotenv.config();
 
 const app = express();
 app.use(express.json({ limit: "50mb" }));
 
-app.use(cors());
+const corsOptions = {
+  origin: "http://localhost:3000", // Replace with your frontend's URL
+  credentials: true, // This is important for cookies
+  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+
+app.use(cors(corsOptions));
 
 app.get("/", (req, res) => {
   res.send("Hello World!");
@@ -67,6 +75,10 @@ app.use("/classEnrollment", classEnrollmentRoutes);
 app.use("/clinicVisit", clinicVisitRoutes);
 
 app.use("/log", viewLogRoutes);
+
+app.use("/resetPassword", resetPasswordRoutes);
+
+app.use("/otp", otpRoutes);
 
 app.use("/auth", authRoutes);
 

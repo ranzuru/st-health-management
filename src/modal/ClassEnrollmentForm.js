@@ -105,6 +105,13 @@ const ClassEnrollmentForm = (props) => {
     const schoolYear = academicYear.schoolYear;
     const grade = classProfile.grade;
     const section = classProfile.section;
+
+    const advisorFirstName = classProfile?.faculty?.firstName;
+    const advisorLastName = classProfile?.faculty?.lastName;
+    const faculty =
+      advisorLastName || advisorFirstName
+        ? `${advisorLastName || ""}, ${advisorFirstName || ""}`.trim()
+        : "N/A";
     return {
       ...rest,
       id: newEnrollment._id,
@@ -115,6 +122,7 @@ const ClassEnrollmentForm = (props) => {
       birthDate,
       name,
       schoolYear,
+      faculty,
       grade,
       section,
     };
@@ -450,7 +458,7 @@ const ClassEnrollmentForm = (props) => {
               </Grid>
             </Grid>
             <Grid container spacing={2}>
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid item xs={12} sm={6} md={2}>
                 <Controller
                   name="schoolYear"
                   control={control}

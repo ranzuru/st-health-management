@@ -6,6 +6,12 @@ const ClassEnrollment = require("../../models/ClassEnrollment");
 const router = express.Router();
 const authenticateMiddleware = require("../../auth/authenticateMiddleware.js");
 const { createLog } = require("../recordLogRouter.js");
+const importStudentMedical = require("../../custom/importStudentMedical.js");
+
+const multer = require("multer");
+
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
 
 // Create a new medical checkup
 router.post("/create", authenticateMiddleware, async (req, res) => {
@@ -68,9 +74,17 @@ router.post("/create", authenticateMiddleware, async (req, res) => {
 });
 
 // Read all medical checkups
-router.get("/fetch", authenticateMiddleware, async (req, res) => {
+router.get("/fetch/:status", authenticateMiddleware, async (req, res) => {
+  const { status } = req.params;
+
+  // List of valid statuses - adjust these as per your application's logic
+  const validStatuses = ["Active", "Archived", "Inactive"];
+  if (!validStatuses.includes(status)) {
+    return res.status(400).json({ error: "Invalid student status." });
+  }
+
   try {
-    const checkups = await MedicalCheckup.find()
+    const checkups = await MedicalCheckup.find({ status: status })
       .populate({
         path: "classEnrollment",
         populate: [
@@ -81,6 +95,7 @@ router.get("/fetch", authenticateMiddleware, async (req, res) => {
       })
       .populate("nutritionalStatus")
       .exec();
+
     res.status(200).json(checkups);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -139,6 +154,94 @@ router.put("/update/:lrn", authenticateMiddleware, async (req, res) => {
     res.status(400).json({ error: error.message });
   }
 });
+
+router.put("/archive/:recordId", authenticateMiddleware, async (req, res) => {
+  try {
+    const medicalCheckupRecord = await MedicalCheckup.findById(
+      req.params.recordId
+    );
+
+    if (!medicalCheckupRecord) {
+      return res
+        .status(404)
+        .json({ error: "Medical checkup record not found" });
+    }
+
+    // Check if the medical checkup record is already archived
+    if (medicalCheckupRecord.status === "Archived") {
+      return res.status(400).json({ error: "Record already archived" });
+    }
+
+    medicalCheckupRecord.status = "Archived";
+    await medicalCheckupRecord.save();
+    res.status(200).json({
+      message: "Medical checkup record marked as Archived",
+      medicalCheckupRecord,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.put("/reinstate/:recordId", authenticateMiddleware, async (req, res) => {
+  try {
+    const medicalCheckupRecord = await MedicalCheckup.findById(
+      req.params.recordId
+    );
+
+    if (!medicalCheckupRecord) {
+      return res
+        .status(404)
+        .json({ error: "Medical checkup record not found" });
+    }
+
+    // Check if the medical checkup record is already active
+    if (medicalCheckupRecord.status === "Active") {
+      return res.status(400).json({ error: "Record is already active" });
+    }
+
+    medicalCheckupRecord.status = "Active";
+    await medicalCheckupRecord.save();
+    res.status(200).json({
+      message: "Medical checkup record reinstated to Active status",
+      medicalCheckupRecord,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.put(
+  "/softDelete/:recordId",
+  authenticateMiddleware,
+  async (req, res) => {
+    try {
+      const medicalCheckupRecord = await MedicalCheckup.findById(
+        req.params.recordId
+      );
+
+      if (!medicalCheckupRecord) {
+        return res
+          .status(404)
+          .json({ error: "Medical checkup record not found" });
+      }
+
+      // Check if the medical checkup record is already inactive
+      if (medicalCheckupRecord.status === "Inactive") {
+        return res.status(400).json({ error: "Record is already inactive" });
+      }
+
+      medicalCheckupRecord.status = "Inactive";
+      await medicalCheckupRecord.save();
+      res.status(200).json({
+        message: "Medical checkup record marked as Inactive",
+        medicalCheckupRecord,
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
 
 // Delete a medical checkup by ID
 router.delete("/delete/:id", authenticateMiddleware, async (req, res) => {
@@ -227,5 +330,40 @@ router.get("/search/:partialLrn", authenticateMiddleware, async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+router.post(
+  "/import-student-medical",
+  upload.single("file"),
+  async (req, res) => {
+    if (!req.file) {
+      return res.status(400).send({ message: "No file provided" });
+    }
+
+    try {
+      const { checkups, errors, hasMoreErrors } = await importStudentMedical(
+        req.file.buffer
+      );
+
+      // Check if there were any errors during the import
+      if (errors.length > 0) {
+        return res.status(422).json({
+          message:
+            "Some student medical records could not be imported due to errors",
+          errors: errors,
+          hasMoreErrors: hasMoreErrors,
+        });
+      }
+
+      // If no errors, send a success response
+      return res.status(201).json({
+        message: "Student medical records imported successfully",
+        checkups: checkups,
+      });
+    } catch (error) {
+      // Generic error handling
+      res.status(500).send({ message: "Server error", error: error.message });
+    }
+  }
+);
 
 module.exports = router;

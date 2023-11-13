@@ -146,7 +146,6 @@ const MedicalCheckupForm = (props) => {
     const weightKg = nutritionalStatus?.weightKg || "N/A";
     const BMIClassification = nutritionalStatus?.BMIClassification || "N/A";
     const heightForAge = nutritionalStatus?.heightForAge || "N/A";
-    const beneficiaryOfSBFP = nutritionalStatus?.beneficiaryOfSBFP || "N/A";
 
     return {
       ...rest,
@@ -164,7 +163,6 @@ const MedicalCheckupForm = (props) => {
       weightKg,
       BMIClassification,
       heightForAge,
-      beneficiaryOfSBFP,
     };
   };
 
@@ -306,7 +304,6 @@ const MedicalCheckupForm = (props) => {
         "BMI",
         "BMIClassification",
         "heightForAge",
-        "beneficiaryOfSBFP",
         "temperature",
         "bloodPressure",
         "heartRate",
@@ -387,9 +384,7 @@ const MedicalCheckupForm = (props) => {
       option.nutritionalStatus?.BMIClassification ===
         value.nutritionalStatus?.BMIClassification &&
       option.nutritionalStatus?.heightForAge ===
-        value.nutritionalStatus?.heightForAge &&
-      option.nutritionalStatus?.beneficiaryOfSBFP ===
-        value.nutritionalStatus?.beneficiaryOfSBFP;
+        value.nutritionalStatus?.heightForAge;
 
     const isAcademicYearEqual =
       option.academicYear?.schoolYear === value.academicYear?.schoolYear;
@@ -699,25 +694,6 @@ const MedicalCheckupForm = (props) => {
                           ? selectedStudent.nutritionalStatus
                             ? selectedStudent.nutritionalStatus.heightForAge
                             : selectedStudent.heightForAge
-                          : ""
-                      }
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={1.5}>
-                    <ReadOnlyTextField
-                      control={control}
-                      name="beneficiaryOfSBFP"
-                      label="SBFP"
-                      value={
-                        selectedStudent
-                          ? selectedStudent.nutritionalStatus
-                            ? selectedStudent.nutritionalStatus
-                                .beneficiaryOfSBFP
-                              ? "Yes"
-                              : "No"
-                            : selectedStudent.beneficiaryOfSBFP
-                            ? "Yes"
-                            : "No"
                           : ""
                       }
                     />

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { DataGrid } from "@mui/x-data-grid";
 import IconButton from "@mui/material/IconButton";
 import EditIcon from "@mui/icons-material/Edit";
@@ -10,9 +10,16 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
 import Button from "@mui/material/Button";
-import ReportIcon from "@mui/icons-material/Description";
+import { Tabs, Tab } from "@mui/material";
 import FacultyMedicalForm from "../modal/FacultyMedicalForm";
 import axiosInstance from "../config/axios-instance";
+import CustomGridToolbar from "../utils/CustomGridToolbar.js";
+import CustomSnackbar from "../components/CustomSnackbar";
+import FacultyMedicalInfoDialog from "../constants/facultyMedicalInfoDialog.js";
+import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
+import { HardDeleteFacultyMedical } from "../components/Actions/HardDeleteFacultyMedical.js";
+import { ReinstateFacultyMedical } from "../components/Actions/ReinstateFacultyMedical.js";
+import StatusCell from "../components/StatusCell.js";
 
 const FacultyCheckUpGrid = () => {
   const [medicalCheckups, setMedicalCheckups] = useState([]);
@@ -22,9 +29,30 @@ const FacultyCheckUpGrid = () => {
   const [recordIdToDelete, setRecordIdToDelete] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [currentType, setCurrentType] = useState("Active");
+  const [isInfoDialogOpen, setInfoDialogOpen] = useState(false);
+  const [selectedRecordInfo, setSelectedRecordInfo] = useState(null);
+  const dataGridRef = useRef(null);
+  // const [filterModel, setFilterModel] = useState({
+  //   items: [],
+  // });
+  const [snackbarData, setSnackbarData] = useState({
+    message: "",
+    severity: "success",
+  });
 
   const handleSearchChange = (event) => {
     setSearchValue(event.target.value);
+  };
+
+  const showSnackbar = (message, severity) => {
+    setSnackbarData({ message, severity });
+    setSnackbarOpen(true);
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbarOpen(false);
   };
 
   const handleDialogOpen = (checkupId) => {
@@ -37,6 +65,29 @@ const FacultyCheckUpGrid = () => {
     setDialogOpen(false);
   };
 
+  const handleInfoDialogClose = () => {
+    setSelectedRecordInfo(null);
+    setInfoDialogOpen(false);
+  };
+
+  const studentStatusColors = {
+    Active: {
+      bgColor: "#DFF0D8",
+      textColor: "#4CAF50",
+      borderColor: "#4CAF50",
+    },
+    Archived: {
+      bgColor: "#FEEBC8",
+      textColor: "#FF9800",
+      borderColor: "#FF9800",
+    },
+    Inactive: {
+      bgColor: "#EBDEF0",
+      textColor: "#8E44AD",
+      borderColor: "#8E44AD",
+    },
+  };
+
   const formatYearFromDate = (dateString) => {
     const date = new Date(dateString);
     const year = date.getFullYear();
@@ -45,63 +96,39 @@ const FacultyCheckUpGrid = () => {
     return `${year}-${month}-${day}`;
   };
 
-  const fetchMedicalCheckups = async () => {
+  const mapCheckup = (checkup) => {
+    const { facultyProfile, academicYear, ...healthData } = checkup;
+    const formattedName =
+      facultyProfile && facultyProfile.middleName
+        ? `${facultyProfile.lastName}, ${
+            facultyProfile.firstName
+          } ${facultyProfile.middleName.charAt(0)}. ${
+            facultyProfile.nameExtension
+          }`.trim()
+        : facultyProfile
+        ? `${facultyProfile.lastName}, ${facultyProfile.firstName} ${facultyProfile.nameExtension}`.trim()
+        : "N/A";
+
+    return {
+      id: checkup._id,
+      dateOfExamination: checkup.dateOfExamination,
+      employeeId: facultyProfile ? facultyProfile.employeeId : "N/A",
+      name: formattedName,
+      birthDate: facultyProfile ? facultyProfile.birthDate : "N/A",
+      age: facultyProfile ? facultyProfile.age : "N/A",
+      gender: facultyProfile ? facultyProfile.gender : "N/A",
+      schoolYear: academicYear ? academicYear.schoolYear : "N/A",
+      ...healthData, // Includes all health-related fields
+    };
+  };
+
+  const fetchMedicalCheckups = useCallback(async (status = "Active") => {
     setIsLoading(true);
     try {
-      const response = await axiosInstance.get("facultyMedical/fetch");
-      const updatedCheckups = response.data.map((checkup) => {
-        return {
-          id: checkup._id,
-          dateOfExamination: checkup.dateOfExamination,
-          employeeId: checkup.facultyProfile
-            ? checkup.facultyProfile.employeeId
-            : "N/A",
-          name:
-            checkup.facultyProfile && checkup.facultyProfile.middleName
-              ? `${checkup.facultyProfile.lastName}, ${
-                  checkup.facultyProfile.firstName
-                } ${checkup.facultyProfile.middleName.charAt(0)}. ${
-                  checkup.facultyProfile.nameExtension
-                }`.trim()
-              : "N/A",
-          birthDate: checkup.facultyProfile
-            ? checkup.facultyProfile.birthDate
-            : "N/A",
-          age: checkup.facultyProfile ? checkup.facultyProfile.age : "N/A",
-          grade: checkup.grade ? checkup.grade : "N/A",
-          section: checkup.section ? checkup.section : "N/A",
-          gender: checkup.facultyProfile
-            ? checkup.facultyProfile.gender
-            : "N/A",
-          schoolYear: checkup.academicYear
-            ? checkup.academicYear.schoolYear
-            : "N/A",
-          heightCm: checkup.heightCm,
-          weightKg: checkup.weightKg,
-          temperature: checkup.temperature,
-          bloodPressure: checkup.bloodPressure,
-          heartRate: checkup.heartRate,
-          pulseRate: checkup.pulseRate,
-          respiratoryRate: checkup.respiratoryRate,
-          visionScreeningLeft: checkup.visionScreeningLeft,
-          visionScreeningRight: checkup.visionScreeningRight,
-          auditoryScreeningLeft: checkup.auditoryScreeningLeft,
-          auditoryScreeningRight: checkup.auditoryScreeningRight,
-          scalpScreening: checkup.scalpScreening,
-          skinScreening: checkup.skinScreening,
-          eyesScreening: checkup.eyesScreening,
-          earScreening: checkup.earScreening,
-          noseScreening: checkup.noseScreening,
-          mouthScreening: checkup.mouthScreening,
-          neckScreening: checkup.neckScreening,
-          throatScreening: checkup.throatScreening,
-          lungScreening: checkup.lungScreening,
-          heartScreening: checkup.heartScreening,
-          abdomen: checkup.abdomen,
-          deformities: checkup.deformities,
-          remarks: checkup.remarks,
-        };
-      });
+      const response = await axiosInstance.get(
+        `facultyMedical/fetch/${status}`
+      );
+      const updatedCheckups = response.data.map(mapCheckup);
       setMedicalCheckups(updatedCheckups);
     } catch (error) {
       console.error(
@@ -112,14 +139,18 @@ const FacultyCheckUpGrid = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchMedicalCheckups();
-  }, []);
+    fetchMedicalCheckups(currentType);
+  }, [fetchMedicalCheckups, currentType]);
 
   const addNewMedicalCheckup = (newCheckup) => {
     setMedicalCheckups((prevCheckups) => [...prevCheckups, newCheckup]);
+  };
+
+  const refreshFaculty = () => {
+    fetchMedicalCheckups(currentType);
   };
 
   const columns = [
@@ -138,24 +169,83 @@ const FacultyCheckUpGrid = () => {
     { field: "temperature", headerName: "Temp (°C)", width: 100 },
     { field: "bloodPressure", headerName: "BP mmHg", width: 100 },
     { field: "heartRate", headerName: "Heart Rate", width: 100 },
-    { field: "remarks", headerName: "Notes", width: 150 },
-
+    { field: "remarks", headerName: "Remarks", width: 150 },
+    {
+      field: "status",
+      headerName: "Status",
+      width: 95,
+      renderCell: (params) => (
+        <StatusCell value={params.value} colorMapping={studentStatusColors} />
+      ),
+    },
     {
       field: "action",
       headerName: "Action",
       width: 150,
-      renderCell: (params) => (
-        <div>
-          <IconButton onClick={() => handleEditRecord(params.row.id)}>
-            <EditIcon />
-          </IconButton>
-          <IconButton onClick={() => handleDialogOpen(params.row.id)}>
-            <DeleteOutlineIcon />
-          </IconButton>
-        </div>
-      ),
+      renderCell: (params) => {
+        const { id } = params.row;
+
+        // Show edit and delete only for Enrolled students
+        if (currentType === "Active") {
+          return (
+            <div>
+              <IconButton onClick={() => handleEditRecord(id)}>
+                <EditIcon />
+              </IconButton>
+              <IconButton onClick={() => handleInfoDialogOpen(id)}>
+                <VisibilityOutlinedIcon />
+              </IconButton>
+              <IconButton onClick={() => handleDialogOpen(id)}>
+                <DeleteOutlineIcon />
+              </IconButton>
+            </div>
+          );
+        }
+
+        if (currentType === "Archived") {
+          return (
+            <div>
+              <IconButton onClick={() => handleInfoDialogOpen(id)}>
+                <VisibilityOutlinedIcon />
+              </IconButton>
+              <HardDeleteFacultyMedical
+                recordId={params.row.id}
+                onSuccess={refreshFaculty}
+              />
+            </div>
+          );
+        }
+
+        if (currentType === "Inactive") {
+          return (
+            <div>
+              <ReinstateFacultyMedical
+                recordId={params.row.id}
+                onSuccess={refreshFaculty}
+              />
+              <IconButton onClick={() => handleInfoDialogOpen(id)}>
+                <VisibilityOutlinedIcon />
+              </IconButton>
+
+              <HardDeleteFacultyMedical
+                recordId={params.row.id}
+                onSuccess={refreshFaculty}
+              />
+            </div>
+          );
+        }
+        return null;
+      },
     },
   ];
+
+  const handleInfoDialogOpen = (checkupId) => {
+    const recordInfo = medicalCheckups.find(
+      (medicalCheckup) => medicalCheckup.id === checkupId
+    );
+    setSelectedRecordInfo(recordInfo);
+    setInfoDialogOpen(true);
+  };
 
   const handleEditRecord = (checkupId) => {
     const medicalToEdit = medicalCheckups.find(
@@ -173,14 +263,15 @@ const FacultyCheckUpGrid = () => {
     );
   };
 
-  const handleDelete = async () => {
+  const handleSoftDelete = async () => {
     try {
-      await axiosInstance.delete(`facultyMedical/delete/${recordIdToDelete}`);
+      await axiosInstance.put(`facultyMedical/softDelete/${recordIdToDelete}`);
 
       // Update the state to filter out the deleted record
       const updatedRecords = medicalCheckups.filter(
         (checkup) => checkup.id !== recordIdToDelete
       );
+      showSnackbar("Faculty checkup record marked as inactive", "success");
       setMedicalCheckups(updatedRecords);
     } catch (error) {
       console.error("Error deleting the record:", error.message);
@@ -188,30 +279,73 @@ const FacultyCheckUpGrid = () => {
     handleDialogClose();
   };
 
-  const FilteredMedicalCheckups = medicalCheckups.filter(
-    (checkup) =>
-      (checkup.dateOfExamination?.toString() || "").includes(searchValue) ||
-      (checkup.employeeId?.toLowerCase() || "").includes(
-        searchValue.toLowerCase()
-      ) ||
-      (checkup.age?.toString() || "").includes(searchValue) ||
-      (checkup.gender?.toLowerCase() || "").includes(
-        searchValue.toLowerCase()
-      ) ||
-      (checkup.section?.toLowerCase() || "").includes(
-        searchValue.toLowerCase()
-      ) ||
-      (checkup.academicYear?.toLowerCase() || "").includes(
-        searchValue.toLowerCase()
-      ) ||
-      (checkup.temperature?.toString() || "").includes(searchValue) ||
-      (checkup.bloodPressure?.toLowerCase() || "").includes(
-        searchValue.toLowerCase()
-      ) ||
-      (checkup.heartRate?.toString() || "").includes(searchValue) ||
-      (checkup.heightCm?.toString() || "").includes(searchValue) ||
-      (checkup.weightKg?.toString() || "").includes(searchValue)
-  );
+  const handleImport = async (event) => {
+    const file = event.target.files[0];
+    const formData = new FormData();
+    formData.append("file", file);
+
+    if (file.size > 5 * 1024 * 1024) {
+      showSnackbar("File size exceeds 5MB", "error");
+      return;
+    }
+
+    setIsLoading(true); // Start loading spinner
+
+    try {
+      const response = await axiosInstance.post(
+        "facultyMedical/import-medical", // Adjust the endpoint as needed
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      // Handle response
+      if (response.data.errors && response.data.errors.length > 0) {
+        const errorMessages = response.data.errors
+          .map((error) => `${error.employeeId}: ${error.errors.join(", ")}`)
+          .join("; ");
+        showSnackbar(`Import issues: ${errorMessages}`, "error");
+      } else {
+        showSnackbar(
+          "Faculty medical records imported successfully!",
+          "success"
+        );
+        refreshFaculty();
+      }
+    } catch (error) {
+      console.error("Error during faculty medical import:", error);
+      // Error handling
+      if (
+        error.response?.status >= 400 &&
+        error.response?.status < 500 &&
+        error.response?.data?.errors
+      ) {
+        const errorMessages = error.response.data.errors
+          .map((error) => `${error.employeeId}: ${error.errors.join(", ")}`)
+          .join("; ");
+        showSnackbar(`Import issues: ${errorMessages}`, "error");
+      } else {
+        const errorMessage =
+          error.response?.data?.message ||
+          "An unexpected error occurred during import.";
+        showSnackbar(errorMessage, "error");
+      }
+    } finally {
+      setIsLoading(false); // Stop loading spinner
+    }
+  };
+
+  const FilteredMedicalCheckups = medicalCheckups
+    .filter((checkup) => checkup.status === currentType)
+    .filter((checkup) =>
+      Object.keys(checkup).some((key) => {
+        const value = checkup[key]?.toString().toLowerCase();
+        return value?.includes(searchValue.toLowerCase());
+      })
+    );
 
   const handleModalOpen = () => {
     setFormOpen(true);
@@ -222,89 +356,118 @@ const FacultyCheckUpGrid = () => {
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="w-full max-w-screen-xl mx-auto px-8">
-        <div className="mb-4 flex justify-between items-center">
-          <div>
-            <Button variant="contained" color="secondary">
-              <ReportIcon /> Generate Report
-            </Button>
-          </div>
-          <div className="flex items-center">
-            <div className="ml-2">
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={handleModalOpen}
-              >
-                Add Patients
-              </Button>
+    <>
+      <CustomSnackbar
+        open={snackbarOpen}
+        handleClose={handleCloseSnackbar}
+        severity={snackbarData.severity}
+        message={snackbarData.message}
+      />
+      <FacultyMedicalInfoDialog
+        open={isInfoDialogOpen}
+        onClose={handleInfoDialogClose}
+        facultyMedical={selectedRecordInfo}
+        refreshRecord={refreshFaculty}
+        currentType={currentType}
+      />
+      <div className="flex flex-col h-full">
+        <div className="w-full max-w-screen-xl mx-auto px-8">
+          <div className="mb-4 flex justify-end items-center">
+            <div className="flex items-center">
+              <div className="ml-2">
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={handleModalOpen}
+                >
+                  Add Patients
+                </Button>
+              </div>
+              <div className="ml-2">
+                <TextField
+                  label="Search"
+                  variant="outlined"
+                  size="small"
+                  value={searchValue}
+                  onChange={handleSearchChange}
+                />
+              </div>
             </div>
-            <div className="ml-2">
-              <TextField
-                label="Search"
-                variant="outlined"
-                size="small"
-                value={searchValue}
-                onChange={handleSearchChange}
-              />
-            </div>
           </div>
-        </div>
-        <DataGrid
-          rows={FilteredMedicalCheckups}
-          columns={columns}
-          getRowId={(row) => row.id}
-          initialState={{
-            pagination: {
-              paginationModel: {
-                pageSize: 10,
+          <Tabs
+            value={currentType}
+            onChange={(_, newValue) => setCurrentType(newValue)}
+            indicatorColor="primary"
+            textColor="primary"
+          >
+            <Tab label="Active" value="Active" />
+            <Tab label="Archived" value="Archived" />
+            <Tab label="Inactive" value="Inactive" />
+          </Tabs>
+          <DataGrid
+            ref={dataGridRef}
+            rows={FilteredMedicalCheckups}
+            columns={columns}
+            getRowId={(row) => row.id}
+            // onFilterModelChange={(newModel) => setFilterModel(newModel)}
+            slots={{
+              toolbar: () => (
+                <CustomGridToolbar
+                  // onExport={handleExport}
+                  handleImport={handleImport}
+                />
+              ),
+            }}
+            initialState={{
+              pagination: {
+                paginationModel: {
+                  pageSize: 10,
+                },
               },
-            },
-          }}
-          sx={{
-            "& .MuiDataGrid-row:nth-of-type(odd)": {
-              backgroundColor: "#f3f4f6",
-            },
-          }}
-          pageSizeOptions={[10]}
-          checkboxSelection
-          disableRowSelectionOnClick
-          loading={isLoading}
-          style={{ height: 650 }}
-        />
-        <FacultyMedicalForm
-          open={formOpen}
-          addNewMedicalCheckup={addNewMedicalCheckup}
-          selectedRecord={selectedRecord}
-          onCheckupUpdate={updatedMedicalCheckup}
-          onClose={() => {
-            setSelectedRecord(null);
-            handleModalClose();
-          }}
-          onCancel={() => {
-            setSelectedRecord(null);
-            handleModalClose();
-          }}
-        />
+            }}
+            sx={{
+              "& .MuiDataGrid-row:nth-of-type(odd)": {
+                backgroundColor: "#f3f4f6",
+              },
+            }}
+            pageSizeOptions={[10]}
+            disableRowSelectionOnClick
+            loading={isLoading}
+            style={{ height: 650 }}
+          />
+          <FacultyMedicalForm
+            open={formOpen}
+            addNewMedicalCheckup={addNewMedicalCheckup}
+            selectedRecord={selectedRecord}
+            onCheckupUpdate={updatedMedicalCheckup}
+            onClose={() => {
+              setSelectedRecord(null);
+              handleModalClose();
+            }}
+            onCancel={() => {
+              setSelectedRecord(null);
+              handleModalClose();
+            }}
+          />
+        </div>
+        <Dialog open={dialogOpen} onClose={handleDialogClose}>
+          <DialogTitle>Confirm Delete!</DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              Are you sure you want to delete this record?
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleDialogClose} color="primary">
+              Cancel
+            </Button>
+            <Button onClick={handleSoftDelete} color="primary">
+              Confirm
+            </Button>
+          </DialogActions>
+        </Dialog>
       </div>
-      <Dialog open={dialogOpen} onClose={handleDialogClose}>
-        <DialogTitle>Confirm Delete!</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Are you sure you want to delete this record?
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleDialogClose} color="primary">
-            Cancel
-          </Button>
-          <Button onClick={handleDelete} color="primary">
-            Confirm
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </div>
+    </>
   );
 };
 

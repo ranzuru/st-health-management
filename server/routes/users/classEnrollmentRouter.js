@@ -7,6 +7,7 @@ const router = express.Router();
 const authenticateMiddleware = require("../../auth/authenticateMiddleware.js");
 const exportClassEnrollmentData = require("../../custom/exportEnrollment.js");
 const importClassEnrollments = require("../../custom/importEnrollment.js");
+const { translateFiltersToMongoQuery } = require("../../utils/filterUtils.js");
 const multer = require("multer");
 const { createLog } = require("../recordLogRouter.js");
 
@@ -42,9 +43,22 @@ router.post("/create", authenticateMiddleware, async (req, res) => {
     const populatedEnrollment = await ClassEnrollment.findById(
       newEnrollment._id
     )
-      .populate("student")
-      .populate("classProfile")
-      .populate("academicYear")
+      .populate({
+        path: "student",
+        model: "StudentProfile", // Assuming you have a StudentProfile model
+      })
+      .populate({
+        path: "classProfile",
+        model: "ClassProfile", // Your ClassProfile model
+        populate: {
+          path: "faculty",
+          model: "FacultyProfile", // To populate the faculty details from FacultyProfile model
+        },
+      })
+      .populate({
+        path: "academicYear",
+        model: "AcademicYear", // Assuming you have an AcademicYear model
+      })
       .exec();
 
     res.status(201).json({ newEnrollment: populatedEnrollment });
@@ -90,7 +104,7 @@ router.get("/search/:partialLrn", authenticateMiddleware, async (req, res) => {
     const partialLrn = req.params.partialLrn;
     const students = await StudentProfile.find({
       lrn: new RegExp(partialLrn, "i"),
-      status: "Enrolled",
+      status: "Active",
     }).select(
       "lrn lastName firstName middleName nameExtension gender age birthDate -_id"
     );
@@ -128,7 +142,7 @@ router.get(
     try {
       const gradesAndSections = await ClassProfile.find({
         status: "Active",
-      }).select("grade section -_id");
+      }).select("grade section lastName firstName -_id");
 
       if (!gradesAndSections || gradesAndSections.length === 0) {
         return res
@@ -179,9 +193,22 @@ router.put("/update/:lrn", authenticateMiddleware, async (req, res) => {
     const populatedEnrollment = await ClassEnrollment.findById(
       enrollmentToUpdate._id
     )
-      .populate("student")
-      .populate("academicYear")
-      .populate("classProfile");
+      .populate({
+        path: "student",
+        model: "StudentProfile", // Assuming you have a StudentProfile model
+      })
+      .populate({
+        path: "academicYear",
+        model: "AcademicYear", // Assuming you have an AcademicYear model
+      })
+      .populate({
+        path: "classProfile",
+        model: "ClassProfile", // You have this model
+        populate: {
+          path: "faculty",
+          model: "FacultyProfile", // To get the faculty details
+        },
+      });
 
     res.status(200).json({
       message: "Updated successfully",
@@ -212,6 +239,15 @@ router.put("/softDelete/:id", authenticateMiddleware, async (req, res) => {
     await createLog('Class Assignment', 'DELETE', `${enrollment}`, req.userData.userId);
   } catch (error) {
     res.status(400).json({ error: error.message });
+  }
+});
+
+router.get("/count", async (req, res) => {
+  try {
+    const count = await ClassEnrollment.countDocuments({ status: "Active" });
+    res.json({ count });
+  } catch (error) {
+    res.status(500).send("Server Error");
   }
 });
 
@@ -288,10 +324,16 @@ router.put(
   }
 );
 
-router.get("/export/:status?", async (req, res) => {
+router.get("/export/:status?", authenticateMiddleware, async (req, res) => {
   const { status } = req.params;
+  console.log("Status:", status);
+  const filters = req.query.filters ? JSON.parse(req.query.filters) : null;
+  console.log("Received filters:", filters);
   try {
-    const buffer = await exportClassEnrollmentData(status);
+    const filtersQuery = filters ? translateFiltersToMongoQuery(filters) : {};
+    console.log("Translated filtersQuery:", filtersQuery);
+
+    const buffer = await exportClassEnrollmentData(status, filtersQuery);
 
     // Set the headers to prompt a download with a proper file name.
     res.setHeader(

@@ -1,22 +1,24 @@
 const mongoose = require("mongoose");
 
-const userSchema = new mongoose.Schema({
-  _id: String,
-  firstName: { type: String, required: true },
-  lastName: { type: String, required: true },
-  phoneNumber: { type: String, required: true },
-  email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-  gender: { type: String, required: true },
-  role: { type: String, required: true },
-  status: {
-    type: String,
-    enum: ["Active", "Inactive"],
-    default: "Active", // Set the default status to Active
+const userSchema = new mongoose.Schema(
+  {
+    _id: String,
+    firstName: { type: String, required: true },
+    lastName: { type: String, required: true },
+    phoneNumber: { type: String, required: true },
+    email: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    gender: { type: String, required: true },
+    role: { type: String, required: true },
+    status: {
+      type: String,
+      enum: ["Active", "Inactive"],
+      default: "Active",
+    },
+    approved: { type: Boolean, default: false },
   },
-  approved: { type: Boolean, default: false }, // Field to track user approval
-  createdAt: { type: Date, default: Date.now }, // Field to track creation date
-});
+  { timestamps: true }
+);
 
 // Create a Counter schema for auto-incrementing IDs
 const counterSchema = new mongoose.Schema({
@@ -28,19 +30,22 @@ const Counter = mongoose.model("Counter", counterSchema);
 
 // Create a function to auto-increment the _id field
 userSchema.pre("save", function (next) {
-  const user = this;
-  Counter.findByIdAndUpdate(
-    { _id: "userId" }, // Use a specific document in the Counter collection for users
-    { $inc: { sequenceValue: 1 } }, // Increment the sequenceValue
-    { new: true, upsert: true } // Create the document if it doesn't exist
-  )
-    .then((counter) => {
-      user._id = `U${counter.sequenceValue}`; // Add the "U" prefix
-      next();
-    })
-    .catch((error) => {
-      next(error);
-    });
+  if (this.isNew) {
+    Counter.findByIdAndUpdate(
+      { _id: "userId" },
+      { $inc: { sequenceValue: 1 } },
+      { new: true, upsert: true }
+    )
+      .then((counter) => {
+        this._id = `U${counter.sequenceValue}`;
+        next();
+      })
+      .catch((error) => {
+        next(error);
+      });
+  } else {
+    next(); // Skip the ID increment if the document already exists
+  }
 });
 
 const User = mongoose.model("User", userSchema);

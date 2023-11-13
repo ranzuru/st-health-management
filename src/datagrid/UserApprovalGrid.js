@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { DataGrid } from "@mui/x-data-grid";
 import IconButton from "@mui/material/IconButton";
 import CheckCircleOutlinedIcon from "@mui/icons-material/CheckCircleOutlined";
@@ -63,27 +63,37 @@ const UserApprovalGrid = () => {
     return `${year}-${month}-${day}`;
   };
 
-  // Fetch user data from your server when the component mounts
-  const fetchData = async () => {
+  const mapRecord = (user) => {
+    const { lastName, firstName } = user;
+    const formattedName = `${firstName} ${lastName}`;
+    return {
+      userId: user._id,
+      name: formattedName,
+      phoneNumber: user.phoneNumber,
+      email: user.email,
+      gender: user.gender,
+      role: user.role,
+      createdAt: user.createdAt,
+      status: user.status,
+    };
+  };
+
+  const fetchData = useCallback(async () => {
     try {
-      const response = await axiosInstance.get("/users/userFetch");
-      const data = response.data;
-      const formattedData = data.map((user) => ({
-        ...user,
-        id: user.user_id,
-      }));
-      setUsers(formattedData);
+      const response = await axiosInstance.get(`/users/approvalFetch`);
+      const updatedUser = response.data.map(mapRecord);
+      setUsers(updatedUser);
     } catch (error) {
       console.error("Error fetching user data:", error);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   const columns = [
-    { field: "_id", headerName: "UserID", width: 100 },
+    { field: "userId", headerName: "UserID", width: 100 },
     { field: "name", headerName: "Name", width: 200 },
     { field: "phoneNumber", headerName: "Mobile Number", width: 150 },
     { field: "email", headerName: "Email", width: 250 },
@@ -102,13 +112,13 @@ const UserApprovalGrid = () => {
       renderCell: (params) => (
         <div>
           <IconButton
-            onClick={() => handleAccept(params.row._id)}
+            onClick={() => handleAccept(params.row.userId)}
             style={{ color: "green" }}
           >
             <CheckCircleOutlinedIcon />
           </IconButton>
           <IconButton
-            onClick={() => handleDecline(params.row._id)}
+            onClick={() => handleDecline(params.row.userId)}
             style={{ color: "red" }}
           >
             <CancelOutlinedIcon />
@@ -133,6 +143,7 @@ const UserApprovalGrid = () => {
             return user;
           });
         });
+        fetchData();
       } else {
         showSnackbar(response.statusText, "error");
       }
@@ -156,6 +167,7 @@ const UserApprovalGrid = () => {
         setUsers((prevUsers) =>
           prevUsers.filter((user) => user._id !== selectedUserId)
         );
+        fetchData();
       } else {
         showSnackbar(response.statusText, "error");
       }
@@ -170,34 +182,21 @@ const UserApprovalGrid = () => {
   };
 
   const handleDecline = async (_id) => {
-    // Set the selected user's _id to the state variable
     setSelectedUserId(_id);
     openDeclineDialog();
   };
 
   const handleAccept = async (_id) => {
-    // Set the selected user's _id to the state variable
     setSelectedUserId(_id);
     openApproveConfirmation();
   };
 
-  const filteredUsers = users.filter((user) => {
-    const userId = user._id || "";
-    const name = (user.firstName || "") + " " + (user.lastName || "");
-    const email = user.email || "";
-    const mobile = user.phoneNumber || "";
-    const role = user.role || "";
-
-    const isApproved = user.approved === false;
-
-    return (
-      (isApproved && userId.toString().includes(searchValue)) ||
-      (isApproved && name.toLowerCase().includes(searchValue.toLowerCase())) ||
-      (isApproved && email.toLowerCase().includes(searchValue.toLowerCase())) ||
-      (isApproved && mobile.includes(searchValue)) ||
-      (isApproved && role.toLowerCase().includes(searchValue.toLowerCase()))
-    );
-  });
+  const filteredUsers = users.filter((users) =>
+    Object.keys(users).some((key) => {
+      const value = users[key]?.toString().toLowerCase();
+      return value?.includes(searchValue.toLowerCase());
+    })
+  );
 
   return (
     <>
@@ -216,7 +215,7 @@ const UserApprovalGrid = () => {
       </Snackbar>
       <div>
         <div className="flex flex-col h-full">
-          <div className="w-full max-w-screen-xl mx-auto px-4">
+          <div className="w-full max-w-screen-xl mx-auto px-8">
             <div className="mb-4 flex justify-end items-center">
               <div className="ml-2">
                 <TextField
@@ -239,9 +238,9 @@ const UserApprovalGrid = () => {
                 },
               }}
               pageSizeOptions={[10]}
-              checkboxSelection
               disableRowSelectionOnClick
-              getRowId={(row) => row._id}
+              getRowId={(row) => row.userId}
+              style={{ height: 650 }}
             />
           </div>
         </div>

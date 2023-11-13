@@ -31,6 +31,23 @@ router.post("/login", async (req, res) => {
   }
 });
 
+// Verify OTP route
+router.post("/verify-otp", async (req, res) => {
+  try {
+    await authController.verifyOtp(req, res);
+  } catch (error) {
+    sendError(res, "An error occurred during OTP verification", 400);
+  }
+});
+
+router.post("/resend-otp", async (req, res) => {
+  try {
+    await authController.resendOtp(req, res);
+  } catch (error) {
+    sendError(res, "An error occurred during OTP verification", 400);
+  }
+});
+
 // Protected route
 router.get("/protected", authenticateMiddleware, (req, res) => {
   res

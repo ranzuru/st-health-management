@@ -5,22 +5,13 @@ const StudentProfile = require("../../models/StudentProfileSchema");
 const router = express.Router();
 const authenticateMiddleware = require("../../auth/authenticateMiddleware.js");
 const exportDengueMonitoringData = require("../../custom/exportDengue.js");
+const importDengueRecords = require("../../custom/importDengue.js");
 const multer = require("multer");
 const ExcelJS = require("exceljs");
 const { createLog } = require("../recordLogRouter.js");
+
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
-const Joi = require("joi");
-
-const validationSchema = Joi.object({
-  LRN: Joi.string().required("LRN is required."),
-  "Date of Onset": Joi.date().required("Date of Onset is required."),
-  "Date of Admission": Joi.date().required("Date of Admission is required."),
-  "Hospital Admission": Joi.string().required(
-    "Hospital Admission is required."
-  ),
-  "Date of Discharge": Joi.date().required("Date of Discharge is required."),
-});
 
 // Create a new dengue monitoring record
 router.post("/create", authenticateMiddleware, async (req, res) => {
@@ -269,6 +260,32 @@ router.put("/delete/:recordId", authenticateMiddleware, async (req, res) => {
   }
 });
 
+router.put("/archive/:recordId", authenticateMiddleware, async (req, res) => {
+  try {
+    const dengueRecord = await DengueMonitoring.findById(req.params.recordId);
+
+    if (!dengueRecord) {
+      return res
+        .status(404)
+        .json({ error: "Dengue monitoring record not found" });
+    }
+
+    // Check if the Dengue monitoring record is already archived
+    if (dengueRecord.status === "Archived") {
+      return res.status(400).json({ error: "Record already archived" });
+    }
+
+    dengueRecord.status = "Archived";
+    await dengueRecord.save();
+    res.status(200).json({
+      message: "Dengue monitoring record marked as Archived",
+      dengueRecord,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 router.put("/reinstate/:recordId", authenticateMiddleware, async (req, res) => {
   try {
     const dengueRecord = await DengueMonitoring.findById(req.params.recordId);
@@ -321,31 +338,17 @@ router.get("/export/:status?", async (req, res) => {
 });
 
 router.post(
-  "/import-excel",
+  "/import-dengue",
   authenticateMiddleware,
   upload.single("file"),
   async (req, res) => {
-    if (!req.file || !req.file.buffer) {
-      return res.status(400).json({ message: "No file uploaded" });
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded." });
     }
 
-    const fileBuffer = req.file.buffer;
-    const workbook = new ExcelJS.Workbook();
-    const headers = [
-      "LRN",
-      "Date of Onset",
-      "Date of Admission",
-      "Hospital Admission",
-      "Date of Discharge",
-    ];
-
-    const dengueRecords = [];
-    const errors = [];
-    const invalidLRNs = [];
-
     try {
-      await workbook.xlsx.load(fileBuffer);
-      const worksheet = workbook.getWorksheet(1);
+      const { dengueRecords, errors, hasMoreErrors } =
+        await importDengueRecords(req.file.buffer);
 
       if (!workbook || !worksheet) {
         return res.status(400).json({ message: "Invalid Excel file format" });
@@ -427,11 +430,15 @@ router.post(
           .json({ message: "Data import failed", errors, invalidLRNs });
       } else {
         await DengueMonitoring.insertMany(dengueRecords);
-        return res.json({ message: "Data imported successfully" });
+        return res.status(201).json({
+          message: "Import successful",
+          dengueRecordsCount: dengueRecords.length,
+          errors,
+          hasMoreErrors,
+        });
       }
     } catch (error) {
-      console.error("Error while importing Excel:", error.message);
-      res.status(500).json({ message: "Failed to import data" });
+      res.status(500).json({ error: error.message });
     }
   }
 );

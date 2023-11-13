@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { DataGrid } from "@mui/x-data-grid";
 import IconButton from "@mui/material/IconButton";
 import EditIcon from "@mui/icons-material/Edit";
@@ -12,7 +12,6 @@ import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
-import ReportIcon from "@mui/icons-material/Description";
 import axiosInstance from "../config/axios-instance";
 import DengueForm from "../modal/DengueForm";
 import { Tabs, Tab } from "@mui/material";
@@ -22,6 +21,8 @@ import { ReinstateDengueMonitoring } from "../components/Actions/ReinstateDengue
 import { useSelector } from "react-redux";
 // custom gridToolBar imports
 import CustomGridToolbar from "../utils/CustomGridToolbar";
+import exportDataToExcel from "../utils/exportDataToExcel.js";
+import StatusCell from "../components/StatusCell.js";
 
 const DengueMonitoringGrid = () => {
   const [dengueRecords, setDengueRecords] = useState([]);
@@ -39,6 +40,10 @@ const DengueMonitoringGrid = () => {
   const [snackbarData, setSnackbarData] = useState({
     message: "",
     severity: "success",
+  });
+  const dataGridRef = useRef(null);
+  const [filterModel, setFilterModel] = useState({
+    items: [],
   });
 
   const showSnackbar = (message, severity) => {
@@ -62,6 +67,24 @@ const DengueMonitoringGrid = () => {
   const handleDialogClose = () => {
     setRecordIdToDelete(null);
     setDialogOpen(false);
+  };
+
+  const studentStatusColors = {
+    Active: {
+      bgColor: "#DFF0D8",
+      textColor: "#4CAF50",
+      borderColor: "#4CAF50",
+    },
+    Archived: {
+      bgColor: "#FEEBC8",
+      textColor: "#FF9800",
+      borderColor: "#FF9800",
+    },
+    Inactive: {
+      bgColor: "#EBDEF0",
+      textColor: "#8E44AD",
+      borderColor: "#8E44AD",
+    },
   };
 
   const formatYearFromDate = (dateString) => {
@@ -145,56 +168,6 @@ const DengueMonitoringGrid = () => {
     fetchDengueRecords(currentType);
   };
 
-  const handleImport = async (event) => {
-    const file = event.target.files[0];
-    const formData = new FormData();
-    formData.append("file", file);
-
-    if (file.size > 5 * 1024 * 1024) {
-      showSnackbar("File size exceeds 5MB", "error");
-      return;
-    }
-
-    try {
-      const response = await axiosInstance.post(
-        "dengueMonitoring/import-excel",
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
-
-      if (response.status === 207) {
-        const issues = response.data.errors;
-        showSnackbar(
-          `Partial Import Done. Issues: ${issues.join(", ")}`,
-          "warning"
-        );
-      } else {
-        showSnackbar("Data imported successfully!", "success");
-      }
-
-      fetchDengueRecords();
-    } catch (error) {
-      if (error.response && error.response.status === 207) {
-        const issues = error.response.data.errors;
-        showSnackbar(
-          `Partial Import Done. Issues: ${issues.join(", ")}`,
-          "warning"
-        );
-      } else if (error.response?.data?.errors) {
-        // Total failure but we have validation errors to show
-        const errors = error.response.data.errors;
-        showSnackbar(`Import failed. Issues: ${errors.join(", ")}`, "error");
-      } else {
-        // Unknown error
-        showSnackbar("An error occurred during importing", "error");
-      }
-    }
-  };
-
   const handleEditRecord = (recordId) => {
     const recordToEdit = dengueRecords.find(
       (dengueRecord) => dengueRecord.id === recordId
@@ -255,6 +228,14 @@ const DengueMonitoringGrid = () => {
       headerName: "Date of Discharge",
       width: 150,
       valueGetter: (params) => formatYearFromDate(params.row.dateOfDischarge),
+    },
+    {
+      field: "status",
+      headerName: "Status",
+      width: 90,
+      renderCell: (params) => (
+        <StatusCell value={params.value} colorMapping={studentStatusColors} />
+      ),
     },
     {
       field: "action",
@@ -329,27 +310,83 @@ const DengueMonitoringGrid = () => {
     })
   );
 
-  const handleExport = async () => {
-    try {
-      const response = await axiosInstance.get(
-        `dengueMonitoring/export/${currentType}`,
-        { responseType: "blob" } // Make sure to set the responseType to 'blob'
-      );
-      // Create a new Blob object with the correct MIME type for an Excel file
-      const blob = new Blob([response.data], {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      });
+  const excelHeaders = columns.map((col) => ({
+    title: col.headerName,
+    key: col.field,
+  }));
 
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      const safeFileName = currentType.replace(/[^a-z0-9-_]/gi, "_");
-      link.setAttribute("download", `dengueMonitoring_${safeFileName}.xlsx`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+  const handleExport = () => {
+    const activeFilterModel = filterModel;
+
+    const filteredData = dengueRecords.filter((record) => {
+      return activeFilterModel.items.every((filterItem) => {
+        if (!filterItem.field) {
+          return true;
+        }
+        const cellValue = (record[filterItem.field] ?? "")
+          .toString()
+          .toLowerCase()
+          .trim();
+
+        // We expect filterItem.value to be an array for "is any of"
+        const filterValues = Array.isArray(filterItem.value)
+          ? filterItem.value.map((val) => val.toString().toLowerCase().trim())
+          : [filterItem.value.toString().toLowerCase().trim()];
+
+        switch (filterItem.operator) {
+          case "equals":
+            return cellValue === filterValues[0];
+          case "contains":
+            return filterValues.some((value) => cellValue.includes(value));
+          case "startsWith":
+            return filterValues.some((value) => cellValue.startsWith(value));
+          case "endsWith":
+            return filterValues.some((value) => cellValue.endsWith(value));
+          case "isAnyOf":
+            return filterValues.includes(cellValue);
+          default:
+            console.log(
+              `Unknown filter type '${filterItem.operator}', record included by default`
+            );
+            return true;
+        }
+      });
+    });
+
+    exportDataToExcel(filteredData, excelHeaders, "DengueRecords", {
+      dateFields: ["dateOfOnset", "dateOfAdmission", "dateOfDischarge"],
+      excludeColumns: ["action"],
+    });
+  };
+
+  const handleImport = async (event) => {
+    const file = event.target.files[0];
+    const formData = new FormData();
+    formData.append("file", file);
+
+    if (file.size > 5 * 1024 * 1024) {
+      showSnackbar("File size exceeds 5MB", "error");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      await axiosInstance.post("dengueMonitoring/import-dengue", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      setSnackbarData("Data imported successfully!", "success");
+      refreshRecord();
     } catch (error) {
-      console.error("Error during export:", error);
+      // Setting the snackbar message to the error message from the backend
+      setSnackbarData({
+        message: error.response?.data?.error || "An unexpected error occurred.",
+        severity: "error",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -384,12 +421,7 @@ const DengueMonitoringGrid = () => {
       />
       <div className="flex flex-col h-full">
         <div className="w-full max-w-screen-xl mx-auto px-8">
-          <div className="mb-4 flex justify-between items-center">
-            <div>
-              <Button variant="contained" color="secondary">
-                <ReportIcon /> Generate Report
-              </Button>
-            </div>
+          <div className="mb-4 flex justify-end items-center">
             <div className="flex items-center">
               <div className="ml-2">
                 <Button
@@ -418,11 +450,14 @@ const DengueMonitoringGrid = () => {
             textColor="primary"
           >
             <Tab label="Active" value="Active" />
+            {role === "Admin" && <Tab label="Archived" value="Archived" />}
             {role === "Admin" && <Tab label="Inactive" value="Inactive" />}
           </Tabs>
           <DataGrid
+            ref={dataGridRef}
             rows={FilteredDengueRecords}
             columns={columns}
+            onFilterModelChange={(newModel) => setFilterModel(newModel)}
             getRowId={(row) => row.id}
             slots={{
               toolbar: () => (
@@ -445,7 +480,6 @@ const DengueMonitoringGrid = () => {
               },
             }}
             pageSizeOptions={[10]}
-            checkboxSelection
             disableRowSelectionOnClick
             loading={isLoading}
             style={{ height: 650 }}

@@ -28,5 +28,4 @@ const MedicalCheckUpAnalytics = () => {
     </div>
   );
 };
-
 export default MedicalCheckUpAnalytics;
