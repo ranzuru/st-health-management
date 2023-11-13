@@ -10,7 +10,7 @@ import {
   MenuItem,
 } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
-import clinicLogo from "./Data/DonjuanStock.png";
+import clinicLogo from "./Data/DonjuanStock.webp";
 import { Link } from "react-router-dom";
 import { useMediaQuery } from "@mui/material";
 import axiosInstance from "./config/axios-instance";

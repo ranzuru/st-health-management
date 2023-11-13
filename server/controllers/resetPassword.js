@@ -1,60 +1,29 @@
 const User = require("../models/User");
 const jwt = require("jsonwebtoken");
-// const { sendResetPasswordEmail } = require("../utils/emailService");
+const { sendResetPasswordEmail } = require("../utils/emailService");
 const bcrypt = require("bcrypt");
-const nodemailer = require("nodemailer");
 
 const sendPasswordResetEmail = async (req, res) => {
   try {
-    // Extract email from request body
     const { email } = req.body;
-
-    // Find the user by email
     const user = await User.findOne({ email });
     if (!user) {
-      // It's a good security practice to use generic messages
       return res.status(404).json({
         message:
           "If that email address is in our database, we will send you an email to reset your password.",
       });
     }
 
-    // Create a reset token that expires in 1 hour
     const resetToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
       expiresIn: "1h",
     });
 
-    // Construct the reset link
     const resetLink = `http://localhost:3000/reset-password?token=${resetToken}`;
 
-    // Create a test account and transporter inside the function
-    let testAccount = await nodemailer.createTestAccount();
-    const transporter = nodemailer.createTransport({
-      host: testAccount.smtp.host,
-      port: testAccount.smtp.port,
-      secure: testAccount.smtp.secure, // true for 465, false for other ports
-      auth: {
-        user: testAccount.user,
-        pass: testAccount.pass,
-      },
-    });
-
-    // Send email
-    let info = await transporter.sendMail({
-      from: '"Your App Name" <yourapp@example.com>', // sender address
-      to: email, // list of receivers
-      subject: "Password Reset Request", // Subject line
-      text: "Here is your password reset link: " + resetLink, // plain text body
-      html: `<b>Click here to reset your password:</b> <a href="${resetLink}">Reset Password</a>`, // html body
-    });
-
-    // Log the message or handle it as needed
-    console.log("Message sent: %s", info.messageId);
-    console.log("Preview URL: %s", nodemailer.getTestMessageUrl(info));
+    await sendResetPasswordEmail(email, resetLink); // Send reset password email using Postmark
 
     res.status(200).json({
       message: "Password reset email sent successfully. Check your inbox.",
-      resetToken: resetToken, // You might want to omit this in a production environment for security
     });
   } catch (error) {
     console.error("Password reset error:", error);
@@ -64,7 +33,6 @@ const sendPasswordResetEmail = async (req, res) => {
   }
 };
 
-// Resets the user's password
 const resetPassword = async (req, res) => {
   try {
     const { token, newPassword } = req.body;

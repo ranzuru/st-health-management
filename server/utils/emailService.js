@@ -46,8 +46,25 @@ const sendResetPasswordEmail = async (to, resetUrl) => {
   }
 };
 
+const sendOtpEmail = async (to, otpCode) => {
+  try {
+    const response = await client.sendEmailWithTemplate({
+      From: process.env.EMAIL_SENDER_ADDRESS,
+      To: to,
+      TemplateAlias: "code-your-own-1",
+      TemplateModel: {
+        otp: otpCode,
+      },
+    });
+    console.log("Password reset email sent with template:", response);
+  } catch (error) {
+    console.error("Error sending password reset email with template:", error);
+  }
+};
+
 module.exports = {
   sendEmail,
   sendResetPasswordEmail,
+  sendOtpEmail,
   sendEmailWithTemplate, // Add this line to export the new function
 };

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { DataGrid } from "@mui/x-data-grid";
 import Button from "@mui/material/Button";
 import IconButton from "@mui/material/IconButton";
@@ -14,6 +14,7 @@ import AcademicYearForm from "../modal/AcademicYearForm";
 import axiosInstance from "../config/axios-instance";
 import StatusCell from "../components/StatusCell.js";
 import CustomSnackbar from "../components/CustomSnackbar.js";
+import { ArchivedSchoolYear } from "../components/Actions/AcademicYearComplete.js";
 
 const AcademicYearGrid = () => {
   const [formOpen, setFormOpen] = useState(false);
@@ -74,26 +75,27 @@ const AcademicYearGrid = () => {
       status: record.status || "N/A",
     };
   };
-  useEffect(() => {
-    const fetchAcademicYearRecords = async () => {
-      setIsLoading(true);
-      try {
-        const response = await axiosInstance.get("academicYear/fetch");
-        const updatedRecords = response.data.map(mapRecord);
-        setAcademicYearRecords(updatedRecords);
-      } catch (error) {
-        console.error(
-          "An error occurred while fetching medical checkups:",
-          error
-        );
-        setIsLoading(false);
-      } finally {
-        setIsLoading(false);
-      }
-    };
 
-    fetchAcademicYearRecords();
+  const fetchAcademicYearRecords = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await axiosInstance.get("academicYear/fetch");
+      const updatedRecords = response.data.map(mapRecord);
+      setAcademicYearRecords(updatedRecords);
+    } catch (error) {
+      console.error(
+        "An error occurred while fetching medical checkups:",
+        error
+      );
+      setIsLoading(false);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchAcademicYearRecords();
+  }, [fetchAcademicYearRecords]);
 
   const addNewAcademicYear = (newRecord) => {
     const mappedRecord = mapRecord(newRecord);
@@ -106,6 +108,10 @@ const AcademicYearGrid = () => {
     );
     setSelectedRecord(recordToEdit);
     setFormOpen(true);
+  };
+
+  const refreshRecord = () => {
+    fetchAcademicYearRecords();
   };
 
   const updatedAcademicYear = (updatedRecord) => {
@@ -144,6 +150,10 @@ const AcademicYearGrid = () => {
           <IconButton onClick={() => handleDialogOpen(params.row.id)}>
             <DeleteOutlineIcon />
           </IconButton>
+          <ArchivedSchoolYear
+            recordId={params.row.id}
+            onSuccess={refreshRecord}
+          />
         </div>
       ),
     },
