@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { DataGrid } from "@mui/x-data-grid";
+import {
+  DataGrid,
+  GridToolbarContainer,
+  GridToolbarExport,
+} from "@mui/x-data-grid";
 import axiosInstance from "../config/axios-instance";
 
 const DEFAULT_GRADES = [
@@ -159,6 +163,14 @@ const DewormingGrid = () => {
     },
   ];
 
+  function CustomToolbar() {
+    return (
+      <GridToolbarContainer>
+        <GridToolbarExport />
+      </GridToolbarContainer>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full">
       <div className="w-full max-w-screen-xl mx-auto px-8">
@@ -169,6 +181,9 @@ const DewormingGrid = () => {
           rows={aggregateData}
           columns={aggregateColumns}
           getRowId={(row) => row._id}
+          slots={{
+            toolbar: CustomToolbar,
+          }}
           initialState={{
             pagination: {
               paginationModel: {

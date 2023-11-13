@@ -6,7 +6,7 @@ import { sidebarItems } from "../components/SidebarItems";
 import SidebarLink from "../components/SidebarLink";
 import SidebarSubmenu from "../components/SidebarSubmenu";
 import MenuOutlinedIcon from "@mui/icons-material/MenuOutlined";
-import schoolLogo from "../Data/DonjuanTransparent.png";
+import schoolLogo from "../Data/DonjuanTransparent.webp";
 import { removeUser } from "../redux/actions/authActions";
 
 function Sidebar() {

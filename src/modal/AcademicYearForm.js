@@ -61,12 +61,12 @@ const AcademicYearForm = (props) => {
       label: "Active",
     },
     {
-      value: "Completed",
-      label: "Completed",
-    },
-    {
       value: "Planned",
       label: "Planned",
+    },
+    {
+      value: "Completed",
+      label: "Completed",
     },
   ];
 
@@ -331,7 +331,11 @@ const AcademicYearForm = (props) => {
                       <InputLabel id="status-label">Status</InputLabel>
                       <Select labelId="status-label" label="Status" {...field}>
                         {statusOption.map((option) => (
-                          <MenuItem key={option.value} value={option.value}>
+                          <MenuItem
+                            key={option.value}
+                            value={option.value}
+                            disabled={option.value === "Completed"}
+                          >
                             {option.label}
                           </MenuItem>
                         ))}

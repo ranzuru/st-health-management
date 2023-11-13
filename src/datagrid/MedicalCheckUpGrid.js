@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { DataGrid } from "@mui/x-data-grid";
 import IconButton from "@mui/material/IconButton";
 import EditIcon from "@mui/icons-material/Edit";
@@ -20,6 +20,8 @@ import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import { HardDeleteStudentMedical } from "../components/Actions/HardDeleteStudentMedical.js";
 import { ReinstateStudentMedical } from "../components/Actions/ReinstateStudentMedical.js";
 import StatusCell from "../components/StatusCell.js";
+import exportDataToExcel from "../utils/exportDataToExcel.js";
+import HeaderMapping from "../headerMapping/studentMedicalHeader.js";
 
 const MedicalCheckUpGrid = () => {
   const [medicalCheckups, setMedicalCheckups] = useState([]);
@@ -36,6 +38,10 @@ const MedicalCheckUpGrid = () => {
   const [snackbarData, setSnackbarData] = useState({
     message: "",
     severity: "success",
+  });
+  const dataGridRef = useRef(null);
+  const [filterModel, setFilterModel] = useState({
+    items: [],
   });
 
   const handleSearchChange = (event) => {
@@ -93,18 +99,14 @@ const MedicalCheckUpGrid = () => {
   };
 
   const transformRecord = (checkup = {}) => {
-    let {
-      classEnrollment: {
-        student = {},
-        academicYear = {},
-        classProfile = {},
-      } = {},
-      nutritionalStatus = {},
-    } = checkup;
+    const { classEnrollment = {}, nutritionalStatus = {} } = checkup;
 
-    if (!nutritionalStatus) {
-      nutritionalStatus = {};
-    }
+    // Destructure nested objects from classEnrollment
+    const {
+      student = {},
+      academicYear = {},
+      classProfile = {},
+    } = classEnrollment;
 
     const name =
       student.firstName || student.lastName
@@ -115,6 +117,7 @@ const MedicalCheckUpGrid = () => {
 
     return {
       id: checkup._id,
+      dateOfExamination: checkup.dateOfExamination,
       lrn: student.lrn || "N/A",
       name,
       age: student.age || "N/A",
@@ -130,9 +133,11 @@ const MedicalCheckUpGrid = () => {
       BMIClassification: nutritionalStatus.BMIClassification || "N/A",
       heightForAge: nutritionalStatus.heightForAge || "N/A",
       ironSupplementation: checkup.ironSupplementation,
-      dateOfExamination: checkup.dateOfExamination,
       deworming: checkup.deworming,
+      temperature: checkup.temperature,
       pulseRate: checkup.pulseRate,
+      bloodPressure: checkup.bloodPressure,
+      heartRate: checkup.heartRate,
       respiratoryRate: checkup.respiratoryRate,
       visionScreeningLeft: checkup.visionScreeningLeft,
       visionScreeningRight: checkup.visionScreeningRight,
@@ -151,9 +156,6 @@ const MedicalCheckUpGrid = () => {
       abdomen: checkup.abdomen,
       deformities: checkup.deformities,
       menarche: checkup.menarche,
-      temperature: checkup.temperature,
-      bloodPressure: checkup.bloodPressure,
-      heartRate: checkup.heartRate,
       remarks: checkup.remarks,
       status: checkup.status,
     };
@@ -208,6 +210,7 @@ const MedicalCheckUpGrid = () => {
     { field: "heightCm", headerName: "Height (cm)", width: 100 },
     { field: "weightKg", headerName: "Weight (kg)", width: 100 },
     { field: "BMIClassification", headerName: "Classification", width: 100 },
+    { field: "heightForAge", headerName: "Height For Age", width: 150 },
     {
       field: "ironSupplementation",
       headerName: "Iron Supp.",
@@ -287,6 +290,81 @@ const MedicalCheckUpGrid = () => {
       },
     },
   ];
+
+  const handleExport = () => {
+    const activeFilterModel = filterModel;
+
+    const filteredData = medicalCheckups.filter((record) => {
+      return activeFilterModel.items.every((filterItem) => {
+        if (!filterItem.field) {
+          return true;
+        }
+
+        let cellValue;
+        if (
+          filterItem.field === "deworming" ||
+          filterItem.field === "ironSupplementation"
+        ) {
+          cellValue = record[filterItem.field] ? "yes" : "no";
+        } else {
+          cellValue = (record[filterItem.field] ?? "")
+            .toString()
+            .toLowerCase()
+            .trim();
+        }
+
+        const filterValues = Array.isArray(filterItem.value)
+          ? filterItem.value.map((val) => val.toString().toLowerCase().trim())
+          : [filterItem.value.toString().toLowerCase().trim()];
+
+        switch (filterItem.operator) {
+          case "equals":
+            return cellValue === filterValues[0];
+          case "contains":
+            return filterValues.some((value) => cellValue.includes(value));
+          case "startsWith":
+            return filterValues.some((value) => cellValue.startsWith(value));
+          case "endsWith":
+            return filterValues.some((value) => cellValue.endsWith(value));
+          case "isAnyOf":
+            return filterValues.includes(cellValue);
+          default:
+            console.log(
+              `Unknown filter type '${filterItem.operator}', record included by default`
+            );
+            return true;
+        }
+      });
+    });
+
+    // Define excelHeaders based on the fields in transformedRecord
+    const excelHeaders = Object.keys(medicalCheckups[0] || {})
+      .filter((key) => key !== "id") // This will exclude the 'id' field
+      .map((key) => ({
+        title: HeaderMapping[key] || key,
+        key: key,
+      }));
+
+    let fileName = "MedicalRecords";
+    if (activeFilterModel.items.length > 0) {
+      // Append filter details to the file name
+      const filterDescriptions = activeFilterModel.items.map((filter) => {
+        if (filter.operator === "isAnyOf" && Array.isArray(filter.value)) {
+          return `${filter.field}_${filter.operator}_${filter.value.join("-")}`;
+        }
+        return `${filter.field}_${filter.operator}_${filter.value}`;
+      });
+      fileName += `_${filterDescriptions.join("_")}`;
+    }
+
+    fileName = fileName.replace(/[^a-z0-9]/gi, "_").toLowerCase();
+
+    exportDataToExcel(filteredData, excelHeaders, fileName, {
+      dateFields: ["dateOfExamination", "birthDate"], // adjust based on transformed data
+      excludeColumns: ["action"], // adjust based on transformed data
+      booleanFields: ["deworming", "ironSupplementation"], // adjust as needed
+    });
+  };
 
   const handleInfoDialogOpen = (checkupId) => {
     const recordInfo = medicalCheckups.find(
@@ -452,13 +530,15 @@ const MedicalCheckUpGrid = () => {
             <Tab label="Inactive" value="Inactive" />
           </Tabs>
           <DataGrid
+            ref={dataGridRef}
             rows={FilteredMedicalCheckups}
             columns={columns}
+            onFilterModelChange={(newModel) => setFilterModel(newModel)}
             getRowId={(row) => row.id}
             slots={{
               toolbar: () => (
                 <CustomGridToolbar
-                  // onExport={handleExport}
+                  onExport={handleExport}
                   handleImport={handleImport}
                 />
               ),

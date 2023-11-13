@@ -4,6 +4,7 @@ import {
   Routes,
   Route,
   useNavigate,
+  useLocation,
   Outlet,
 } from "react-router-dom";
 import LoginPage from "./LoginPage";
@@ -47,16 +48,22 @@ import { PersistGate } from "redux-persist/integration/react";
 
 function AuthRedirect() {
   const navigate = useNavigate();
+  const location = useLocation();
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
-  const currentPath = window.location.pathname;
 
   useEffect(() => {
-    if (currentPath === "/" && isAuthenticated) {
+    // Redirect to dashboard if at root and authenticated
+    if (isAuthenticated && location.pathname === "/") {
       navigate("/app/dashboard");
-    } else if (!isAuthenticated && currentPath.startsWith("/app")) {
-      navigate("/");
+      return;
     }
-  }, [isAuthenticated, navigate, currentPath]);
+
+    // Redirect to root if not authenticated and trying to access a protected route
+    if (!isAuthenticated && location.pathname.startsWith("/app")) {
+      navigate("/");
+      return;
+    }
+  }, [isAuthenticated, navigate, location.pathname]);
 
   return null;
 }

@@ -18,8 +18,8 @@ import { useSelector } from "react-redux";
 import PasswordResetRequestDialog from "./components/resetPasswordComponents/PasswordResetRequestDialog.js";
 import OtpInput from "./components/otpComponents/otpInput.js";
 
-import schoolLogo from "./Data/DonjuanTransparent.png";
-import clinicLogo from "./Data/DonjuanStock.png";
+import schoolLogo from "./Data/DonjuanTransparent.webp";
+import clinicLogo from "./Data/DonjuanStock.webp";
 import EmailField from "./components/LoginComponents/EmailField.js";
 import PasswordField from "./components/LoginComponents/PasswordField.js";
 import { validation } from "./components/LoginComponents/LoginValidation.js";

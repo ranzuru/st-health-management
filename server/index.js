@@ -1,6 +1,7 @@
 const dotenv = require("dotenv");
 dotenv.config();
 const express = require("express");
+const path = require("path");
 const authenticateMiddleware = require("./auth/authenticateMiddleware.js");
 const authRoutes = require("./auth/Routes.js");
 const connectDB = require("./mongodb/Connect.js");
@@ -27,6 +28,14 @@ const otpRoutes = require("./routes/otpRoutes.js");
 const cors = require("cors");
 
 const app = express();
+
+const oneYear = 31536000;
+app.use(
+  "/public",
+  express.static(path.join(__dirname, "public"), {
+    maxAge: oneYear,
+  })
+);
 app.use(express.json({ limit: "50mb" }));
 
 const corsOptions = {

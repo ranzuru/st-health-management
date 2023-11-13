@@ -19,6 +19,7 @@ import NutritionalStatusForm from "../modal/NutritionalStatusForm";
 import axiosInstance from "../config/axios-instance";
 import CustomGridToolbar from "../utils/CustomGridToolbar.js";
 import CustomSnackbar from "../components/CustomSnackbar";
+import StatusCell from "../components/StatusCell.js";
 
 const NutritionalStatusPreGrid = () => {
   const [searchValue, setSearchValue] = useState("");
@@ -60,6 +61,24 @@ const NutritionalStatusPreGrid = () => {
   const handleDialogClose = () => {
     setRecordIdToDelete(null);
     setDialogOpen(false);
+  };
+
+  const studentStatusColors = {
+    Active: {
+      bgColor: "#DFF0D8",
+      textColor: "#4CAF50",
+      borderColor: "#4CAF50",
+    },
+    Archived: {
+      bgColor: "#FEEBC8",
+      textColor: "#FF9800",
+      borderColor: "#FF9800",
+    },
+    Inactive: {
+      bgColor: "#EBDEF0",
+      textColor: "#8E44AD",
+      borderColor: "#8E44AD",
+    },
   };
 
   const formatYearFromDate = (dateString) => {
@@ -113,6 +132,7 @@ const NutritionalStatusPreGrid = () => {
       beneficiaryOfSBFP: record.beneficiaryOfSBFP,
       measurementType: record.measurementType,
       remarks: record.remarks,
+      status: record.status,
     };
   };
 
@@ -186,6 +206,14 @@ const NutritionalStatusPreGrid = () => {
       field: "remarks",
       headerName: "Remarks",
       width: 150,
+    },
+    {
+      field: "status",
+      headerName: "Status",
+      width: 90,
+      renderCell: (params) => (
+        <StatusCell value={params.value} colorMapping={studentStatusColors} />
+      ),
     },
     {
       field: "action",
@@ -396,7 +424,6 @@ const NutritionalStatusPreGrid = () => {
             onChange={(_, newValue) => setCurrentType(newValue)}
             indicatorColor="primary"
             textColor="primary"
-            centered
           >
             <Tab label="PRE-INTERVENTION" value="PRE" />
             <Tab label="POST-INTERVENTION" value="POST" />
